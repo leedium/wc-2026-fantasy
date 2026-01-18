@@ -1,6 +1,6 @@
 # Product Requirements Document: World Cup 2026 Decentralized Prediction Game
 
-> **Version:** 1.1.0
+> **Version:** 1.3.0
 > **Last Updated:** 2026-01-18
 
 ## Executive Summary
@@ -165,11 +165,9 @@ NFTs are **earned**, not required for entry.
 
 | NFT Type | Earned When | Utility |
 |----------|-------------|---------|
-| Prediction Badge | Correct group/match prediction | Collectible, proof of prediction |
-| Streak NFT | 3+ consecutive correct picks | Bonus prize pool multiplier |
-| Leaderboard NFT | Final top 10/100/1000 | Tiered share of prize pool |
-| Perfect Group NFT | All 12 groups correct order | Rare achievement, bonus payout |
-| Champion Caller NFT | Predicted tournament winner | Special edition, high value |
+| Participant | Registered for tournament | Proof of participation |
+| Leaderboard | Final top 100 | Tiered share of prize pool |
+| Champion Caller | Predicted tournament winner | Collectible achievement |
 
 ### NFT Metadata
 - Tournament: "FIFA World Cup 2026"
@@ -204,24 +202,15 @@ NFTs are **earned**, not required for entry.
 
 ### Entry Fee Tiers
 
-| Tier | Entry Fee | Prize Pool % | Rake % | Benefits |
-|------|-----------|--------------|--------|----------|
-| **Bronze** | $10 USDC | 85% ($8.50) | 15% | Basic participation |
-| **Silver** | $25 USDC | 88% ($22) | 12% | Standard play |
-| **Gold** | $100 USDC | 90% ($90) | 10% | Priority support, exclusive Discord |
-| **Diamond** | $500 USDC | 92% ($460) | 8% | VIP status, merch airdrop |
+| Tier | Entry Fee | Prize Pool % | Rake % |
+|------|-----------|--------------|--------|
+| **Standard** | $25 USDC | 88% ($22) | 12% |
+| **Premium** | $100 USDC | 90% ($90) | 10% |
 
-**Tier Distribution Modeling (10K users expected):**
-| Tier | Est. % of Users | Est. Users | Revenue |
-|------|-----------------|------------|---------|
-| Bronze | 40% | 4,000 | $40,000 |
-| Silver | 40% | 4,000 | $100,000 |
-| Gold | 15% | 1,500 | $150,000 |
-| Diamond | 5% | 500 | $250,000 |
-| **TOTAL** | 100% | 10,000 | **$540,000** |
-
-**Blended rake rate:** ~10.7% (~$58K)
-**Prize pool:** ~$482K
+**Target scenario (10K users, 70% Standard / 30% Premium):**
+- Revenue: $475,000
+- Prize pool: ~$424,000
+- Platform rake: ~$51,000
 
 ---
 
@@ -242,69 +231,14 @@ NFTs are **earned**, not required for entry.
 
 **Philosophy:** Reward top performers significantly, but ensure broad participation feels worthwhile.
 
-#### Main Prize Pool (80% of total)
-
-| Tier | Rank Range | % of Pool | Per-Person (10K model) |
-|------|------------|-----------|----------------------|
-| Champion | 1st | 12% | $57,840 |
-| Elite | 2nd-3rd | 8% (4% each) | $19,280 each |
-| Top 10 | 4th-10th | 14% (2% each) | $9,640 each |
-| Top 100 | 11th-100th | 18% (0.2% each) | $964 each |
-| Top 1000 | 101st-1000th | 18% (0.02% each) | $96 each |
-| Top 10% | 1001st-1000th | 10% | Variable (~$48 avg) |
-
-#### Participation Pool (15% of total)
-- Split among ALL players who score >100 points (showing genuine engagement)
-- Estimated: 70% of players qualify
-- ~$10 per qualifying participant (feels like "money back")
-
-#### Bonus Prize Pool (5% of total)
-- Perfect Group predictor(s): 2% split
-- Champion Caller NFT holders: 2% split
-- Longest correct streak: 1%
-
----
-
-### Scale Scenarios
-
-| Scenario | Users | Avg Entry | Total Revenue | Prize Pool | 1st Place |
-|----------|-------|-----------|---------------|------------|-----------|
-| Minimum Viable | 1,000 | $30 | $30,000 | $26,700 | $3,200 |
-| Target | 10,000 | $54 | $540,000 | $482,000 | $57,840 |
-| Optimistic | 50,000 | $40 | $2,000,000 | $1,780,000 | $213,600 |
-| Viral | 100,000 | $35 | $3,500,000 | $3,115,000 | $373,800 |
-
----
-
-### Referral Program
-
-**Mechanics:**
-- Each user gets unique referral code/link
-- Referrer earns 5% of referee's entry fee (from platform rake, not prize pool)
-- Referee gets 5% discount on entry fee
-
-**Example:**
-- User A refers User B
-- User B pays $25 (Silver tier) with 5% discount = $23.75
-- User A earns $1.25 (5% of $25)
-- Platform rake: $2.75 - $1.25 referral = $1.50 net
-
-**Caps:**
-- Max 50 referrals per user (prevent gaming)
-- Referral rewards capped at $500 total per user
-
----
-
-### Early Bird Incentives
-
-| Registration Window | Bonus |
-|--------------------|-------|
-| 6+ months before tournament | +10% bonus points on all predictions |
-| 3-6 months before | +5% bonus points |
-| 1-3 months before | Standard |
-| Last 2 weeks | -5% point penalty (late fee) |
-
-**Alternative approach:** Early registrants get higher prize pool multiplier instead of point bonus (cleaner, less confusing)
+| Rank | % of Pool | Per-Person (10K users, $424K pool) |
+|------|-----------|-----------------------------------|
+| 1st | 15% | $63,600 |
+| 2nd-3rd | 10% (5% each) | $21,200 each |
+| 4th-10th | 15% (2.1% each) | $8,900 each |
+| 11th-100th | 25% (0.28% each) | $1,180 each |
+| 101st-1000th | 20% (0.02% each) | $85 each |
+| Top 10% (1001+) | 15% | Variable (~$70 avg) |
 
 ---
 
@@ -314,13 +248,6 @@ NFTs are **earned**, not required for entry.
 - Held in audited smart contract (not team wallet)
 - Multi-sig for emergency withdrawals only (3 of 5 signers)
 - Time-locked release: Cannot be touched until tournament ends + 30 days
-
-**Yield Strategy (Optional):**
-- Prize pool idle for ~6 months pre-tournament
-- Could earn yield in low-risk DeFi (Aave, Compound)
-- Est. 3-5% APY = additional $7-12K on $250K pool
-- Risk consideration: Smart contract risk vs. reward
-- **Recommendation:** Keep simple for V1, no yield farming
 
 ---
 
@@ -428,7 +355,7 @@ pub struct Tournament {
 pub struct UserEntry {
     pub owner: Pubkey,
     pub tournament: Pubkey,
-    pub tier: EntryTier,             // Bronze, Silver, Gold, Diamond
+    pub tier: EntryTier,             // Standard, Premium
     pub entry_fee_paid: u64,
     pub prediction_hash: [u8; 32],   // Commit phase
     pub predictions: Option<Predictions>, // Reveal phase
@@ -567,12 +494,8 @@ pub struct PrizeClaim {
 | Achievement | Trigger | Rarity |
 |-------------|---------|--------|
 | Participant | Registered for tournament | Common |
-| Group Guru | 6+ groups correct | Uncommon |
-| Perfect Group | All 12 groups exact | Legendary |
-| Bracket Master | Final 4 correct | Rare |
-| Champion Caller | Winner correct | Epic |
-| Oracle | Top 10 finish | Legendary |
-| Streak King | 10+ consecutive correct | Epic |
+| Leaderboard | Final top 100 | Rare |
+| Champion Caller | Predicted tournament winner | Epic |
 
 ---
 

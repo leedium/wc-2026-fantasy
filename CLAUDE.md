@@ -1,6 +1,6 @@
 # CLAUDE.md
 
-> **Version:** 1.1.0
+> **Version:** 1.3.0
 > **Last Updated:** 2026-01-18
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
@@ -54,7 +54,7 @@ Four main programs:
 - Knockout: Predict winners R32→Final (max 163 pts, 1.5x upset bonus)
 - Total points: max 283 pts
 - **Tiebreaker**: Total tournament goals prediction (closest to actual wins)
-- Entry tiers: Bronze ($10), Silver ($25), Gold ($100), Diamond ($500)
+- Entry tiers: Standard ($25), Premium ($100)
 
 ## Oracle Design
 

@@ -1,6 +1,6 @@
 # Brainstorm
 
-> **Version:** 1.1.0
+> **Version:** 1.3.0
 > **Last Updated:** 2026-01-18
 
 ## Project
@@ -16,14 +16,15 @@ Thus holding these NFTs would get a percentage from the prize pool.
 - Participants would pay an upfront cost in the native token or a stable con, preferably USDC or USDT.
 - If game mechanic is successful, the model could be applied to other sports events or leagues.
 
-## Decisions Made (v1.1)
+## Decisions Made (v1.3)
 - **Blockchain**: Solana with Anchor framework
-- **Entry fee**: Tiered ($10-$500 USDC)
-- **NFTs**: Used for achievements/rewards, not required for entry
+- **Entry fee**: 2 tiers - Standard ($25) and Premium ($100) USDC
+- **NFTs**: 3 types only - Participant, Leaderboard (top 100), Champion Caller
 - **Predictions**: All submitted upfront before tournament (group stage + full knockout bracket)
 - **No bonus predictions**: Keeping it simple - just group standings and knockout bracket
 - **Tiebreaker**: Total tournament goals prediction (closest to actual wins)
 - **Scoring**: Points for correct group positions and knockout winners
+- **Prize distribution**: 100% based on leaderboard rank (no special bonus pools)
 
 ## Problems / Questions (Remaining)
 - ~~Need help in designing the gaming model / mechanic~~ → RESOLVED (see PRD.md)
