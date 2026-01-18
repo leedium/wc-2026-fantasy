@@ -1,11 +1,11 @@
 # Product Requirements Document: World Cup 2026 Decentralized Prediction Game
 
-> **Version:** 1.4.0
+> **Version:** 2.0.0
 > **Last Updated:** 2026-01-18
 
 ## Executive Summary
 
-A blockchain-based prediction game for FIFA World Cup 2026 where users pay an entry fee to submit full tournament bracket predictions (group stage standings + knockout bracket) upfront before the tournament begins. Correct predictions earn achievement NFTs that represent shares of the prize pool. The platform takes a small rake for sustainability while distributing the majority to winners.
+A blockchain-based prediction game for FIFA World Cup 2026 where users pay an entry fee to submit full tournament bracket predictions (group stage standings + knockout bracket) upfront before the tournament begins. Winners claim shares of the prize pool based on final rankings. The platform takes a small rake for sustainability while distributing the majority to winners.
 
 ---
 
@@ -14,10 +14,9 @@ A blockchain-based prediction game for FIFA World Cup 2026 where users pay an en
 Traditional sports prediction pools suffer from:
 - Centralized control and trust issues with prize distribution
 - Limited transparency in how winnings are calculated
-- No ownership or collectible value from participation
 - Geographic/payment restrictions
 
-A decentralized solution provides transparent, trustless prize distribution with collectible NFT rewards that have lasting value.
+A decentralized solution provides transparent, trustless prize distribution.
 
 ---
 
@@ -25,10 +24,9 @@ A decentralized solution provides transparent, trustless prize distribution with
 
 | Segment | Characteristics | Needs |
 |---------|----------------|-------|
-| Crypto-native | Familiar with wallets, DeFi | Seamless Web3 experience, tradeable assets |
-| Casual sports fans | May be new to blockchain | Simple onboarding, familiar UX, clear value proposition |
+| Crypto-native | Familiar with wallets, DeFi | Seamless Web3 experience |
 
-**Key insight:** Must support both audiences with optional wallet abstraction for newcomers.
+**v1 Focus:** Crypto-native users with existing Solana wallets. Wallet abstraction for casual users can be added in v2.
 
 ---
 
@@ -43,7 +41,6 @@ A decentralized solution provides transparent, trustless prize distribution with
 ### Success Metrics
 - Total participants
 - Prize pool size (TVL)
-- NFT trading volume (secondary market activity)
 - User retention for future events
 
 ---
@@ -96,7 +93,6 @@ Users predict **all knockout match winners** from Round of 32 to Final.
 
 **Bracket Logic:**
 - Predictions must be internally consistent (can't pick a team in QF if you didn't pick them to advance from R16)
-- "Upset bonus": If you correctly predict an upset (lower-seeded team wins), earn **1.5x points** for that match
 
 ---
 
@@ -139,47 +135,14 @@ If still tied after total goals comparison, use submission timestamp (earlier su
 
 ### Anti-Cheat Mechanisms
 
-1. **Commit-Reveal Scheme**
-   - Phase 1: User submits hash of predictions + salt
-   - Phase 2: After lock, user reveals predictions
-   - If reveal doesn't match hash → disqualified
+1. **Encrypted-Until-Lock**
+   - Users submit predictions encrypted with tournament encryption key
+   - Predictions can be updated anytime before lock (no additional fee)
+   - After lock time, API decrypts predictions on-read (zero on-chain cost)
+   - All predictions become visible simultaneously after lock
    - Prevents copying other players' predictions
 
-2. **Sybil Resistance**
-   - Optional KYC tier for large prizes
-   - Rate limiting on wallet creation
-   - Minimum wallet age/activity requirement (optional)
-
-3. **Collusion Detection**
-   - Statistical analysis of prediction similarity
-   - Flag accounts with >95% identical predictions
-   - Manual review for suspicious clusters
-
----
-
-## NFT Design (Rewards/Achievements)
-
-NFTs are **earned**, not required for entry.
-
-### NFT Types
-
-| NFT Type | Earned When | Utility |
-|----------|-------------|---------|
-| Participant | Registered for tournament | Proof of participation |
-| Leaderboard | Final top 100 | Tiered share of prize pool |
-| Champion Caller | Predicted tournament winner | Collectible achievement |
-
-### NFT Metadata
-- Tournament: "FIFA World Cup 2026"
-- Prediction made
-- Points earned
-- Timestamp
-- Unique artwork per achievement type
-
-### Secondary Market
-- NFTs are tradeable on supported marketplaces
-- Prize claim rights transfer with NFT ownership
-- Creates speculation/trading opportunities
+Note: Sybil resistance and collusion detection deferred to v2. Low entry fee (0.10 SOL) provides natural spam deterrent.
 
 ---
 
@@ -245,7 +208,7 @@ NFTs are **earned**, not required for entry.
 |--------|--------|-------------------|------------|
 | Transaction Cost | ~$0.00025 | ~$0.01-0.10 | Solana wins (10K users = significant savings) |
 | Finality | 400ms | 2-12 seconds | Solana wins (better UX) |
-| NFT Ecosystem | Metaplex (mature) | ERC-721/1155 | Both good |
+| Ecosystem | Metaplex, Jupiter, etc. | OpenZeppelin, Uniswap | Both mature |
 | Dev Experience | Rust/Anchor | Solidity | EVM easier, but you have Solana exp |
 | User Wallets | Phantom, Backpack | MetaMask, Coinbase | Both well-adopted |
 
@@ -258,13 +221,13 @@ NFTs are **earned**, not required for entry.
 ```
 ┌─────────────────────────────────────────────────────────────────┐
 │                         FRONTEND                                 │
-│  ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌──────────┐        │
-│  │  Next.js │  │  Wallet  │  │  Privy   │  │  State   │        │
-│  │   App    │  │ Adapter  │  │ (casual) │  │ (Zustand)│        │
-│  └────┬─────┘  └────┬─────┘  └────┬─────┘  └────┬─────┘        │
-└───────┼─────────────┼─────────────┼─────────────┼───────────────┘
-        │             │             │             │
-        └─────────────┴──────┬──────┴─────────────┘
+│  ┌──────────┐  ┌──────────┐  ┌──────────┐                      │
+│  │  Next.js │  │  Wallet  │  │  State   │                      │
+│  │   App    │  │ Adapter  │  │ (Zustand)│                      │
+│  └────┬─────┘  └────┬─────┘  └────┬─────┘                      │
+└───────┼─────────────┼─────────────┼────────────────────────────┘
+        │             │             │
+        └─────────────┴──────┬──────┘
                              │
 ┌────────────────────────────┼────────────────────────────────────┐
 │                    SOLANA BLOCKCHAIN                            │
@@ -274,22 +237,17 @@ NFTs are **earned**, not required for entry.
 │  │  ┌────────────┐  ┌────────────┐  ┌────────────┐       │     │
 │  │  │ Prediction │  │  Scoring   │  │   Prize    │       │     │
 │  │  │   Vault    │  │   Engine   │  │ Distributor│       │     │
-│  │  └─────┬──────┘  └─────┬──────┘  └─────┬──────┘       │     │
-│  │        │               │               │               │     │
-│  │  ┌─────┴───────────────┴───────────────┴─────┐        │     │
-│  │  │           Achievement NFT Program          │        │     │
-│  │  │              (Metaplex Core)               │        │     │
-│  │  └───────────────────────────────────────────┘        │     │
+│  │  └────────────┘  └────────────┘  └────────────┘       │     │
 │  └───────────────────────────────────────────────────────┘     │
 │                            │                                    │
 └────────────────────────────┼────────────────────────────────────┘
                              │
 ┌────────────────────────────┼────────────────────────────────────┐
 │                    BACKEND SERVICES                             │
-│  ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌──────────┐        │
-│  │  Oracle  │  │ Indexer  │  │   API    │  │   Jobs   │        │
-│  │ (Sports) │  │ (Helius) │  │ (Hono)   │  │ (Cron)   │        │
-│  └──────────┘  └──────────┘  └──────────┘  └──────────┘        │
+│  ┌──────────┐  ┌──────────┐  ┌──────────┐                      │
+│  │   API    │  │ Database │  │   Jobs   │                      │
+│  │  (Hono)  │  │(Supabase)│  │  (Cron)  │                      │
+│  └──────────┘  └──────────┘  └──────────┘                      │
 └─────────────────────────────────────────────────────────────────┘
 ```
 
@@ -319,8 +277,7 @@ pub struct UserEntry {
     pub owner: Pubkey,
     pub tournament: Pubkey,
     pub entry_fee_paid: u64,         // Fixed 0.10 SOL
-    pub prediction_hash: [u8; 32],   // Commit phase
-    pub predictions: Option<Predictions>, // Reveal phase
+    pub encrypted_predictions: Vec<u8>, // Encrypted until lock
     pub total_points: u32,
     pub rank: Option<u32>,
     pub claimed: bool,
@@ -338,15 +295,15 @@ pub struct Predictions {
 
 **Instructions:**
 - `initialize_tournament` - Admin creates tournament
-- `register_user` - User pays entry fee, commits prediction hash
-- `reveal_predictions` - User reveals predictions after lock
+- `register_user` - User pays entry fee
+- `submit_predictions` - User submits encrypted predictions (can call multiple times before lock)
 - `update_tournament_status` - Admin transitions phases
 
 ---
 
 #### 2. Scoring Engine Program
 
-**Purpose:** Calculate points based on match results from oracle.
+**Purpose:** Calculate points based on match results from admin.
 
 **Accounts:**
 ```rust
@@ -360,29 +317,15 @@ pub struct MatchResult {
     pub score_a: u8,
     pub score_b: u8,
     pub winner: u8,                  // 0 = draw (group only), else team ID
-    pub oracle_signature: [u8; 64],  // Proof from oracle
     pub timestamp: i64,
-}
-
-#[account]
-pub struct Leaderboard {
-    pub tournament: Pubkey,
-    pub entries: Vec<LeaderboardEntry>, // Sorted by points desc
-    pub last_updated: i64,
-}
-
-#[derive(AnchorSerialize, AnchorDeserialize)]
-pub struct LeaderboardEntry {
-    pub user: Pubkey,
-    pub points: u32,
-    pub rank: u32,
 }
 ```
 
+Note: Leaderboard computed off-chain in Supabase via SQL, not stored on-chain. This reduces on-chain storage costs significantly.
+
 **Instructions:**
-- `submit_match_result` - Oracle submits verified result
+- `submit_match_result` - Admin submits verified result
 - `calculate_user_points` - Compute points for one user (can be batched)
-- `update_leaderboard` - Recompute rankings
 - `finalize_tournament` - Lock final rankings
 
 ---
@@ -424,77 +367,37 @@ pub struct PrizeClaim {
 - `configure_prizes` - Admin sets prize distribution
 - `calculate_prize` - Compute prize for user based on rank
 - `claim_prize` - User claims their winnings
-- `emergency_withdraw` - Multi-sig admin recovery (time-locked)
+- `emergency_withdraw` - Admin recovery (time-locked)
 
 ---
 
-#### 4. Achievement NFT Program (Metaplex Core)
+### Oracle Integration (v1 Simplified)
 
-**NFT Metadata Schema:**
-```json
-{
-  "name": "WC2026 Champion Caller",
-  "symbol": "WC26",
-  "description": "Correctly predicted the World Cup 2026 champion",
-  "image": "https://arweave.net/...",
-  "attributes": [
-    { "trait_type": "Tournament", "value": "FIFA World Cup 2026" },
-    { "trait_type": "Achievement", "value": "Champion Caller" },
-    { "trait_type": "Prediction", "value": "Argentina" },
-    { "trait_type": "Points Earned", "value": 25 },
-    { "trait_type": "Rarity", "value": "Legendary" },
-    { "trait_type": "Timestamp", "value": 1718928000 }
-  ],
-  "properties": {
-    "prize_claim_eligible": true,
-    "prize_percentage_bps": 200
-  }
-}
-```
-
-**Achievement Types:**
-| Achievement | Trigger | Rarity |
-|-------------|---------|--------|
-| Participant | Registered for tournament | Common |
-| Leaderboard | Final top 100 | Rare |
-| Champion Caller | Predicted tournament winner | Epic |
-
----
-
-### Oracle Integration
-
-**Primary: Chainlink (if available on Solana) or Pyth**
-
-**Backup: Custom Oracle with Multi-Source Verification**
+**Admin-controlled oracle for v1.** Admin verifies results from sports data sources and submits on-chain.
 
 ```
-┌─────────────┐     ┌─────────────┐     ┌─────────────┐
-│  API-Sports │     │ SportMonks  │     │   ESPN API  │
-└──────┬──────┘     └──────┬──────┘     └──────┬──────┘
-       │                   │                   │
-       └───────────────────┴───────────────────┘
-                           │
-                    ┌──────┴──────┐
-                    │   Aggregator │
-                    │   Service    │
-                    └──────┬──────┘
-                           │
-                    ┌──────┴──────┐
-                    │  3-of-5     │
-                    │  Multi-sig  │
-                    └──────┬──────┘
-                           │
-                    ┌──────┴──────┐
-                    │  On-chain   │
-                    │  Oracle     │
-                    └─────────────┘
+┌─────────────┐
+│ Sports Data │  (API-Sports, ESPN, etc.)
+│   Sources   │
+└──────┬──────┘
+       │
+┌──────┴──────┐
+│    Admin    │  (manual verification)
+│   Backend   │
+└──────┬──────┘
+       │
+┌──────┴──────┐
+│  On-chain   │
+│   Submit    │
+└─────────────┘
 ```
 
-**Validation Rules:**
-- Match result requires 2+ sources agreeing
-- 30-minute delay after match end (allow corrections)
-- Admin override with multi-sig (edge cases only)
+**v1 Process:**
+- Admin monitors match results from trusted sports data sources
+- After match ends, admin verifies result and submits on-chain
 - All submissions logged for transparency
+
+**v2 Upgrade Path:** Multi-sig oracle with automated multi-source verification can be added later.
 
 ---
 
@@ -506,8 +409,6 @@ pub struct PrizeClaim {
 | Styling | Tailwind CSS + shadcn/ui | Fast development, consistency |
 | State | Zustand + React Query | Simple, performant |
 | Wallet | @solana/wallet-adapter | Standard Solana integration |
-| Abstraction | Privy | Email/social login for casual users |
-| Fiat On-ramp | MoonPay or Stripe (via Privy) | Credit card payments |
 
 ---
 
@@ -516,10 +417,10 @@ pub struct PrizeClaim {
 | Service | Technology | Purpose |
 |---------|------------|---------|
 | API | Hono (Cloudflare Workers) | Low-latency, global edge |
-| Indexer | Helius | Real-time Solana data |
-| Database | Supabase (Postgres) | User profiles, cache |
-| Jobs | Cloudflare Cron | Leaderboard updates, notifications |
-| Storage | Arweave (via Irys) | NFT metadata permanence |
+| Database | Supabase (Postgres) | User data, predictions, leaderboard |
+| Jobs | Cloudflare Cron | Notifications |
+
+Note: Admin backend writes to both Solana and Supabase when submitting match results. Leaderboard computed via SQL in Supabase.
 
 ---
 
@@ -528,11 +429,11 @@ pub struct PrizeClaim {
 | Risk | Mitigation |
 |------|-----------|
 | Smart contract bugs | Audit by reputable firm (Sec3, OtterSec) |
-| Oracle manipulation | Multi-source verification, time delays |
-| Front-running predictions | Commit-reveal scheme with user-generated salt |
-| Sybil attacks | Optional KYC, wallet age requirements |
-| Admin key compromise | Multi-sig (3/5), time-locked operations |
-| Prize pool theft | Audited contracts, no admin withdrawal without multi-sig |
+| Oracle manipulation | Admin-controlled for v1 (trusted operator) |
+| Front-running predictions | Encrypted-until-lock with tournament decryption key |
+| Sybil attacks | Low entry fee (0.10 SOL) deters spam; enhanced detection in v2 |
+| Admin key compromise | Secure key management; multi-sig can be added in v2 |
+| Prize pool theft | Audited contracts, time-locked operations |
 
 ---
 
@@ -540,43 +441,33 @@ pub struct PrizeClaim {
 
 | Item | Cost | Notes |
 |------|------|-------|
-| Solana RPC (Helius) | $50-200 | Depends on traffic |
+| Solana RPC | $0-50 | Free tier or basic paid RPC |
 | Cloudflare Workers | $5-50 | Edge API |
 | Supabase | $25-100 | Database |
-| Arweave storage | $50-100 | One-time for NFT metadata |
 | Domain + CDN | $20 | |
-| **Total** | ~$150-500/mo | Pre-launch |
+| **Total** | ~$50-220/mo | Pre-launch |
 
-**Launch month spike:** Add $500-2000 for traffic surge
+**Launch month spike:** Add $200-500 for traffic surge
 
 ---
 
 ## User Experience Flow
 
-### Onboarding (Crypto-native)
+### Onboarding
 1. Connect wallet (Phantom, Backpack, etc.)
-2. View tournament structure
-3. Make predictions
-4. Pay entry fee
-5. Receive confirmation NFT
-
-### Onboarding (Casual fans)
-1. Sign up with email (wallet abstraction via Privy/Magic)
-2. Fund account with credit card (on-ramp)
-3. Make predictions (guided UI)
-4. Pay entry fee (abstracted)
-5. Receive confirmation
+2. View tournament structure and rules
+3. Make predictions (group stage + knockout bracket + total goals)
+4. Pay entry fee (0.10 SOL)
+5. Receive on-chain confirmation
 
 ### During Tournament
-- Live leaderboard
-- Push notifications for match results
-- Real-time point updates
-- Achievement NFT claims
+- Live leaderboard (updated in Supabase after admin submits results)
+- Point updates after each match result is submitted on-chain
+- View own predictions vs actual results
 
 ### Post-Tournament
 - Final rankings revealed
-- Prize claims
-- NFT showcase/sharing
+- Prize claims (top finishers)
 - Opt-in for future events
 
 ---
@@ -595,7 +486,6 @@ The intersection of blockchain, prediction games, and prize pools creates a comp
 |---------------|------------|--------------|
 | **Gambling** | HIGH | Requires licenses, heavy restrictions, potential criminal liability |
 | **Skill-based contest** | MEDIUM | More permissible, but still regulated in some jurisdictions |
-| **Securities offering** | HIGH | NFTs with revenue rights could trigger securities laws |
 | **Money transmission** | MEDIUM | Handling user funds may require licenses |
 
 ---
@@ -781,7 +671,6 @@ The intersection of blockchain, prediction games, and prize pools creates a comp
 ## Open Questions & Recommendations
 
 ### Resolved
-- NFT role: Rewards/achievements (not entry)
 - Complexity: Full bracket only (group stage + knockout), no bonus predictions
 - Predictions: All submitted upfront before tournament starts
 - Tiebreaker: Total tournament goals prediction
@@ -789,14 +678,15 @@ The intersection of blockchain, prediction games, and prize pools creates a comp
 - Currency: Native SOL only (no stablecoins)
 - KYC: None required (wallet-only participation)
 - Scale: Design for 10K+
+- Oracle: Admin-controlled for v1
+- NFTs: Deferred to v2
+- Wallet abstraction: Deferred to v2
 
 ### Still Open
 
 | Question | Recommendation |
 |----------|----------------|
-| Oracle provider | Sportmonks API with custom oracle |
-| Wallet abstraction | Privy or Dynamic for casual user onboarding |
-| NFT marketplace | Magic Eden (Solana native) |
+| Sports data source | API-Sports, SportMonks, or ESPN API for match results |
 
 ---
 
@@ -809,13 +699,12 @@ The intersection of blockchain, prediction games, and prize pools creates a comp
 - Testnet deployment
 
 ### Phase 2: Game Logic
-- Scoring oracle integration
+- Scoring engine (admin submits results)
 - Point calculation system
-- Leaderboard functionality
-- Achievement NFT minting
+- Off-chain leaderboard via Supabase
 
 ### Phase 3: Polish
-- Casual user onboarding (wallet abstraction)
+- Prize distributor contract
 - Mobile-responsive UI
 - Notification system
 
@@ -835,8 +724,8 @@ The intersection of blockchain, prediction games, and prize pools creates a comp
 
 ## Next Steps
 
-1. Finalize blockchain platform decision
+1. Finalize blockchain platform decision (Solana recommended)
 2. Define exact point values and test for balance
-3. Design NFT artwork concepts
-4. Begin smart contract development
+3. Begin smart contract development (Prediction Vault first)
+4. Set up Supabase schema for leaderboard
 5. Legal consultation for target markets
