@@ -1,6 +1,6 @@
 # Product Requirements Document: World Cup 2026 Decentralized Prediction Game
 
-> **Version:** 1.3.0
+> **Version:** 1.4.0
 > **Last Updated:** 2026-01-18
 
 ## Executive Summary
@@ -183,62 +183,47 @@ NFTs are **earned**, not required for entry.
 
 ---
 
-## Tokenomics & Economics (Detailed)
+## Tokenomics & Economics
 
-### Currency Strategy
+### Currency
 
-**Primary Currency: USDC (Stablecoin)**
-- Stable value protects prize pool from volatility
-- Familiar to both crypto and traditional users
-- Wide availability across chains
-- Easy to understand prize values
-
-**Alternative Accepted:** SOL (native token)
-- Auto-convert to USDC at entry via Jupiter aggregator
-- Provides flexibility for Solana-native users
-- Slight slippage risk (acceptable for UX benefit)
+**Native SOL only.** Prize pool value fluctuates with SOL market price.
 
 ---
 
-### Entry Fee Tiers
+### Entry Fee
 
-| Tier | Entry Fee | Prize Pool % | Rake % |
-|------|-----------|--------------|--------|
-| **Standard** | $25 USDC | 88% ($22) | 12% |
-| **Premium** | $100 USDC | 90% ($90) | 10% |
+| Entry Fee | Prize Pool % | Platform Rake % |
+|-----------|--------------|-----------------|
+| **0.10 SOL** | 90% | 10% |
 
-**Target scenario (10K users, 70% Standard / 30% Premium):**
-- Revenue: $475,000
-- Prize pool: ~$424,000
-- Platform rake: ~$51,000
+**Example (10K participants):**
+- Total collected: 1,000 SOL
+- Prize pool: 900 SOL
+- Platform rake: 100 SOL
 
 ---
 
 ### Platform Rake Allocation
 
-| Category | % of Rake | Amount (10K model) | Purpose |
-|----------|-----------|-------------------|---------|
-| Development | 30% | $17,400 | Ongoing development, bug fixes |
-| Operations | 20% | $11,600 | Infrastructure, oracles, gas |
-| Security Audit | 15% | $8,700 | Pre-launch and ongoing audits |
-| Marketing | 15% | $8,700 | User acquisition, partnerships |
-| Treasury | 10% | $5,800 | Future events seed funding |
-| Insurance Fund | 10% | $5,800 | Edge case disputes, oracle failures |
+| Category | % of Rake | Purpose |
+|----------|-----------|---------|
+| Development | 40% | Ongoing development, bug fixes |
+| Operations | 30% | Infrastructure, oracles, gas |
+| Treasury | 30% | Future events, insurance fund |
 
 ---
 
-### Prize Pool Distribution Model
+### Prize Pool Distribution
 
-**Philosophy:** Reward top performers significantly, but ensure broad participation feels worthwhile.
-
-| Rank | % of Pool | Per-Person (10K users, $424K pool) |
-|------|-----------|-----------------------------------|
-| 1st | 15% | $63,600 |
-| 2nd-3rd | 10% (5% each) | $21,200 each |
-| 4th-10th | 15% (2.1% each) | $8,900 each |
-| 11th-100th | 25% (0.28% each) | $1,180 each |
-| 101st-1000th | 20% (0.02% each) | $85 each |
-| Top 10% (1001+) | 15% | Variable (~$70 avg) |
+| Rank | % of Pool |
+|------|-----------|
+| 1st | 15% |
+| 2nd-3rd | 10% (5% each) |
+| 4th-10th | 15% (~2.1% each) |
+| 11th-100th | 25% (~0.28% each) |
+| 101st-1000th | 20% (~0.02% each) |
+| Top 10% (1001+) | 15% (split equally) |
 
 ---
 
@@ -251,29 +236,7 @@ NFTs are **earned**, not required for entry.
 
 ---
 
-### Financial Projections Summary
-
-**Conservative (5K users, $25 avg):**
-- Revenue: $125,000
-- Prize Pool: $111,250
-- Platform Revenue: $13,750
-- 1st Place: $13,350
-
-**Target (10K users, $54 avg):**
-- Revenue: $540,000
-- Prize Pool: $482,000
-- Platform Revenue: $58,000
-- 1st Place: $57,840
-
-**Stretch (25K users, $45 avg):**
-- Revenue: $1,125,000
-- Prize Pool: $1,001,250
-- Platform Revenue: $123,750
-- 1st Place: $120,150
-
----
-
-## Technical Architecture (Detailed)
+## Technical Architecture
 
 ### Blockchain Platform: Solana
 
@@ -355,8 +318,7 @@ pub struct Tournament {
 pub struct UserEntry {
     pub owner: Pubkey,
     pub tournament: Pubkey,
-    pub tier: EntryTier,             // Standard, Premium
-    pub entry_fee_paid: u64,
+    pub entry_fee_paid: u64,         // Fixed 0.10 SOL
     pub prediction_hash: [u8; 32],   // Commit phase
     pub predictions: Option<Predictions>, // Reveal phase
     pub total_points: u32,
@@ -701,27 +663,13 @@ The intersection of blockchain, prediction games, and prize pools creates a comp
 
 ---
 
-### KYC/AML Strategy
+### KYC Strategy
 
-#### Tiered KYC Approach
+**No KYC required.** Wallet-only participation keeps the experience simple and permissionless.
 
-| Tier | Entry Amount | Prize Potential | KYC Required |
-|------|-------------|-----------------|--------------|
-| Bronze | $10 | <$100 | None (wallet only) |
-| Silver | $25 | <$500 | Optional (email) |
-| Gold | $100 | <$5,000 | Basic (name, country) |
-| Diamond | $500 | Unlimited | Full (ID verification) |
-
-#### Prize Claim KYC
-
-| Prize Amount | Verification |
-|--------------|--------------|
-| <$100 | None |
-| $100 - $1,000 | Email verification |
-| $1,000 - $10,000 | ID + address verification |
-| >$10,000 | Full KYC + source of funds (for AML) |
-
-**Provider recommendation:** Persona, Jumio, or Sumsub for identity verification
+- Entry fee is low (0.10 SOL) reducing abuse incentive
+- Prize values fluctuate with SOL, not fixed fiat amounts
+- Users responsible for their own tax reporting
 
 ---
 
@@ -837,16 +785,16 @@ The intersection of blockchain, prediction games, and prize pools creates a comp
 - Complexity: Full bracket only (group stage + knockout), no bonus predictions
 - Predictions: All submitted upfront before tournament starts
 - Tiebreaker: Total tournament goals prediction
-- Revenue: Entry fee + platform rake
+- Revenue: Entry fee (0.10 SOL) + platform rake (10%)
+- Currency: Native SOL only (no stablecoins)
+- KYC: None required (wallet-only participation)
 - Scale: Design for 10K+
 
 ### Still Open
 
 | Question | Recommendation |
 |----------|----------------|
-| Blockchain platform | Solana (your experience + low fees) |
-| Entry fee amount | $20-50 standard tier (accessible but meaningful) |
-| Oracle provider | Chainlink or Sportmonks API with custom oracle |
+| Oracle provider | Sportmonks API with custom oracle |
 | Wallet abstraction | Privy or Dynamic for casual user onboarding |
 | NFT marketplace | Magic Eden (Solana native) |
 
@@ -868,7 +816,6 @@ The intersection of blockchain, prediction games, and prize pools creates a comp
 
 ### Phase 3: Polish
 - Casual user onboarding (wallet abstraction)
-- Fiat on-ramp integration
 - Mobile-responsive UI
 - Notification system
 
