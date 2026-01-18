@@ -1,0 +1,972 @@
+# Product Requirements Document: World Cup 2026 Decentralized Prediction Game
+
+> **Version:** 1.1.0
+> **Last Updated:** 2026-01-18
+
+## Executive Summary
+
+A blockchain-based prediction game for FIFA World Cup 2026 where users pay an entry fee to submit full tournament bracket predictions (group stage standings + knockout bracket) upfront before the tournament begins. Correct predictions earn achievement NFTs that represent shares of the prize pool. The platform takes a small rake for sustainability while distributing the majority to winners.
+
+---
+
+## Problem Statement
+
+Traditional sports prediction pools suffer from:
+- Centralized control and trust issues with prize distribution
+- Limited transparency in how winnings are calculated
+- No ownership or collectible value from participation
+- Geographic/payment restrictions
+
+A decentralized solution provides transparent, trustless prize distribution with collectible NFT rewards that have lasting value.
+
+---
+
+## Target Users
+
+| Segment | Characteristics | Needs |
+|---------|----------------|-------|
+| Crypto-native | Familiar with wallets, DeFi | Seamless Web3 experience, tradeable assets |
+| Casual sports fans | May be new to blockchain | Simple onboarding, familiar UX, clear value proposition |
+
+**Key insight:** Must support both audiences with optional wallet abstraction for newcomers.
+
+---
+
+## Product Goals & Success Metrics
+
+### Goals
+1. Create an engaging, fair prediction game for World Cup 2026
+2. Demonstrate a reusable model for future sports events
+3. Build a community of 10K+ participants
+4. Ensure transparent, trustless prize distribution
+
+### Success Metrics
+- Total participants
+- Prize pool size (TVL)
+- NFT trading volume (secondary market activity)
+- User retention for future events
+
+---
+
+## Game Mechanics (Detailed)
+
+### World Cup 2026 Format Overview
+- **48 teams** in **12 groups** (4 teams per group)
+- Top 2 from each group advance (24 teams) + 8 best 3rd-place teams = **32 teams** in knockout
+- Knockout: Round of 32 → Round of 16 → QF → SF → 3rd Place → Final
+- **104 total matches** (36 group + 68 knockout)
+
+---
+
+### Prediction Categories
+
+#### Category 1: Group Stage Predictions (Required)
+
+Users predict **final standings for all 12 groups** (positions 1-4 for each group).
+
+| Scoring Scenario | Points | Example |
+|-----------------|--------|---------|
+| Perfect group (all 4 positions correct) | 10 pts | Predicted: 1.GER 2.FRA 3.JPN 4.CRC → Actual: Same |
+| Top 2 correct in exact order | 6 pts | Got 1st and 2nd right, 3rd/4th wrong |
+| Top 2 correct, wrong order | 4 pts | Picked GER & FRA to advance, but swapped positions |
+| Only 1st place correct | 2 pts | Got the group winner only |
+| Only 2nd place correct | 2 pts | Got the runner-up only |
+| One team in correct position (3rd/4th) | 1 pt | Correctly placed an eliminated team |
+
+**Maximum Group Stage Points:** 12 groups × 10 pts = **120 pts**
+
+**Minimum to show skill:** ~40 pts (partial credit on most groups)
+
+---
+
+#### Category 2: Knockout Bracket Predictions (Required)
+
+Users predict **all knockout match winners** from Round of 32 to Final.
+
+| Round | Matches | Points/Correct | Max Points |
+|-------|---------|----------------|------------|
+| Round of 32 | 16 | 2 pts | 32 pts |
+| Round of 16 | 8 | 4 pts | 32 pts |
+| Quarter-finals | 4 | 8 pts | 32 pts |
+| Semi-finals | 2 | 16 pts | 32 pts |
+| 3rd Place Match | 1 | 10 pts | 10 pts |
+| Final | 1 | 25 pts | 25 pts |
+
+**Maximum Knockout Points:** **163 pts**
+
+**Bracket Logic:**
+- Predictions must be internally consistent (can't pick a team in QF if you didn't pick them to advance from R16)
+- "Upset bonus": If you correctly predict an upset (lower-seeded team wins), earn **1.5x points** for that match
+
+---
+
+### Total Points Summary
+
+| Category | Max Points | Typical Good Score |
+|----------|------------|-------------------|
+| Group Stage | 120 | 50-70 |
+| Knockout Bracket | 163 | 60-90 |
+| **TOTAL** | **283** | **110-160** |
+
+---
+
+### Prediction Submission
+
+**All predictions are submitted upfront before the tournament begins.**
+
+| What | Lock Deadline |
+|------|---------------|
+| All predictions (group stage + full knockout bracket + total goals tiebreaker) | 1 hour before first match |
+
+Users must submit their complete bracket prediction in a single submission, including:
+- Group stage standings (positions 1-4 for all 12 groups)
+- Full knockout bracket (R32 through Final)
+- Total tournament goals prediction (used for tiebreaker only)
+
+---
+
+### Tiebreaker System
+
+When players have equal points, ties are resolved by **Total Goals Prediction Accuracy**:
+
+- Each user predicts the exact total number of goals scored in the tournament
+- Absolute difference from actual total goals determines winner
+- Lower difference wins
+
+If still tied after total goals comparison, use submission timestamp (earlier submission wins).
+
+---
+
+### Anti-Cheat Mechanisms
+
+1. **Commit-Reveal Scheme**
+   - Phase 1: User submits hash of predictions + salt
+   - Phase 2: After lock, user reveals predictions
+   - If reveal doesn't match hash → disqualified
+   - Prevents copying other players' predictions
+
+2. **Sybil Resistance**
+   - Optional KYC tier for large prizes
+   - Rate limiting on wallet creation
+   - Minimum wallet age/activity requirement (optional)
+
+3. **Collusion Detection**
+   - Statistical analysis of prediction similarity
+   - Flag accounts with >95% identical predictions
+   - Manual review for suspicious clusters
+
+---
+
+## NFT Design (Rewards/Achievements)
+
+NFTs are **earned**, not required for entry.
+
+### NFT Types
+
+| NFT Type | Earned When | Utility |
+|----------|-------------|---------|
+| Prediction Badge | Correct group/match prediction | Collectible, proof of prediction |
+| Streak NFT | 3+ consecutive correct picks | Bonus prize pool multiplier |
+| Leaderboard NFT | Final top 10/100/1000 | Tiered share of prize pool |
+| Perfect Group NFT | All 12 groups correct order | Rare achievement, bonus payout |
+| Champion Caller NFT | Predicted tournament winner | Special edition, high value |
+
+### NFT Metadata
+- Tournament: "FIFA World Cup 2026"
+- Prediction made
+- Points earned
+- Timestamp
+- Unique artwork per achievement type
+
+### Secondary Market
+- NFTs are tradeable on supported marketplaces
+- Prize claim rights transfer with NFT ownership
+- Creates speculation/trading opportunities
+
+---
+
+## Tokenomics & Economics (Detailed)
+
+### Currency Strategy
+
+**Primary Currency: USDC (Stablecoin)**
+- Stable value protects prize pool from volatility
+- Familiar to both crypto and traditional users
+- Wide availability across chains
+- Easy to understand prize values
+
+**Alternative Accepted:** SOL (native token)
+- Auto-convert to USDC at entry via Jupiter aggregator
+- Provides flexibility for Solana-native users
+- Slight slippage risk (acceptable for UX benefit)
+
+---
+
+### Entry Fee Tiers
+
+| Tier | Entry Fee | Prize Pool % | Rake % | Benefits |
+|------|-----------|--------------|--------|----------|
+| **Bronze** | $10 USDC | 85% ($8.50) | 15% | Basic participation |
+| **Silver** | $25 USDC | 88% ($22) | 12% | Standard play |
+| **Gold** | $100 USDC | 90% ($90) | 10% | Priority support, exclusive Discord |
+| **Diamond** | $500 USDC | 92% ($460) | 8% | VIP status, merch airdrop |
+
+**Tier Distribution Modeling (10K users expected):**
+| Tier | Est. % of Users | Est. Users | Revenue |
+|------|-----------------|------------|---------|
+| Bronze | 40% | 4,000 | $40,000 |
+| Silver | 40% | 4,000 | $100,000 |
+| Gold | 15% | 1,500 | $150,000 |
+| Diamond | 5% | 500 | $250,000 |
+| **TOTAL** | 100% | 10,000 | **$540,000** |
+
+**Blended rake rate:** ~10.7% (~$58K)
+**Prize pool:** ~$482K
+
+---
+
+### Platform Rake Allocation
+
+| Category | % of Rake | Amount (10K model) | Purpose |
+|----------|-----------|-------------------|---------|
+| Development | 30% | $17,400 | Ongoing development, bug fixes |
+| Operations | 20% | $11,600 | Infrastructure, oracles, gas |
+| Security Audit | 15% | $8,700 | Pre-launch and ongoing audits |
+| Marketing | 15% | $8,700 | User acquisition, partnerships |
+| Treasury | 10% | $5,800 | Future events seed funding |
+| Insurance Fund | 10% | $5,800 | Edge case disputes, oracle failures |
+
+---
+
+### Prize Pool Distribution Model
+
+**Philosophy:** Reward top performers significantly, but ensure broad participation feels worthwhile.
+
+#### Main Prize Pool (80% of total)
+
+| Tier | Rank Range | % of Pool | Per-Person (10K model) |
+|------|------------|-----------|----------------------|
+| Champion | 1st | 12% | $57,840 |
+| Elite | 2nd-3rd | 8% (4% each) | $19,280 each |
+| Top 10 | 4th-10th | 14% (2% each) | $9,640 each |
+| Top 100 | 11th-100th | 18% (0.2% each) | $964 each |
+| Top 1000 | 101st-1000th | 18% (0.02% each) | $96 each |
+| Top 10% | 1001st-1000th | 10% | Variable (~$48 avg) |
+
+#### Participation Pool (15% of total)
+- Split among ALL players who score >100 points (showing genuine engagement)
+- Estimated: 70% of players qualify
+- ~$10 per qualifying participant (feels like "money back")
+
+#### Bonus Prize Pool (5% of total)
+- Perfect Group predictor(s): 2% split
+- Champion Caller NFT holders: 2% split
+- Longest correct streak: 1%
+
+---
+
+### Scale Scenarios
+
+| Scenario | Users | Avg Entry | Total Revenue | Prize Pool | 1st Place |
+|----------|-------|-----------|---------------|------------|-----------|
+| Minimum Viable | 1,000 | $30 | $30,000 | $26,700 | $3,200 |
+| Target | 10,000 | $54 | $540,000 | $482,000 | $57,840 |
+| Optimistic | 50,000 | $40 | $2,000,000 | $1,780,000 | $213,600 |
+| Viral | 100,000 | $35 | $3,500,000 | $3,115,000 | $373,800 |
+
+---
+
+### Referral Program
+
+**Mechanics:**
+- Each user gets unique referral code/link
+- Referrer earns 5% of referee's entry fee (from platform rake, not prize pool)
+- Referee gets 5% discount on entry fee
+
+**Example:**
+- User A refers User B
+- User B pays $25 (Silver tier) with 5% discount = $23.75
+- User A earns $1.25 (5% of $25)
+- Platform rake: $2.75 - $1.25 referral = $1.50 net
+
+**Caps:**
+- Max 50 referrals per user (prevent gaming)
+- Referral rewards capped at $500 total per user
+
+---
+
+### Early Bird Incentives
+
+| Registration Window | Bonus |
+|--------------------|-------|
+| 6+ months before tournament | +10% bonus points on all predictions |
+| 3-6 months before | +5% bonus points |
+| 1-3 months before | Standard |
+| Last 2 weeks | -5% point penalty (late fee) |
+
+**Alternative approach:** Early registrants get higher prize pool multiplier instead of point bonus (cleaner, less confusing)
+
+---
+
+### Treasury Management
+
+**Prize Pool Custody:**
+- Held in audited smart contract (not team wallet)
+- Multi-sig for emergency withdrawals only (3 of 5 signers)
+- Time-locked release: Cannot be touched until tournament ends + 30 days
+
+**Yield Strategy (Optional):**
+- Prize pool idle for ~6 months pre-tournament
+- Could earn yield in low-risk DeFi (Aave, Compound)
+- Est. 3-5% APY = additional $7-12K on $250K pool
+- Risk consideration: Smart contract risk vs. reward
+- **Recommendation:** Keep simple for V1, no yield farming
+
+---
+
+### Financial Projections Summary
+
+**Conservative (5K users, $25 avg):**
+- Revenue: $125,000
+- Prize Pool: $111,250
+- Platform Revenue: $13,750
+- 1st Place: $13,350
+
+**Target (10K users, $54 avg):**
+- Revenue: $540,000
+- Prize Pool: $482,000
+- Platform Revenue: $58,000
+- 1st Place: $57,840
+
+**Stretch (25K users, $45 avg):**
+- Revenue: $1,125,000
+- Prize Pool: $1,001,250
+- Platform Revenue: $123,750
+- 1st Place: $120,150
+
+---
+
+## Technical Architecture (Detailed)
+
+### Blockchain Platform: Solana
+
+**Why Solana:**
+| Factor | Solana | EVM L2 (Base/Arb) | Assessment |
+|--------|--------|-------------------|------------|
+| Transaction Cost | ~$0.00025 | ~$0.01-0.10 | Solana wins (10K users = significant savings) |
+| Finality | 400ms | 2-12 seconds | Solana wins (better UX) |
+| NFT Ecosystem | Metaplex (mature) | ERC-721/1155 | Both good |
+| Dev Experience | Rust/Anchor | Solidity | EVM easier, but you have Solana exp |
+| User Wallets | Phantom, Backpack | MetaMask, Coinbase | Both well-adopted |
+
+**Recommendation:** Solana, leveraging your existing experience and cost advantages at scale.
+
+---
+
+### System Architecture Overview
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                         FRONTEND                                 │
+│  ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌──────────┐        │
+│  │  Next.js │  │  Wallet  │  │  Privy   │  │  State   │        │
+│  │   App    │  │ Adapter  │  │ (casual) │  │ (Zustand)│        │
+│  └────┬─────┘  └────┬─────┘  └────┬─────┘  └────┬─────┘        │
+└───────┼─────────────┼─────────────┼─────────────┼───────────────┘
+        │             │             │             │
+        └─────────────┴──────┬──────┴─────────────┘
+                             │
+┌────────────────────────────┼────────────────────────────────────┐
+│                    SOLANA BLOCKCHAIN                            │
+│                            │                                    │
+│  ┌─────────────────────────┴─────────────────────────────┐     │
+│  │                    ANCHOR PROGRAMS                      │     │
+│  │  ┌────────────┐  ┌────────────┐  ┌────────────┐       │     │
+│  │  │ Prediction │  │  Scoring   │  │   Prize    │       │     │
+│  │  │   Vault    │  │   Engine   │  │ Distributor│       │     │
+│  │  └─────┬──────┘  └─────┬──────┘  └─────┬──────┘       │     │
+│  │        │               │               │               │     │
+│  │  ┌─────┴───────────────┴───────────────┴─────┐        │     │
+│  │  │           Achievement NFT Program          │        │     │
+│  │  │              (Metaplex Core)               │        │     │
+│  │  └───────────────────────────────────────────┘        │     │
+│  └───────────────────────────────────────────────────────┘     │
+│                            │                                    │
+└────────────────────────────┼────────────────────────────────────┘
+                             │
+┌────────────────────────────┼────────────────────────────────────┐
+│                    BACKEND SERVICES                             │
+│  ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌──────────┐        │
+│  │  Oracle  │  │ Indexer  │  │   API    │  │   Jobs   │        │
+│  │ (Sports) │  │ (Helius) │  │ (Hono)   │  │ (Cron)   │        │
+│  └──────────┘  └──────────┘  └──────────┘  └──────────┘        │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+---
+
+### Smart Contract Architecture (Anchor/Rust)
+
+#### 1. Prediction Vault Program
+
+**Purpose:** Handle user registration, entry fees, and prediction storage.
+
+**Accounts:**
+```rust
+#[account]
+pub struct Tournament {
+    pub authority: Pubkey,           // Admin
+    pub prize_pool: Pubkey,          // Token account
+    pub total_entries: u64,
+    pub total_prize_pool: u64,
+    pub status: TournamentStatus,    // Registration, Locked, Active, Completed
+    pub lock_time: i64,              // Single lock time for all predictions
+    pub bump: u8,
+}
+
+#[account]
+pub struct UserEntry {
+    pub owner: Pubkey,
+    pub tournament: Pubkey,
+    pub tier: EntryTier,             // Bronze, Silver, Gold, Diamond
+    pub entry_fee_paid: u64,
+    pub prediction_hash: [u8; 32],   // Commit phase
+    pub predictions: Option<Predictions>, // Reveal phase
+    pub total_points: u32,
+    pub rank: Option<u32>,
+    pub claimed: bool,
+    pub timestamp: i64,
+    pub bump: u8,
+}
+
+#[derive(AnchorSerialize, AnchorDeserialize)]
+pub struct Predictions {
+    pub groups: [[u8; 4]; 12],       // 12 groups, 4 team positions each
+    pub knockout: [u8; 32],          // 32 match winners (bitmap)
+    pub total_goals: u16,            // Tiebreaker prediction
+}
+```
+
+**Instructions:**
+- `initialize_tournament` - Admin creates tournament
+- `register_user` - User pays entry fee, commits prediction hash
+- `reveal_predictions` - User reveals predictions after lock
+- `update_tournament_status` - Admin transitions phases
+
+---
+
+#### 2. Scoring Engine Program
+
+**Purpose:** Calculate points based on match results from oracle.
+
+**Accounts:**
+```rust
+#[account]
+pub struct MatchResult {
+    pub tournament: Pubkey,
+    pub match_id: u16,
+    pub match_type: MatchType,       // Group, R32, R16, QF, SF, Third, Final
+    pub team_a: u8,
+    pub team_b: u8,
+    pub score_a: u8,
+    pub score_b: u8,
+    pub winner: u8,                  // 0 = draw (group only), else team ID
+    pub oracle_signature: [u8; 64],  // Proof from oracle
+    pub timestamp: i64,
+}
+
+#[account]
+pub struct Leaderboard {
+    pub tournament: Pubkey,
+    pub entries: Vec<LeaderboardEntry>, // Sorted by points desc
+    pub last_updated: i64,
+}
+
+#[derive(AnchorSerialize, AnchorDeserialize)]
+pub struct LeaderboardEntry {
+    pub user: Pubkey,
+    pub points: u32,
+    pub rank: u32,
+}
+```
+
+**Instructions:**
+- `submit_match_result` - Oracle submits verified result
+- `calculate_user_points` - Compute points for one user (can be batched)
+- `update_leaderboard` - Recompute rankings
+- `finalize_tournament` - Lock final rankings
+
+---
+
+#### 3. Prize Distributor Program
+
+**Purpose:** Handle prize pool distribution and claims.
+
+**Accounts:**
+```rust
+#[account]
+pub struct PrizeConfig {
+    pub tournament: Pubkey,
+    pub total_pool: u64,
+    pub tiers: Vec<PrizeTier>,
+    pub participation_threshold: u32, // Min points for participation pool
+    pub finalized: bool,
+}
+
+#[derive(AnchorSerialize, AnchorDeserialize)]
+pub struct PrizeTier {
+    pub rank_start: u32,
+    pub rank_end: u32,
+    pub percentage_bps: u16,         // Basis points (100 = 1%)
+}
+
+#[account]
+pub struct PrizeClaim {
+    pub user: Pubkey,
+    pub tournament: Pubkey,
+    pub rank: u32,
+    pub prize_amount: u64,
+    pub claimed: bool,
+    pub claim_timestamp: Option<i64>,
+}
+```
+
+**Instructions:**
+- `configure_prizes` - Admin sets prize distribution
+- `calculate_prize` - Compute prize for user based on rank
+- `claim_prize` - User claims their winnings
+- `emergency_withdraw` - Multi-sig admin recovery (time-locked)
+
+---
+
+#### 4. Achievement NFT Program (Metaplex Core)
+
+**NFT Metadata Schema:**
+```json
+{
+  "name": "WC2026 Champion Caller",
+  "symbol": "WC26",
+  "description": "Correctly predicted the World Cup 2026 champion",
+  "image": "https://arweave.net/...",
+  "attributes": [
+    { "trait_type": "Tournament", "value": "FIFA World Cup 2026" },
+    { "trait_type": "Achievement", "value": "Champion Caller" },
+    { "trait_type": "Prediction", "value": "Argentina" },
+    { "trait_type": "Points Earned", "value": 25 },
+    { "trait_type": "Rarity", "value": "Legendary" },
+    { "trait_type": "Timestamp", "value": 1718928000 }
+  ],
+  "properties": {
+    "prize_claim_eligible": true,
+    "prize_percentage_bps": 200
+  }
+}
+```
+
+**Achievement Types:**
+| Achievement | Trigger | Rarity |
+|-------------|---------|--------|
+| Participant | Registered for tournament | Common |
+| Group Guru | 6+ groups correct | Uncommon |
+| Perfect Group | All 12 groups exact | Legendary |
+| Bracket Master | Final 4 correct | Rare |
+| Champion Caller | Winner correct | Epic |
+| Oracle | Top 10 finish | Legendary |
+| Streak King | 10+ consecutive correct | Epic |
+
+---
+
+### Oracle Integration
+
+**Primary: Chainlink (if available on Solana) or Pyth**
+
+**Backup: Custom Oracle with Multi-Source Verification**
+
+```
+┌─────────────┐     ┌─────────────┐     ┌─────────────┐
+│  API-Sports │     │ SportMonks  │     │   ESPN API  │
+└──────┬──────┘     └──────┬──────┘     └──────┬──────┘
+       │                   │                   │
+       └───────────────────┴───────────────────┘
+                           │
+                    ┌──────┴──────┐
+                    │   Aggregator │
+                    │   Service    │
+                    └──────┬──────┘
+                           │
+                    ┌──────┴──────┐
+                    │  3-of-5     │
+                    │  Multi-sig  │
+                    └──────┬──────┘
+                           │
+                    ┌──────┴──────┐
+                    │  On-chain   │
+                    │  Oracle     │
+                    └─────────────┘
+```
+
+**Validation Rules:**
+- Match result requires 2+ sources agreeing
+- 30-minute delay after match end (allow corrections)
+- Admin override with multi-sig (edge cases only)
+- All submissions logged for transparency
+
+---
+
+### Frontend Tech Stack
+
+| Layer | Technology | Reason |
+|-------|------------|--------|
+| Framework | Next.js 14 (App Router) | SSR, performance, SEO |
+| Styling | Tailwind CSS + shadcn/ui | Fast development, consistency |
+| State | Zustand + React Query | Simple, performant |
+| Wallet | @solana/wallet-adapter | Standard Solana integration |
+| Abstraction | Privy | Email/social login for casual users |
+| Fiat On-ramp | MoonPay or Stripe (via Privy) | Credit card payments |
+
+---
+
+### Backend Services
+
+| Service | Technology | Purpose |
+|---------|------------|---------|
+| API | Hono (Cloudflare Workers) | Low-latency, global edge |
+| Indexer | Helius | Real-time Solana data |
+| Database | Supabase (Postgres) | User profiles, cache |
+| Jobs | Cloudflare Cron | Leaderboard updates, notifications |
+| Storage | Arweave (via Irys) | NFT metadata permanence |
+
+---
+
+### Security Considerations
+
+| Risk | Mitigation |
+|------|-----------|
+| Smart contract bugs | Audit by reputable firm (Sec3, OtterSec) |
+| Oracle manipulation | Multi-source verification, time delays |
+| Front-running predictions | Commit-reveal scheme with user-generated salt |
+| Sybil attacks | Optional KYC, wallet age requirements |
+| Admin key compromise | Multi-sig (3/5), time-locked operations |
+| Prize pool theft | Audited contracts, no admin withdrawal without multi-sig |
+
+---
+
+### Infrastructure Costs (Monthly Estimate)
+
+| Item | Cost | Notes |
+|------|------|-------|
+| Solana RPC (Helius) | $50-200 | Depends on traffic |
+| Cloudflare Workers | $5-50 | Edge API |
+| Supabase | $25-100 | Database |
+| Arweave storage | $50-100 | One-time for NFT metadata |
+| Domain + CDN | $20 | |
+| **Total** | ~$150-500/mo | Pre-launch |
+
+**Launch month spike:** Add $500-2000 for traffic surge
+
+---
+
+## User Experience Flow
+
+### Onboarding (Crypto-native)
+1. Connect wallet (Phantom, Backpack, etc.)
+2. View tournament structure
+3. Make predictions
+4. Pay entry fee
+5. Receive confirmation NFT
+
+### Onboarding (Casual fans)
+1. Sign up with email (wallet abstraction via Privy/Magic)
+2. Fund account with credit card (on-ramp)
+3. Make predictions (guided UI)
+4. Pay entry fee (abstracted)
+5. Receive confirmation
+
+### During Tournament
+- Live leaderboard
+- Push notifications for match results
+- Real-time point updates
+- Achievement NFT claims
+
+### Post-Tournament
+- Final rankings revealed
+- Prize claims
+- NFT showcase/sharing
+- Opt-in for future events
+
+---
+
+## Legal & Compliance Considerations (Expanded)
+
+### Regulatory Landscape Overview
+
+The intersection of blockchain, prediction games, and prize pools creates a complex regulatory environment that varies significantly by jurisdiction.
+
+---
+
+### Classification Risk Analysis
+
+| Classification | Risk Level | Implications |
+|---------------|------------|--------------|
+| **Gambling** | HIGH | Requires licenses, heavy restrictions, potential criminal liability |
+| **Skill-based contest** | MEDIUM | More permissible, but still regulated in some jurisdictions |
+| **Securities offering** | HIGH | NFTs with revenue rights could trigger securities laws |
+| **Money transmission** | MEDIUM | Handling user funds may require licenses |
+
+---
+
+### Jurisdiction-by-Jurisdiction Assessment
+
+#### HIGH RISK - Recommend Geo-blocking
+
+| Jurisdiction | Reason | Action |
+|--------------|--------|--------|
+| **United States** | Complex state-by-state gambling laws, SEC scrutiny of crypto | Block entirely or consult specialized US gaming counsel |
+| **China** | Crypto banned, gambling banned | Block |
+| **Singapore** | Strict gambling regulations, crypto advertising restrictions | Block |
+| **UAE** | Gambling prohibited | Block |
+| **Australia** | Online gambling heavily regulated | Block or obtain license |
+
+#### MEDIUM RISK - Proceed with Caution
+
+| Jurisdiction | Reason | Action |
+|--------------|--------|--------|
+| **UK** | Gambling Commission oversight, but skill games may be exempt | Legal review required |
+| **Germany** | New gambling regulations, crypto-friendly | Possible with compliance |
+| **Canada** | Province-by-province rules | Legal review required |
+| **Japan** | Crypto legal, gambling restricted | Legal review required |
+
+#### LOWER RISK - Generally Permissible
+
+| Jurisdiction | Notes |
+|--------------|-------|
+| **Latin America** | Generally crypto-friendly, less gambling regulation |
+| **Southeast Asia** (except SG) | Varies, but generally more permissive |
+| **Eastern Europe** | Crypto-friendly, less enforcement |
+| **Malta** | Crypto-friendly, gaming licenses available |
+| **Portugal** | Crypto gains tax-free, permissive environment |
+
+---
+
+### Skill vs. Chance Argument
+
+**Key legal distinction:** Games of skill are often exempt from gambling regulations.
+
+**Arguments for SKILL classification:**
+
+1. **Knowledge required**
+   - Understanding team strengths, player form, historical performance
+   - Analyzing group compositions and knockout bracket paths
+   - Tournament format knowledge (48-team expansion is new)
+
+2. **Consistent performance correlation**
+   - Expert predictions outperform random guessing significantly
+   - Leaderboards show skill differentiation (not random distribution)
+   - Historical data from similar contests shows expert advantage
+
+3. **No house edge on outcomes**
+   - Platform doesn't influence match results
+   - All users have equal information access
+   - No "house" that wins when users lose
+
+**Arguments AGAINST (challenges to defend):**
+- Ultimately, match outcomes are uncertain
+- Even experts can't guarantee results
+- Entry fee + prize = "consideration + chance + prize" (gambling definition)
+
+**Recommendation:** Frame as "fantasy sports-style skill competition" where possible.
+
+---
+
+### KYC/AML Strategy
+
+#### Tiered KYC Approach
+
+| Tier | Entry Amount | Prize Potential | KYC Required |
+|------|-------------|-----------------|--------------|
+| Bronze | $10 | <$100 | None (wallet only) |
+| Silver | $25 | <$500 | Optional (email) |
+| Gold | $100 | <$5,000 | Basic (name, country) |
+| Diamond | $500 | Unlimited | Full (ID verification) |
+
+#### Prize Claim KYC
+
+| Prize Amount | Verification |
+|--------------|--------------|
+| <$100 | None |
+| $100 - $1,000 | Email verification |
+| $1,000 - $10,000 | ID + address verification |
+| >$10,000 | Full KYC + source of funds (for AML) |
+
+**Provider recommendation:** Persona, Jumio, or Sumsub for identity verification
+
+---
+
+### Terms of Service Requirements
+
+**Essential clauses:**
+
+1. **Eligibility**
+   - Minimum age (18 or 21 depending on jurisdiction)
+   - Restricted countries list
+   - Self-exclusion option
+
+2. **Risk disclosures**
+   - "Entry fees are non-refundable"
+   - "Cryptocurrency values may fluctuate"
+   - "Past performance doesn't guarantee future results"
+
+3. **Prize distribution**
+   - Clear rules on how prizes are calculated
+   - Tax responsibility lies with winner
+   - Dispute resolution process
+
+4. **Platform rights**
+   - Right to disqualify for rule violations
+   - Right to modify rules (with notice)
+   - Right to cancel if participation below minimum
+
+5. **Liability limitations**
+   - Not responsible for oracle failures
+   - Not responsible for blockchain congestion
+   - Maximum liability capped at entry fee
+
+---
+
+### Tax Considerations
+
+**For users:**
+- Prize winnings are generally taxable income
+- Crypto-to-crypto conversions may trigger capital gains
+- Users responsible for their own tax reporting
+
+**For platform:**
+- May need to issue tax forms (1099-MISC in US if not geo-blocked)
+- Rake revenue is taxable business income
+- Consider entity structure (offshore vs. domestic)
+
+**Recommendation:** Provide clear tax guidance to users; consider tax form generation for large winners.
+
+---
+
+### Intellectual Property Risks
+
+| Risk | Mitigation |
+|------|-----------|
+| FIFA trademarks | Don't use "FIFA" or "World Cup" in branding; use "2026 Football Championship" |
+| Team logos | Use generic representations; no official logos without license |
+| Player likenesses | Use names only; no photos without rights |
+| Data licensing | Ensure sports data provider has rights to distribute |
+
+**Recommendation:** Use generic tournament branding, avoid official FIFA imagery.
+
+---
+
+### Data Privacy (GDPR/CCPA)
+
+**Requirements:**
+- Privacy policy with data collection disclosures
+- Cookie consent (if applicable)
+- Right to deletion (where technically feasible)
+- Data minimization principles
+
+**Blockchain considerations:**
+- On-chain data is immutable (can't delete)
+- Store minimal PII on-chain
+- Keep personal data off-chain in Supabase (deletable)
+
+---
+
+### Recommended Legal Setup
+
+| Item | Action | Priority |
+|------|--------|----------|
+| **Legal entity** | Establish in crypto-friendly jurisdiction (BVI, Cayman, Estonia, or Portugal) | HIGH |
+| **Gaming counsel** | Engage firm specializing in crypto + gaming (Anderson Kill, Perkins Coie, etc.) | HIGH |
+| **Terms of Service** | Draft comprehensive ToS with required disclosures | HIGH |
+| **Privacy Policy** | GDPR-compliant privacy policy | HIGH |
+| **Geo-blocking** | Implement VPN detection + country blocking | HIGH |
+| **KYC provider** | Integrate for high-value participants | MEDIUM |
+| **Insurance** | Explore crypto-native insurance (Nexus Mutual) | LOW |
+
+---
+
+### Compliance Checklist (Pre-Launch)
+
+- [ ] Legal entity established
+- [ ] Gaming/crypto legal opinion obtained
+- [ ] Terms of Service finalized
+- [ ] Privacy Policy finalized
+- [ ] Geo-blocking implemented
+- [ ] Restricted countries list defined
+- [ ] KYC flow integrated for high tiers
+- [ ] Age verification mechanism
+- [ ] Tax guidance documentation
+- [ ] Dispute resolution process defined
+- [ ] Smart contract audit (includes legal review of logic)
+
+---
+
+## Open Questions & Recommendations
+
+### Resolved
+- NFT role: Rewards/achievements (not entry)
+- Complexity: Full bracket only (group stage + knockout), no bonus predictions
+- Predictions: All submitted upfront before tournament starts
+- Tiebreaker: Total tournament goals prediction
+- Revenue: Entry fee + platform rake
+- Scale: Design for 10K+
+
+### Still Open
+
+| Question | Recommendation |
+|----------|----------------|
+| Blockchain platform | Solana (your experience + low fees) |
+| Entry fee amount | $20-50 standard tier (accessible but meaningful) |
+| Oracle provider | Chainlink or Sportmonks API with custom oracle |
+| Wallet abstraction | Privy or Dynamic for casual user onboarding |
+| NFT marketplace | Magic Eden (Solana native) |
+
+---
+
+## Development Phases
+
+### Phase 1: Foundation
+- Smart contract architecture design
+- Core prediction vault contract
+- Basic frontend with wallet connection
+- Testnet deployment
+
+### Phase 2: Game Logic
+- Scoring oracle integration
+- Point calculation system
+- Leaderboard functionality
+- Achievement NFT minting
+
+### Phase 3: Polish
+- Casual user onboarding (wallet abstraction)
+- Fiat on-ramp integration
+- Mobile-responsive UI
+- Notification system
+
+### Phase 4: Launch Prep
+- Security audit
+- Load testing (10K+ users)
+- Legal review
+- Community building / marketing
+
+### Phase 5: Post-Launch
+- Monitor and support tournament
+- Prize distribution
+- Post-mortem analysis
+- Template for future events
+
+---
+
+## Next Steps
+
+1. Finalize blockchain platform decision
+2. Define exact point values and test for balance
+3. Design NFT artwork concepts
+4. Begin smart contract development
+5. Legal consultation for target markets
