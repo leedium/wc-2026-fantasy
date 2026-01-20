@@ -23,7 +23,7 @@ World Cup 2026 decentralized prediction game on Solana. Users pay entry fees to 
 Three main programs:
 
 1. **Prediction Vault** - User registration, entry fees, encrypted prediction storage (decrypted after lock)
-2. **Scoring Engine** - Point calculation from admin-submitted match results
+2. **Scoring Engine** - Point calculation from admin-submitted results (group standings + knockout results)
 3. **Prize Distributor** - Prize pool management and claims
 
 ### Key Data Structures
@@ -31,7 +31,8 @@ Three main programs:
 - `Tournament` - Tournament state, single lock time, prize pool
 - `UserEntry` - User predictions (encrypted until lock, then decrypted for scoring)
 - `Predictions` - Groups standings + knockout bracket + total goals (tiebreaker)
-- `MatchResult` - Oracle-verified match outcomes
+- `GroupStandings` - Final group stage standings (12 groups)
+- `KnockoutResult` - Individual knockout match outcomes (31 matches)
 - `PrizeClaim` - Individual prize allocations
 
 Note: Leaderboard computed off-chain in Supabase, not stored on-chain.
@@ -40,9 +41,10 @@ Note: Leaderboard computed off-chain in Supabase, not stored on-chain.
 
 1. **Submit phase**: User submits encrypted predictions before lock (can update anytime)
 2. **Lock & Decrypt**: After lock time, API decrypts predictions (zero on-chain cost)
-3. **Scoring**: Points calculated as match results come in via oracle
-4. **Tiebreaker**: Total goals prediction used to break ties
-5. **Distribution**: Prizes calculated based on final rankings
+3. **Group scoring**: Admin submits final group standings (12 submissions) after group stage ends → points calculated
+4. **Knockout scoring**: Admin submits knockout results as matches complete (31 submissions) → points calculated per match
+5. **Tiebreaker**: Total goals prediction used to break ties
+6. **Distribution**: Prizes calculated based on final rankings
 
 ## Game Mechanics
 
@@ -58,4 +60,8 @@ Note: Leaderboard computed off-chain in Supabase, not stored on-chain.
 
 ## Oracle Design
 
-Admin-controlled oracle for v1. Admin submits match results on-chain after verification. Can upgrade to multi-sig oracle in future versions.
+Admin-controlled oracle for v1:
+- **Group stage**: Admin submits final standings (positions 1-4) for each group after all group matches complete
+- **Knockout stage**: Admin submits match results as each knockout game finishes
+
+Can upgrade to multi-sig oracle in future versions.

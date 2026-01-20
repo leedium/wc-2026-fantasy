@@ -246,28 +246,39 @@ seeds = [b"user_entry", tournament.key().as_ref(), user.key().as_ref()]
 #### Accounts
 
 ```rust
-/// Single match result submitted by admin
+/// Final standings for a single group (submitted once after group stage ends)
+/// Admin submits 12 of these total (one per group)
 #[account]
-pub struct MatchResult {
-    /// Tournament this match belongs to
+pub struct GroupStandings {
+    /// Tournament this belongs to
     pub tournament: Pubkey,
-    /// Unique match identifier (0-103 for 104 matches)
-    pub match_id: u16,
-    /// Type of match
+    /// Group identifier (0-11 for groups A-L)
+    pub group_id: u8,
+    /// Team IDs in final standing order: [1st, 2nd, 3rd, 4th]
+    pub standings: [u8; 4],
+    /// When this was submitted
+    pub timestamp: i64,
+    /// PDA bump
+    pub bump: u8,
+}
+
+/// Single knockout match result (submitted as each match completes)
+/// Admin submits 31 of these total
+#[account]
+pub struct KnockoutResult {
+    /// Tournament this belongs to
+    pub tournament: Pubkey,
+    /// Match identifier (0-30 for 31 knockout matches)
+    pub match_id: u8,
+    /// Type of knockout match
     pub match_type: MatchType,
-    /// Group identifier (0-11 for group stage, ignored for knockout)
-    pub group_id: Option<u8>,
     /// First team ID
     pub team_a: u8,
     /// Second team ID
     pub team_b: u8,
-    /// Goals scored by team A
-    pub score_a: u8,
-    /// Goals scored by team B
-    pub score_b: u8,
-    /// Winner (0 = draw for group stage, team_a or team_b ID otherwise)
+    /// Winning team ID
     pub winner: u8,
-    /// When this result was submitted
+    /// When this was submitted
     pub timestamp: i64,
     /// PDA bump
     pub bump: u8,
@@ -275,29 +286,32 @@ pub struct MatchResult {
 
 #[derive(AnchorSerialize, AnchorDeserialize, Clone, PartialEq, Eq)]
 pub enum MatchType {
-    Group,
-    RoundOf32,
-    RoundOf16,
-    QuarterFinal,
-    SemiFinal,
-    ThirdPlace,
-    Final,
+    RoundOf32,    // 16 matches (IDs 0-15)
+    RoundOf16,    // 8 matches (IDs 16-23)
+    QuarterFinal, // 4 matches (IDs 24-27)
+    SemiFinal,    // 2 matches (IDs 28-29)
+    ThirdPlace,   // 1 match (ID 30)
+    Final,        // 1 match (ID 30, shared with third place conceptually but separate)
 }
 ```
 
 #### Instructions
 
 ```rust
-/// Admin submits a verified match result
-pub fn submit_match_result(
-    ctx: Context<SubmitMatchResult>,
-    match_id: u16,
+/// Admin submits final standings for one group (called 12 times total)
+pub fn submit_group_standings(
+    ctx: Context<SubmitGroupStandings>,
+    group_id: u8,
+    standings: [u8; 4],  // [1st, 2nd, 3rd, 4th] team IDs
+) -> Result<()>;
+
+/// Admin submits a knockout match result (called 31 times total)
+pub fn submit_knockout_result(
+    ctx: Context<SubmitKnockoutResult>,
+    match_id: u8,
     match_type: MatchType,
-    group_id: Option<u8>,
     team_a: u8,
     team_b: u8,
-    score_a: u8,
-    score_b: u8,
     winner: u8,
 ) -> Result<()>;
 
@@ -312,6 +326,16 @@ pub fn calculate_user_points(
 pub fn finalize_tournament(
     ctx: Context<FinalizeTournament>,
 ) -> Result<()>;
+```
+
+#### PDA Seeds
+
+```rust
+// GroupStandings PDA
+seeds = [b"group_standings", tournament.key().as_ref(), &[group_id]]
+
+// KnockoutResult PDA
+seeds = [b"knockout_result", tournament.key().as_ref(), &[match_id]]
 ```
 
 #### Scoring Logic
@@ -463,17 +487,29 @@ CREATE INDEX idx_users_wallet ON users(wallet_address);
 CREATE INDEX idx_users_points ON users(total_points DESC);
 CREATE INDEX idx_users_rank ON users(rank);
 
--- Match results (mirrors on-chain MatchResult)
-CREATE TABLE match_results (
+-- Group standings (mirrors on-chain GroupStandings)
+-- 12 rows total, one per group
+CREATE TABLE group_standings (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     tournament_id TEXT NOT NULL,
-    match_id SMALLINT NOT NULL,
-    match_type TEXT NOT NULL,
-    group_id SMALLINT,
+    group_id SMALLINT NOT NULL,          -- 0-11 for groups A-L
+    first_place SMALLINT NOT NULL,       -- Team ID
+    second_place SMALLINT NOT NULL,      -- Team ID
+    third_place SMALLINT NOT NULL,       -- Team ID
+    fourth_place SMALLINT NOT NULL,      -- Team ID
+    submitted_at TIMESTAMPTZ DEFAULT NOW(),
+    UNIQUE(tournament_id, group_id)
+);
+
+-- Knockout results (mirrors on-chain KnockoutResult)
+-- 31 rows total for knockout stage
+CREATE TABLE knockout_results (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    tournament_id TEXT NOT NULL,
+    match_id SMALLINT NOT NULL,          -- 0-30
+    match_type TEXT NOT NULL,            -- R32, R16, QF, SF, Third, Final
     team_a SMALLINT NOT NULL,
     team_b SMALLINT NOT NULL,
-    score_a SMALLINT NOT NULL,
-    score_b SMALLINT NOT NULL,
     winner SMALLINT NOT NULL,
     submitted_at TIMESTAMPTZ DEFAULT NOW(),
     UNIQUE(tournament_id, match_id)
@@ -600,11 +636,20 @@ Response: {
     totalGoals: 172
 } | { error: "Predictions locked until tournament starts" }
 
-// Get match results
-GET /matches
+// Get group standings (available after group stage)
+GET /groups
+Response: {
+    groups: [
+        { groupId: 0, name: "A", standings: [teamId1, teamId2, teamId3, teamId4] },
+        ...
+    ]
+}
+
+// Get knockout results (updated as matches complete)
+GET /knockout
 Response: {
     matches: [
-        { matchId: 0, type: "group", teamA: 1, teamB: 2, scoreA: 2, scoreB: 1, winner: 1 },
+        { matchId: 0, type: "R32", teamA: 1, teamB: 2, winner: 1 },
         ...
     ]
 }
@@ -625,23 +670,30 @@ Response: { success: true, txSignature: "..." }
 #### Admin Endpoints (Admin Wallet Required)
 
 ```typescript
-// Submit match result
-POST /admin/match
+// Submit group standings (called once per group after group stage ends)
+POST /admin/group-standings
 Headers: { Authorization: "Bearer <admin-signed-message>" }
 Body: {
-    matchId: number,
-    matchType: string,
-    groupId?: number,
+    groupId: number,           // 0-11
+    standings: [number, number, number, number]  // [1st, 2nd, 3rd, 4th] team IDs
+}
+Response: { success: true, txSignature: "..." }
+
+// Submit knockout result (called as each knockout match completes)
+POST /admin/knockout-result
+Headers: { Authorization: "Bearer <admin-signed-message>" }
+Body: {
+    matchId: number,           // 0-30
+    matchType: "R32" | "R16" | "QF" | "SF" | "Third" | "Final",
     teamA: number,
     teamB: number,
-    scoreA: number,
-    scoreB: number,
     winner: number
 }
 Response: { success: true, txSignature: "..." }
 
 // Trigger point calculation for all users
 POST /admin/calculate-points
+Body: { stage: "groups" | "knockout" | "all" }
 Response: { success: true, usersProcessed: 5000 }
 
 // Update tournament status
@@ -775,29 +827,49 @@ User                    Frontend                 Solana                  Supabas
   │◀── Predictions Saved ──│                        │                        │
 ```
 
-### 3. Match Result & Scoring Flow
+### 3a. Group Standings & Scoring Flow (after group stage ends)
 
 ```
 Admin                   Backend                  Solana                  Supabase
   │                        │                        │                        │
-  │─── Submit Result ─────▶│                        │                        │
-  │                        │─── submit_match_result()                        │
-  │                        │                       ▶│                        │
+  │─── Submit Group A ────▶│                        │                        │
+  │    standings           │─── submit_group_standings()                     │
+  │                        │    (group_id=0)       ▶│                        │
   │                        │◀── TX Confirmed ───────│                        │
+  │                        │─── INSERT group_standings ─────────────────────▶│
   │                        │                        │                        │
-  │                        │─── INSERT match_results┼───────────────────────▶│
+  │   ... repeat for groups B-L (12 total) ...      │                        │
   │                        │                        │                        │
+  │─── Calculate Points ──▶│                        │                        │
   │                        │─── For each user: ─────┼───────────────────────▶│
   │                        │    1. Decrypt predictions                       │
-  │                        │    2. Calculate points                          │
+  │                        │    2. Calculate GROUP points                    │
   │                        │    3. Update total_points                       │
   │                        │                        │                        │
-  │                        │─── calculate_user_points()                      │
-  │                        │    (batch, on-chain)  ▶│                        │
+  │                        │─── Recalculate rankings┼───────────────────────▶│
+  │◀── Group Scoring Done ─│                        │                        │
+```
+
+### 3b. Knockout Result & Scoring Flow (as each match completes)
+
+```
+Admin                   Backend                  Solana                  Supabase
+  │                        │                        │                        │
+  │─── Submit R32 Match ──▶│                        │                        │
+  │                        │─── submit_knockout_result()                     │
+  │                        │    (match_id, winner) ▶│                        │
+  │                        │◀── TX Confirmed ───────│                        │
+  │                        │                        │                        │
+  │                        │─── INSERT knockout_results ────────────────────▶│
+  │                        │                        │                        │
+  │                        │─── For each user: ─────┼───────────────────────▶│
+  │                        │    1. Check if predicted winner                 │
+  │                        │    2. Add points for this match                 │
+  │                        │    3. Update total_points                       │
   │                        │                        │                        │
   │                        │─── Recalculate rankings┼───────────────────────▶│
   │                        │                        │                        │
-  │◀── Results Published ──│                        │                        │
+  │◀── Match Scored ───────│                        │                        │
 ```
 
 ### 4. Prize Claim Flow
@@ -977,24 +1049,34 @@ test('user can register and submit predictions', async ({ page }) => {
 
 ### Runbook
 
-#### Submitting Match Results
+#### Submitting Group Standings (after group stage ends)
+
+```bash
+# 1. Verify final group standings from multiple sources
+# 2. Submit standings for each group (12 total)
+wc2026-admin submit-group \
+    --group-id 0 \
+    --standings 1,2,3,4    # Team IDs: 1st, 2nd, 3rd, 4th
+
+# 3. Repeat for all 12 groups (A=0 through L=11)
+
+# 4. Trigger group stage point calculation
+wc2026-admin calculate-points --stage groups
+```
+
+#### Submitting Knockout Results (as each match completes)
 
 ```bash
 # 1. Verify match result from multiple sources
-# 2. Use admin CLI to submit
-wc2026-admin submit-match \
-    --match-id 42 \
-    --type group \
-    --group-id 3 \
+# 2. Submit knockout result
+wc2026-admin submit-knockout \
+    --match-id 0 \
+    --type R32 \
     --team-a 15 \
     --team-b 22 \
-    --score 2-1
+    --winner 15
 
-# 3. Verify on-chain
-wc2026-admin verify-match --match-id 42
-
-# 4. Trigger point recalculation
-wc2026-admin calculate-points --all
+# 3. Points are calculated automatically per match
 ```
 
 #### Emergency Procedures
@@ -1045,27 +1127,199 @@ wc2026-admin emergency-withdraw --execute
 
 ## Appendix
 
-### Team IDs
+### Team Enum (Rust)
 
-| ID | Team | Group |
-|----|------|-------|
-| 1 | Argentina | A |
-| 2 | Brazil | B |
-| ... | ... | ... |
+```rust
+/// All 48 teams for FIFA World Cup 2026
+/// Teams 1-42 are confirmed qualified, 43-48 TBD via playoffs (March 2026)
+#[derive(AnchorSerialize, AnchorDeserialize, Clone, Copy, PartialEq, Eq, Debug)]
+#[repr(u8)]
+pub enum Team {
+    // === HOSTS (3) ===
+    USA = 1,
+    MEX = 2,
+    CAN = 3,
 
-*Full list to be populated when groups are announced.*
+    // === CONMEBOL - South America (6) ===
+    ARG = 4,
+    BRA = 5,
+    COL = 6,
+    ECU = 7,
+    PAR = 8,
+    URU = 9,
 
-### Match IDs
+    // === UEFA - Europe (12 confirmed, 4 TBD) ===
+    ENG = 10,
+    FRA = 11,
+    GER = 12,
+    ESP = 13,
+    POR = 14,
+    NED = 15,
+    BEL = 16,
+    SUI = 17,
+    CRO = 18,
+    AUT = 19,
+    SCO = 20,
+    NOR = 21,
 
-| ID Range | Type |
-|----------|------|
-| 0-35 | Group Stage (36 matches) |
-| 36-51 | Round of 32 (16 matches) |
-| 52-59 | Round of 16 (8 matches) |
-| 60-63 | Quarter-finals (4 matches) |
-| 64-65 | Semi-finals (2 matches) |
-| 66 | Third Place (1 match) |
-| 67 | Final (1 match) |
+    // === CONCACAF - North/Central America & Caribbean (3 non-hosts) ===
+    PAN = 22,
+    CUW = 23,  // Curaçao
+    HAI = 24,
+
+    // === AFC - Asia (8) ===
+    JPN = 25,
+    KOR = 26,
+    AUS = 27,
+    IRN = 28,
+    QAT = 29,
+    KSA = 30,  // Saudi Arabia
+    UZB = 31,
+    JOR = 32,
+
+    // === CAF - Africa (9) ===
+    MAR = 33,
+    SEN = 34,
+    CIV = 35,  // Ivory Coast
+    EGY = 36,
+    GHA = 37,
+    TUN = 38,
+    ALG = 39,
+    RSA = 40,  // South Africa
+    CPV = 41,  // Cape Verde
+
+    // === OFC - Oceania (1) ===
+    NZL = 42,
+
+    // === TBD - Playoffs March 2026 (6 remaining) ===
+    TBD_UEFA_1 = 43,   // UEFA Playoff Path A winner
+    TBD_UEFA_2 = 44,   // UEFA Playoff Path B winner
+    TBD_UEFA_3 = 45,   // UEFA Playoff Path C winner
+    TBD_UEFA_4 = 46,   // UEFA Playoff Path D winner
+    TBD_PLAYOFF_1 = 47, // Inter-confederation playoff winner 1
+    TBD_PLAYOFF_2 = 48, // Inter-confederation playoff winner 2
+}
+
+impl Team {
+    pub fn code(&self) -> &'static str {
+        match self {
+            Team::USA => "USA", Team::MEX => "MEX", Team::CAN => "CAN",
+            Team::ARG => "ARG", Team::BRA => "BRA", Team::COL => "COL",
+            Team::ECU => "ECU", Team::PAR => "PAR", Team::URU => "URU",
+            Team::ENG => "ENG", Team::FRA => "FRA", Team::GER => "GER",
+            Team::ESP => "ESP", Team::POR => "POR", Team::NED => "NED",
+            Team::BEL => "BEL", Team::SUI => "SUI", Team::CRO => "CRO",
+            Team::AUT => "AUT", Team::SCO => "SCO", Team::NOR => "NOR",
+            Team::PAN => "PAN", Team::CUW => "CUW", Team::HAI => "HAI",
+            Team::JPN => "JPN", Team::KOR => "KOR", Team::AUS => "AUS",
+            Team::IRN => "IRN", Team::QAT => "QAT", Team::KSA => "KSA",
+            Team::UZB => "UZB", Team::JOR => "JOR",
+            Team::MAR => "MAR", Team::SEN => "SEN", Team::CIV => "CIV",
+            Team::EGY => "EGY", Team::GHA => "GHA", Team::TUN => "TUN",
+            Team::ALG => "ALG", Team::RSA => "RSA", Team::CPV => "CPV",
+            Team::NZL => "NZL",
+            _ => "TBD",
+        }
+    }
+
+    pub fn name(&self) -> &'static str {
+        match self {
+            Team::USA => "United States", Team::MEX => "Mexico", Team::CAN => "Canada",
+            Team::ARG => "Argentina", Team::BRA => "Brazil", Team::COL => "Colombia",
+            Team::ECU => "Ecuador", Team::PAR => "Paraguay", Team::URU => "Uruguay",
+            Team::ENG => "England", Team::FRA => "France", Team::GER => "Germany",
+            Team::ESP => "Spain", Team::POR => "Portugal", Team::NED => "Netherlands",
+            Team::BEL => "Belgium", Team::SUI => "Switzerland", Team::CRO => "Croatia",
+            Team::AUT => "Austria", Team::SCO => "Scotland", Team::NOR => "Norway",
+            Team::PAN => "Panama", Team::CUW => "Curaçao", Team::HAI => "Haiti",
+            Team::JPN => "Japan", Team::KOR => "South Korea", Team::AUS => "Australia",
+            Team::IRN => "Iran", Team::QAT => "Qatar", Team::KSA => "Saudi Arabia",
+            Team::UZB => "Uzbekistan", Team::JOR => "Jordan",
+            Team::MAR => "Morocco", Team::SEN => "Senegal", Team::CIV => "Ivory Coast",
+            Team::EGY => "Egypt", Team::GHA => "Ghana", Team::TUN => "Tunisia",
+            Team::ALG => "Algeria", Team::RSA => "South Africa", Team::CPV => "Cape Verde",
+            Team::NZL => "New Zealand",
+            _ => "To Be Determined",
+        }
+    }
+}
+```
+
+### Team Reference Table
+
+| ID | Code | Team | Confederation | Status |
+|----|------|------|---------------|--------|
+| 1 | USA | United States | CONCACAF | Host |
+| 2 | MEX | Mexico | CONCACAF | Host |
+| 3 | CAN | Canada | CONCACAF | Host |
+| 4 | ARG | Argentina | CONMEBOL | Qualified |
+| 5 | BRA | Brazil | CONMEBOL | Qualified |
+| 6 | COL | Colombia | CONMEBOL | Qualified |
+| 7 | ECU | Ecuador | CONMEBOL | Qualified |
+| 8 | PAR | Paraguay | CONMEBOL | Qualified |
+| 9 | URU | Uruguay | CONMEBOL | Qualified |
+| 10 | ENG | England | UEFA | Qualified |
+| 11 | FRA | France | UEFA | Qualified |
+| 12 | GER | Germany | UEFA | Qualified |
+| 13 | ESP | Spain | UEFA | Qualified |
+| 14 | POR | Portugal | UEFA | Qualified |
+| 15 | NED | Netherlands | UEFA | Qualified |
+| 16 | BEL | Belgium | UEFA | Qualified |
+| 17 | SUI | Switzerland | UEFA | Qualified |
+| 18 | CRO | Croatia | UEFA | Qualified |
+| 19 | AUT | Austria | UEFA | Qualified |
+| 20 | SCO | Scotland | UEFA | Qualified |
+| 21 | NOR | Norway | UEFA | Qualified |
+| 22 | PAN | Panama | CONCACAF | Qualified |
+| 23 | CUW | Curaçao | CONCACAF | Qualified |
+| 24 | HAI | Haiti | CONCACAF | Qualified |
+| 25 | JPN | Japan | AFC | Qualified |
+| 26 | KOR | South Korea | AFC | Qualified |
+| 27 | AUS | Australia | AFC | Qualified |
+| 28 | IRN | Iran | AFC | Qualified |
+| 29 | QAT | Qatar | AFC | Qualified |
+| 30 | KSA | Saudi Arabia | AFC | Qualified |
+| 31 | UZB | Uzbekistan | AFC | Qualified |
+| 32 | JOR | Jordan | AFC | Qualified |
+| 33 | MAR | Morocco | CAF | Qualified |
+| 34 | SEN | Senegal | CAF | Qualified |
+| 35 | CIV | Ivory Coast | CAF | Qualified |
+| 36 | EGY | Egypt | CAF | Qualified |
+| 37 | GHA | Ghana | CAF | Qualified |
+| 38 | TUN | Tunisia | CAF | Qualified |
+| 39 | ALG | Algeria | CAF | Qualified |
+| 40 | RSA | South Africa | CAF | Qualified |
+| 41 | CPV | Cape Verde | CAF | Qualified |
+| 42 | NZL | New Zealand | OFC | Qualified |
+| 43-46 | TBD | UEFA Playoff Winners | UEFA | Pending |
+| 47-48 | TBD | Inter-conf. Playoff Winners | Mixed | Pending |
+
+*42 of 48 teams confirmed. Remaining 6 decided via playoffs in March 2026.*
+
+*Group assignments will be determined at the FIFA World Cup Draw.*
+
+### Group IDs
+
+| ID | Group |
+|----|-------|
+| 0 | Group A |
+| 1 | Group B |
+| 2 | Group C |
+| ... | ... |
+| 11 | Group L |
+
+### Knockout Match IDs
+
+| ID Range | Type | Count |
+|----------|------|-------|
+| 0-15 | Round of 32 | 16 matches |
+| 16-23 | Round of 16 | 8 matches |
+| 24-27 | Quarter-finals | 4 matches |
+| 28-29 | Semi-finals | 2 matches |
+| 30 | Third Place | 1 match |
+| 31 | Final | 1 match |
+
+**Total: 12 group standings + 32 knockout results = 44 admin submissions**
 
 ### Error Codes
 
