@@ -65,3 +65,7 @@ Admin-controlled oracle for v1:
 - **Knockout stage**: Admin submits match results as each knockout game finishes
 
 Can upgrade to multi-sig oracle in future versions.
+
+## Git Commits
+
+- Do not include "Co-Authored-By" lines in commit messages
