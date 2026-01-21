@@ -22,6 +22,66 @@ Started: Tue Jan 21 2026
 - ThemeProvider in `@/providers/ThemeProvider` - wraps app for next-themes dark mode support
 - Provider wrapping order in layout: ThemeProvider > QueryProvider > WalletProvider > children
 - Inter font configured via `--font-inter` CSS variable, used as `font-sans` class
+- Install shadcn/ui components via: `npx shadcn@latest add <component-name> --yes`
 
+---
+
+## 2026-01-21 - US-001
+- Installed additional shadcn/ui components for building pages
+- Files changed:
+  - frontend/src/components/ui/navigation-menu.tsx (new)
+  - frontend/src/components/ui/sheet.tsx (new)
+  - frontend/src/components/ui/table.tsx (new)
+  - frontend/src/components/ui/select.tsx (new)
+  - frontend/src/components/ui/tabs.tsx (new)
+  - frontend/src/components/ui/badge.tsx (new)
+  - frontend/src/components/ui/separator.tsx (new)
+  - frontend/src/components/ui/skeleton.tsx (new)
+  - frontend/package.json (dependencies updated)
+- **Learnings for future iterations:**
+  - shadcn/ui CLI automatically installs peer dependencies (radix-ui packages)
+  - Use `--yes` flag to skip confirmation prompts
+  - Components need Prettier formatting after install (class sorting)
+---
+
+## 2026-01-21 - US-002
+- Created mock tournament data for development
+- Files changed:
+  - frontend/src/types/tournament.ts (new) - TypeScript types for tournament entities
+  - frontend/src/lib/mock-data.ts (new) - Mock data for tournament info, teams, groups, leaderboard, user entry
+- **Learnings for future iterations:**
+  - Tournament types defined in `@/types/tournament` - import types from there for tournament-related components
+  - Mock data exports: `mockTournamentInfo`, `mockTeams`, `mockGroups`, `mockLeaderboard`, `mockUserEntry`, `knockoutMatches`
+  - Helper functions: `getTeamsByGroup(groupId)`, `getTeamById(teamId)`, `getKnockoutMatchesByStage(stage)`
+  - 48 teams across 12 groups (A-L), 4 teams per group
+  - Knockout bracket has 32 matches total (16 R32, 8 R16, 4 QF, 2 SF, 1 third place, 1 final)
+  - Leaderboard generates 54 mock entries with random points
+---
+
+## 2026-01-21 - US-003
+- Created Footer component for consistent page footer
+- Files changed:
+  - frontend/src/components/layout/Footer.tsx (new)
+- **Learnings for future iterations:**
+  - Footer uses Separator component from shadcn/ui for visual dividers
+  - Theme colors: `text-foreground`, `text-muted-foreground`, `bg-background`, `border-border` for consistent theming
+  - Responsive pattern: `flex-col items-center sm:flex-row sm:justify-between` for mobile-first stacking layout
+  - Current year retrieved dynamically with `new Date().getFullYear()` for copyright
+  - Browser verification not available in this environment - manual testing needed
+---
+
+## 2026-01-21 - US-004
+- Created Header component with full navigation
+- Files changed:
+  - frontend/src/components/layout/Header.tsx (new)
+  - frontend/src/lib/constants.ts (updated - changed `results` to `claims` in ROUTES)
+- **Learnings for future iterations:**
+  - NavigationMenu uses `legacyBehavior passHref` with Link for proper href handling
+  - `navigationMenuTriggerStyle()` provides consistent nav link styling
+  - Active link detection: exact match for home (`/`), startsWith for other routes
+  - Sticky header: `sticky top-0 z-50` with `bg-background/95 backdrop-blur` for blur effect
+  - Mobile navigation pattern: Sheet from right side with hamburger menu trigger
+  - WalletMultiButton is imported from `@solana/wallet-adapter-react-ui` (CSS already in WalletProvider)
+  - Browser verification not available in this environment - manual testing needed
 ---
 
