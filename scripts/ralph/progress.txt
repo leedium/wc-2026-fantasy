@@ -1,3 +1,21 @@
 # Ralph Progress Log
 Started: Wed Jan 21 12:20:21 CET 2026
+
+## Codebase Patterns
+- Frontend located at `/frontend` directory
+- Run quality checks from frontend dir: `npm run build`, `npm run typecheck`, `npm run lint`
+- TypeScript strict mode enabled in tsconfig.json
+- Next.js App Router in `src/app/` directory
+- Path alias `@/*` maps to `./src/*`
+
+---
+
+## 2026-01-21 - US-001
+- What was implemented: Verified Next.js 16.1.4 project with App Router, TypeScript strict mode. Added typecheck script to package.json.
+- Files changed: `frontend/package.json` (added typecheck script)
+- **Learnings for future iterations:**
+  - Project already had Next.js initialized via create-next-app
+  - Next.js 16.1.4 is installed (exceeds the 15 requirement in PRD)
+  - Tailwind CSS 4 is already configured (via @tailwindcss/postcss)
+  - There's a warning about workspace root detection due to multiple lockfiles - can be fixed via turbopack.root config if needed
 ---
