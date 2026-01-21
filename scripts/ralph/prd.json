@@ -82,8 +82,8 @@
         "Typecheck passes"
       ],
       "priority": 5,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Created all directory structures with .gitkeep placeholders. Added lib/constants.ts with app constants."
     },
     {
       "id": "US-006",
@@ -98,8 +98,8 @@
         "Typecheck passes"
       ],
       "priority": 6,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Added eslint-config-prettier for conflict avoidance, prettier-plugin-tailwindcss for class sorting. Scripts: format, format:check, lint:fix."
     },
     {
       "id": "US-007",

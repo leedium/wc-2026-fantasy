@@ -37,10 +37,7 @@ function createEnvConfig(): EnvConfig {
     process.env.NEXT_PUBLIC_SOLANA_RPC_URL,
     'NEXT_PUBLIC_SOLANA_RPC_URL'
   );
-  const apiUrl = validateUrl(
-    process.env.NEXT_PUBLIC_API_URL,
-    'NEXT_PUBLIC_API_URL'
-  );
+  const apiUrl = validateUrl(process.env.NEXT_PUBLIC_API_URL, 'NEXT_PUBLIC_API_URL');
 
   return {
     solanaNetwork,

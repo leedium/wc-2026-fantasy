@@ -4,6 +4,7 @@ Started: Wed Jan 21 12:20:21 CET 2026
 ## Codebase Patterns
 - Frontend located at `/frontend` directory
 - Run quality checks from frontend dir: `npm run build`, `npm run typecheck`, `npm run lint`
+- Format code before committing: `npm run format` (Prettier with Tailwind class sorting)
 - TypeScript strict mode enabled in tsconfig.json
 - Next.js App Router in `src/app/` directory
 - Path alias `@/*` maps to `./src/*`
@@ -12,6 +13,8 @@ Started: Wed Jan 21 12:20:21 CET 2026
 - Dark mode is class-based - add `.dark` class to html element to enable
 - shadcn/ui components in `src/components/ui/` - use sonner for toasts (toast deprecated)
 - Use `cn()` from `@/lib/utils` for conditional Tailwind classes
+- Folder structure: `components/layout/` for Header/Footer, `components/shared/` for reusable, `hooks/` for custom hooks, `stores/` for Zustand, `types/` for TS types, `providers/` for context providers
+- App constants in `@/lib/constants` (ENTRY_FEE_SOL, TOURNAMENT_CONFIG, SCORING, ROUTES, etc.)
 
 ---
 
@@ -69,4 +72,37 @@ Started: Wed Jan 21 12:20:21 CET 2026
   - shadcn uses new-york style by default with oklch color format
   - Components are installed to `src/components/ui/` directory
   - utils.ts provides cn() helper that combines clsx and tailwind-merge for conditional classes
+---
+
+## 2026-01-21 - US-005
+- What was implemented: Established consistent folder structure for the frontend codebase
+- Files changed:
+  - `frontend/src/app/(routes)/.gitkeep` (new) - Route groups directory
+  - `frontend/src/components/layout/.gitkeep` (new) - Layout components (Header, Footer, etc.)
+  - `frontend/src/components/shared/.gitkeep` (new) - Reusable shared components
+  - `frontend/src/hooks/.gitkeep` (new) - Custom React hooks
+  - `frontend/src/stores/.gitkeep` (new) - Zustand stores
+  - `frontend/src/types/.gitkeep` (new) - TypeScript type definitions
+  - `frontend/src/providers/.gitkeep` (new) - React context providers
+  - `frontend/src/lib/constants.ts` (new) - App constants (entry fee, tournament config, routes, etc.)
+- **Learnings for future iterations:**
+  - Use `.gitkeep` files to track empty directories in git
+  - `app/(routes)/` uses parentheses for Next.js route groups (won't affect URL path)
+  - Constants file includes: ENTRY_FEE_SOL, TOURNAMENT_CONFIG, SCORING, ROUTES, API_ENDPOINTS, STORAGE_KEYS
+  - Import constants from `@/lib/constants`
+---
+
+## 2026-01-21 - US-006
+- What was implemented: ESLint and Prettier configuration with conflict avoidance
+- Files changed:
+  - `frontend/.prettierrc` (new) - Prettier config with semi, single quotes, Tailwind plugin
+  - `frontend/eslint.config.mjs` (modified) - Added eslint-config-prettier for conflict avoidance
+  - `frontend/package.json` (modified) - Added format, format:check, lint:fix scripts
+  - `frontend/package-lock.json` (modified) - New dependencies
+  - Multiple `.tsx`, `.ts`, `.css` files reformatted by Prettier
+- **Learnings for future iterations:**
+  - ESLint 9 uses flat config format (`eslint.config.mjs`) - import `eslint-config-prettier` and spread it after other configs
+  - Use `eslint-config-prettier` to disable conflicting rules (not `eslint-plugin-prettier`)
+  - `prettier-plugin-tailwindcss` auto-sorts Tailwind classes - add to .prettierrc plugins array
+  - Scripts available: `npm run format` (write), `npm run format:check` (verify), `npm run lint:fix` (auto-fix)
 ---
