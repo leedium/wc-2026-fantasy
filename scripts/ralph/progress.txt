@@ -15,6 +15,9 @@ Started: Wed Jan 21 12:20:21 CET 2026
 - Use `cn()` from `@/lib/utils` for conditional Tailwind classes
 - Folder structure: `components/layout/` for Header/Footer, `components/shared/` for reusable, `hooks/` for custom hooks, `stores/` for Zustand, `types/` for TS types, `providers/` for context providers
 - App constants in `@/lib/constants` (ENTRY_FEE_SOL, TOURNAMENT_CONFIG, SCORING, ROUTES, etc.)
+- React Query provider in `@/providers/QueryProvider` - wrap app for server state management
+- Solana wallet provider in `@/providers/WalletProvider` - import wallet CSS there, not in globals.css
+- Backpack wallet auto-detected via Wallet Standard - no explicit adapter needed
 
 ---
 
@@ -105,4 +108,33 @@ Started: Wed Jan 21 12:20:21 CET 2026
   - Use `eslint-config-prettier` to disable conflicting rules (not `eslint-plugin-prettier`)
   - `prettier-plugin-tailwindcss` auto-sorts Tailwind classes - add to .prettierrc plugins array
   - Scripts available: `npm run format` (write), `npm run format:check` (verify), `npm run lint:fix` (auto-fix)
+---
+
+## 2026-01-21 - US-007
+- What was implemented: React Query provider setup for server state management and API caching
+- Files changed:
+  - `frontend/package.json` (modified) - Added @tanstack/react-query and @tanstack/react-query-devtools
+  - `frontend/src/providers/QueryProvider.tsx` (new) - QueryClientProvider with sensible defaults
+- **Learnings for future iterations:**
+  - React Query configuration follows Next.js App Router pattern: use `useState` to create query client to avoid hydration issues
+  - For SSR compatibility, check `typeof window === 'undefined'` to create separate clients for server vs browser
+  - Browser reuses single QueryClient instance, server creates new one per request
+  - Default config: staleTime 1min, gcTime 5min, retry 3 for queries, retry 1 for mutations
+  - Devtools conditionally rendered with `process.env.NODE_ENV === 'development'`
+  - Import QueryProvider from `@/providers/QueryProvider`
+---
+
+## 2026-01-21 - US-008
+- What was implemented: Solana wallet adapter integration with multi-wallet support
+- Files changed:
+  - `frontend/package.json` (modified) - Added @solana/wallet-adapter-react, @solana/wallet-adapter-react-ui, @solana/wallet-adapter-wallets, @solana/web3.js
+  - `frontend/src/providers/WalletProvider.tsx` (new) - WalletContextProvider with Phantom, Solflare, Coinbase adapters
+- **Learnings for future iterations:**
+  - Backpack wallet implements Wallet Standard and is auto-detected - no explicit adapter needed
+  - `@solana/wallet-adapter-wallets` package doesn't include BackpackWalletAdapter - use CoinbaseWalletAdapter or rely on Wallet Standard
+  - Import wallet CSS in WalletProvider component: `import '@solana/wallet-adapter-react-ui/styles.css'`
+  - Network enum: `WalletAdapterNetwork.Devnet` vs `WalletAdapterNetwork.Mainnet`
+  - Use `clusterApiUrl(network)` as fallback if no custom RPC URL configured
+  - Provider nesting order: ConnectionProvider > WalletProvider > WalletModalProvider
+  - Import WalletProvider from `@/providers/WalletProvider`
 ---

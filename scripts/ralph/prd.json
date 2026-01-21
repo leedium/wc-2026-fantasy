@@ -113,8 +113,8 @@
         "Typecheck passes"
       ],
       "priority": 7,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Configured with sensible defaults: staleTime 1min, gcTime 5min, retry 3 for queries, retry 1 for mutations. Devtools enabled in development only."
     },
     {
       "id": "US-008",
@@ -130,8 +130,8 @@
         "Typecheck passes"
       ],
       "priority": 8,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Installed @solana/wallet-adapter packages. Configured Phantom, Solflare, Coinbase adapters. Backpack auto-detected via Wallet Standard."
     },
     {
       "id": "US-009",
