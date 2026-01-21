@@ -1,0 +1,152 @@
+name: Create Issues from PRD
+
+on:
+  # Trigger on push to main when prd.json changes
+  push:
+    branches:
+      - main
+    paths:
+      - 'scripts/ralph/prd.json'
+
+  # Allow manual trigger
+  workflow_dispatch:
+    inputs:
+      prd_path:
+        description: 'Path to PRD JSON file'
+        required: false
+        default: 'scripts/ralph/prd.json'
+      skip_completed:
+        description: 'Skip stories with passes: true'
+        required: false
+        default: 'false'
+        type: choice
+        options:
+          - 'true'
+          - 'false'
+
+jobs:
+  create-issues:
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+      contents: read
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Create issues from PRD
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const fs = require('fs');
+            const path = require('path');
+
+            // Get inputs
+            const prdPath = '${{ inputs.prd_path }}' || 'scripts/ralph/prd.json';
+            const skipCompleted = '${{ inputs.skip_completed }}' === 'true';
+
+            // Read PRD file
+            const prdFile = path.join(process.env.GITHUB_WORKSPACE, prdPath);
+            if (!fs.existsSync(prdFile)) {
+              core.setFailed(`PRD file not found: ${prdPath}`);
+              return;
+            }
+
+            const prd = JSON.parse(fs.readFileSync(prdFile, 'utf8'));
+            console.log(`Processing PRD: ${prd.project} - ${prd.description}`);
+            console.log(`Branch: ${prd.branchName}`);
+            console.log(`Total stories: ${prd.userStories.length}`);
+
+            // Get existing issues to avoid duplicates
+            const existingIssues = await github.paginate(github.rest.issues.listForRepo, {
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: 'all',
+              per_page: 100
+            });
+
+            const existingTitles = new Set(existingIssues.map(issue => issue.title));
+            console.log(`Found ${existingIssues.length} existing issues`);
+
+            // Process each user story
+            let created = 0;
+            let skipped = 0;
+
+            for (const story of prd.userStories) {
+              // Skip completed stories if requested
+              if (skipCompleted && story.passes) {
+                console.log(`Skipping completed story: ${story.id}`);
+                skipped++;
+                continue;
+              }
+
+              // Create issue title
+              const issueTitle = `[${story.id}] ${story.title}`;
+
+              // Check if issue already exists
+              if (existingTitles.has(issueTitle)) {
+                console.log(`Issue already exists: ${issueTitle}`);
+                skipped++;
+                continue;
+              }
+
+              // Build acceptance criteria as checklist
+              const acceptanceCriteria = story.acceptanceCriteria
+                .map(criteria => `- [ ] ${criteria}`)
+                .join('\n');
+
+              // Build issue body
+              const body = `## Description
+
+${story.description}
+
+## Acceptance Criteria
+
+${acceptanceCriteria}
+
+## Details
+
+| Field | Value |
+|-------|-------|
+| **PRD** | ${prd.project} |
+| **Branch** | \`${prd.branchName}\` |
+| **Priority** | ${story.priority} |
+| **Status** | ${story.passes ? '✅ Completed' : '⏳ Pending'} |
+
+---
+*Auto-generated from [${prdPath}](${prdPath})*`;
+
+              // Determine labels
+              const labels = ['prd', 'user-story'];
+              if (story.passes) {
+                labels.push('completed');
+              }
+
+              // Create the issue
+              try {
+                const issue = await github.rest.issues.create({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  title: issueTitle,
+                  body: body,
+                  labels: labels
+                });
+
+                console.log(`Created issue #${issue.data.number}: ${issueTitle}`);
+                created++;
+              } catch (error) {
+                console.error(`Failed to create issue: ${issueTitle}`, error.message);
+              }
+            }
+
+            console.log(`\nSummary:`);
+            console.log(`- Created: ${created}`);
+            console.log(`- Skipped: ${skipped}`);
+            console.log(`- Total: ${prd.userStories.length}`);
