@@ -25,7 +25,7 @@ export const ROUTES = {
   home: '/',
   predictions: '/predictions',
   leaderboard: '/leaderboard',
-  results: '/results',
+  claims: '/claims',
 } as const;
 
 // API endpoints (relative to API_URL)

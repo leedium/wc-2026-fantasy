@@ -1,0 +1,175 @@
+# Ralph Progress Log
+Started: Wed Jan 21 12:20:21 CET 2026
+
+## Codebase Patterns
+- Frontend located at `/frontend` directory
+- Run quality checks from frontend dir: `npm run build`, `npm run typecheck`, `npm run lint`
+- Format code before committing: `npm run format` (Prettier with Tailwind class sorting)
+- TypeScript strict mode enabled in tsconfig.json
+- Next.js App Router in `src/app/` directory
+- Path alias `@/*` maps to `./src/*`
+- Environment config files go in `src/config/` directory
+- Tailwind v4 uses `@theme inline { }` blocks in `globals.css` for theme configuration
+- Dark mode is class-based - add `.dark` class to html element to enable
+- shadcn/ui components in `src/components/ui/` - use sonner for toasts (toast deprecated)
+- Use `cn()` from `@/lib/utils` for conditional Tailwind classes
+- Folder structure: `components/layout/` for Header/Footer, `components/shared/` for reusable, `hooks/` for custom hooks, `stores/` for Zustand, `types/` for TS types, `providers/` for context providers
+- App constants in `@/lib/constants` (ENTRY_FEE_SOL, TOURNAMENT_CONFIG, SCORING, ROUTES, etc.)
+- React Query provider in `@/providers/QueryProvider` - wrap app for server state management
+- Solana wallet provider in `@/providers/WalletProvider` - import wallet CSS there, not in globals.css
+- Backpack wallet auto-detected via Wallet Standard - no explicit adapter needed
+- Zustand store in `@/stores/useAppStore` - use selector hooks for optimized re-renders
+- ThemeProvider in `@/providers/ThemeProvider` - wraps app for next-themes dark mode support
+- Provider wrapping order in layout: ThemeProvider > QueryProvider > WalletProvider > children
+- Inter font configured via `--font-inter` CSS variable, used as `font-sans` class
+
+---
+
+## 2026-01-21 - US-001
+- What was implemented: Verified Next.js 16.1.4 project with App Router, TypeScript strict mode. Added typecheck script to package.json.
+- Files changed: `frontend/package.json` (added typecheck script)
+- **Learnings for future iterations:**
+  - Project already had Next.js initialized via create-next-app
+  - Next.js 16.1.4 is installed (exceeds the 15 requirement in PRD)
+  - Tailwind CSS 4 is already configured (via @tailwindcss/postcss)
+  - There's a warning about workspace root detection due to multiple lockfiles - can be fixed via turbopack.root config if needed
+---
+
+## 2026-01-21 - US-002
+- What was implemented: Environment variable configuration for switching between devnet and mainnet
+- Files changed:
+  - `frontend/.env.example` (new) - Template with NEXT_PUBLIC_SOLANA_NETWORK, NEXT_PUBLIC_SOLANA_RPC_URL, NEXT_PUBLIC_API_URL
+  - `frontend/src/config/env.ts` (new) - Typed environment config with runtime validation
+  - `frontend/.gitignore` (modified) - Added exception for .env.example
+- **Learnings for future iterations:**
+  - `.gitignore` has `.env*` pattern which catches `.env.example` - need `!.env.example` to allow tracking
+  - `.env.local` was already covered by `.env*` pattern in gitignore
+  - Environment validation uses `createEnvConfig()` that runs at module load time
+  - SolanaNetwork type is 'devnet' | 'mainnet-beta' (not just 'mainnet')
+---
+
+## 2026-01-21 - US-003
+- What was implemented: Tailwind CSS v4 configuration with WC2026 theme colors and class-based dark mode
+- Files changed:
+  - `frontend/tailwind.config.ts` (new) - TypeScript config with content paths and theme color definitions
+  - `frontend/src/app/globals.css` (modified) - Added @theme block with WC2026 colors and dark mode support
+- **Learnings for future iterations:**
+  - Tailwind v4 uses `@theme inline { }` blocks in CSS for configuration instead of tailwind.config.js
+  - Still created tailwind.config.ts for backward compatibility and to satisfy acceptance criteria
+  - Dark mode is class-based (add `.dark` class to root element to enable)
+  - Theme colors available as CSS variables (e.g., `--color-primary`) and Tailwind classes (e.g., `bg-primary`)
+  - Color scales defined for primary, secondary, accent (50-950 range)
+---
+
+## 2026-01-21 - US-004
+- What was implemented: shadcn/ui initialization and base component installation
+- Files changed:
+  - `frontend/components.json` (new) - shadcn/ui configuration file
+  - `frontend/src/lib/utils.ts` (new) - cn() helper function using clsx and tailwind-merge
+  - `frontend/src/components/ui/button.tsx` (new) - Button component
+  - `frontend/src/components/ui/card.tsx` (new) - Card component
+  - `frontend/src/components/ui/input.tsx` (new) - Input component
+  - `frontend/src/components/ui/dialog.tsx` (new) - Dialog component
+  - `frontend/src/components/ui/sonner.tsx` (new) - Toast/notification component (replaces deprecated toast)
+  - `frontend/src/app/globals.css` (modified) - shadcn CSS variables added
+  - `frontend/package.json` (modified) - Added shadcn dependencies
+- **Learnings for future iterations:**
+  - shadcn/ui toast component is deprecated, use sonner instead
+  - shadcn init adds `tw-animate-css` import to globals.css but doesn't install the package - need to run `npm install tw-animate-css` manually
+  - shadcn uses new-york style by default with oklch color format
+  - Components are installed to `src/components/ui/` directory
+  - utils.ts provides cn() helper that combines clsx and tailwind-merge for conditional classes
+---
+
+## 2026-01-21 - US-005
+- What was implemented: Established consistent folder structure for the frontend codebase
+- Files changed:
+  - `frontend/src/app/(routes)/.gitkeep` (new) - Route groups directory
+  - `frontend/src/components/layout/.gitkeep` (new) - Layout components (Header, Footer, etc.)
+  - `frontend/src/components/shared/.gitkeep` (new) - Reusable shared components
+  - `frontend/src/hooks/.gitkeep` (new) - Custom React hooks
+  - `frontend/src/stores/.gitkeep` (new) - Zustand stores
+  - `frontend/src/types/.gitkeep` (new) - TypeScript type definitions
+  - `frontend/src/providers/.gitkeep` (new) - React context providers
+  - `frontend/src/lib/constants.ts` (new) - App constants (entry fee, tournament config, routes, etc.)
+- **Learnings for future iterations:**
+  - Use `.gitkeep` files to track empty directories in git
+  - `app/(routes)/` uses parentheses for Next.js route groups (won't affect URL path)
+  - Constants file includes: ENTRY_FEE_SOL, TOURNAMENT_CONFIG, SCORING, ROUTES, API_ENDPOINTS, STORAGE_KEYS
+  - Import constants from `@/lib/constants`
+---
+
+## 2026-01-21 - US-006
+- What was implemented: ESLint and Prettier configuration with conflict avoidance
+- Files changed:
+  - `frontend/.prettierrc` (new) - Prettier config with semi, single quotes, Tailwind plugin
+  - `frontend/eslint.config.mjs` (modified) - Added eslint-config-prettier for conflict avoidance
+  - `frontend/package.json` (modified) - Added format, format:check, lint:fix scripts
+  - `frontend/package-lock.json` (modified) - New dependencies
+  - Multiple `.tsx`, `.ts`, `.css` files reformatted by Prettier
+- **Learnings for future iterations:**
+  - ESLint 9 uses flat config format (`eslint.config.mjs`) - import `eslint-config-prettier` and spread it after other configs
+  - Use `eslint-config-prettier` to disable conflicting rules (not `eslint-plugin-prettier`)
+  - `prettier-plugin-tailwindcss` auto-sorts Tailwind classes - add to .prettierrc plugins array
+  - Scripts available: `npm run format` (write), `npm run format:check` (verify), `npm run lint:fix` (auto-fix)
+---
+
+## 2026-01-21 - US-007
+- What was implemented: React Query provider setup for server state management and API caching
+- Files changed:
+  - `frontend/package.json` (modified) - Added @tanstack/react-query and @tanstack/react-query-devtools
+  - `frontend/src/providers/QueryProvider.tsx` (new) - QueryClientProvider with sensible defaults
+- **Learnings for future iterations:**
+  - React Query configuration follows Next.js App Router pattern: use `useState` to create query client to avoid hydration issues
+  - For SSR compatibility, check `typeof window === 'undefined'` to create separate clients for server vs browser
+  - Browser reuses single QueryClient instance, server creates new one per request
+  - Default config: staleTime 1min, gcTime 5min, retry 3 for queries, retry 1 for mutations
+  - Devtools conditionally rendered with `process.env.NODE_ENV === 'development'`
+  - Import QueryProvider from `@/providers/QueryProvider`
+---
+
+## 2026-01-21 - US-008
+- What was implemented: Solana wallet adapter integration with multi-wallet support
+- Files changed:
+  - `frontend/package.json` (modified) - Added @solana/wallet-adapter-react, @solana/wallet-adapter-react-ui, @solana/wallet-adapter-wallets, @solana/web3.js
+  - `frontend/src/providers/WalletProvider.tsx` (new) - WalletContextProvider with Phantom, Solflare, Coinbase adapters
+- **Learnings for future iterations:**
+  - Backpack wallet implements Wallet Standard and is auto-detected - no explicit adapter needed
+  - `@solana/wallet-adapter-wallets` package doesn't include BackpackWalletAdapter - use CoinbaseWalletAdapter or rely on Wallet Standard
+  - Import wallet CSS in WalletProvider component: `import '@solana/wallet-adapter-react-ui/styles.css'`
+  - Network enum: `WalletAdapterNetwork.Devnet` vs `WalletAdapterNetwork.Mainnet`
+  - Use `clusterApiUrl(network)` as fallback if no custom RPC URL configured
+  - Provider nesting order: ConnectionProvider > WalletProvider > WalletModalProvider
+  - Import WalletProvider from `@/providers/WalletProvider`
+---
+
+## 2026-01-21 - US-009
+- What was implemented: Zustand state management setup with devtools and persist middleware
+- Files changed:
+  - `frontend/package.json` (modified) - Added zustand dependency
+  - `frontend/src/stores/useAppStore.ts` (new) - Main app store with typed state and actions
+- **Learnings for future iterations:**
+  - Zustand v5 uses `create<State>()(...)` syntax with double parentheses for middleware composition
+  - For middleware chaining: `create<State>()(devtools(persist(...)))` - devtools wraps persist
+  - Persist middleware `partialize` option controls which state fields are persisted to localStorage
+  - Devtools middleware accepts `name` for store name and `enabled` to conditionally enable in development
+  - Action names passed as third argument to `set()` appear in Redux DevTools: `set({ value }, false, 'actionName')`
+  - Create selector hooks (e.g., `useIsLoading`) to prevent unnecessary re-renders - they only subscribe to specific state slices
+  - Import store from `@/stores/useAppStore`
+  - Store includes: UI state (loading, modals, mobile menu), wallet state (connected, address), network state, preferences (theme, onboarding)
+---
+
+## 2026-01-21 - US-010
+- What was implemented: Root layout with all providers wrapped in correct order and Inter font
+- Files changed:
+  - `frontend/src/app/layout.tsx` (modified) - Added Inter font, metadata, provider wrapping, Toaster
+  - `frontend/src/app/globals.css` (modified) - Changed font-sans to use Inter variable
+  - `frontend/src/providers/ThemeProvider.tsx` (new) - ThemeProvider using next-themes for dark mode
+- **Learnings for future iterations:**
+  - Provider order: ThemeProvider > QueryProvider > WalletProvider (theme outermost for hydration)
+  - Use `suppressHydrationWarning` on html element when using next-themes to avoid hydration mismatch warnings
+  - next-themes uses `attribute="class"` for class-based dark mode (adds .dark class to html)
+  - Toaster (sonner) uses `useTheme` from next-themes so it must be inside ThemeProvider
+  - Inter font variable is `--font-inter`, set in globals.css as `--font-sans: var(--font-inter)`
+  - Import ThemeProvider from `@/providers/ThemeProvider`
+---
