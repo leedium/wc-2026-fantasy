@@ -983,6 +983,88 @@ test('user can register and submit predictions', async ({ page }) => {
 | API endpoints | 80%+ |
 | Frontend components | 70%+ |
 
+### Frontend Unit Tests
+
+The frontend uses Jest and React Testing Library for unit testing.
+
+#### Commands
+
+```bash
+cd frontend
+
+# Run all tests
+npm test
+
+# Run tests in watch mode (for development)
+npm run test:watch
+
+# Run tests with coverage report
+npm run test:coverage
+```
+
+#### Test File Organization
+
+```
+frontend/src/
+├── stores/__tests__/
+│   └── useAppStore.test.ts          # Zustand store tests
+├── components/
+│   ├── predictions/__tests__/
+│   │   ├── GroupStageForm.test.tsx
+│   │   ├── KnockoutBracket.test.tsx
+│   │   └── TiebreakerInput.test.tsx
+│   ├── leaderboard/__tests__/
+│   │   └── LeaderboardTable.test.tsx
+│   ├── layout/__tests__/
+│   │   ├── Header.test.tsx
+│   │   ├── Footer.test.tsx
+│   │   └── PageLayout.test.tsx
+│   └── shared/__tests__/
+│       └── Pagination.test.tsx
+└── app/
+    ├── predictions/__tests__/
+    │   └── PredictionsPageContent.test.tsx
+    ├── leaderboard/__tests__/
+    │   └── LeaderboardPageContent.test.tsx
+    └── claims/__tests__/
+        └── ClaimsPageContent.test.tsx
+```
+
+#### Mocking Strategy
+
+| Dependency | Mock Location | Description |
+|------------|---------------|-------------|
+| `@solana/wallet-adapter-react` | `__mocks__/@solana/wallet-adapter-react.ts` | Wallet hooks (useWallet, useConnection) |
+| `@solana/wallet-adapter-react-ui` | `__mocks__/@solana/wallet-adapter-react-ui.ts` | UI components (WalletMultiButton) |
+| `next/navigation` | `jest.setup.ts` | Router hooks (useRouter, usePathname) |
+| `next/link` | `jest.setup.ts` | Link component as anchor |
+| `next/image` | `jest.setup.ts` | Image component as img |
+| CSS/SCSS | `identity-obj-proxy` | Returns class names as-is |
+| Images/Assets | `__mocks__/fileMock.js` | Returns stub string |
+
+#### Wallet Mock Helpers
+
+The wallet adapter mock provides helpers for testing connected/disconnected states:
+
+```typescript
+import {
+  setWalletConnected,
+  setWalletDisconnected,
+  createConnectedWallet,
+} from '@solana/wallet-adapter-react';
+
+// In your test:
+beforeEach(() => {
+  setWalletDisconnected(); // Reset to disconnected state
+});
+
+it('should show user rank when connected', () => {
+  setWalletConnected('YourTestWalletAddress123...');
+  render(<LeaderboardPageContent />);
+  // ...assertions
+});
+```
+
 ---
 
 ## Deployment Plan
