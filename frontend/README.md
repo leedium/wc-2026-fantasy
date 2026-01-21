@@ -1,4 +1,6 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# WC2026 Frontend
+
+World Cup 2026 prediction game frontend built with Next.js 16, React 19, and Tailwind CSS 4.
 
 ## Getting Started
 
@@ -6,31 +8,79 @@ First, run the development server:
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
 Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Testing
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+The frontend uses Jest and React Testing Library for unit testing.
 
-## Learn More
+### Commands
 
-To learn more about Next.js, take a look at the following resources:
+```bash
+# Run all tests once
+npm test
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+# Run tests in watch mode (for development)
+npm run test:watch
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+# Run tests with coverage report
+npm run test:coverage
+```
 
-## Deploy on Vercel
+### Coverage Requirements
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+Tests must maintain 70% coverage across:
+- Branches
+- Functions
+- Lines
+- Statements
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+### Test File Organization
+
+Tests are co-located with their source files in `__tests__` directories:
+
+```
+src/
+├── stores/__tests__/           # Zustand store tests
+├── components/
+│   ├── predictions/__tests__/  # Prediction form tests
+│   ├── leaderboard/__tests__/  # Leaderboard component tests
+│   ├── layout/__tests__/       # Layout component tests
+│   └── shared/__tests__/       # Shared component tests
+└── app/
+    ├── predictions/__tests__/  # Predictions page tests
+    ├── leaderboard/__tests__/  # Leaderboard page tests
+    └── claims/__tests__/       # Claims page tests
+```
+
+### Mocking
+
+The testing setup includes mocks for:
+
+- **Solana Wallet Adapter**: `__mocks__/@solana/wallet-adapter-react.ts` provides helpers like `setWalletConnected()` and `setWalletDisconnected()` for testing wallet states.
+- **Next.js Navigation**: `useRouter`, `usePathname`, and `Link` are mocked in `jest.setup.ts`.
+- **Browser APIs**: `matchMedia`, `ResizeObserver`, and `IntersectionObserver` are mocked for jsdom compatibility.
+
+## Scripts
+
+| Command | Description |
+|---------|-------------|
+| `npm run dev` | Start development server |
+| `npm run build` | Build for production |
+| `npm run start` | Start production server |
+| `npm run lint` | Run ESLint |
+| `npm run typecheck` | Run TypeScript type checking |
+| `npm test` | Run tests |
+| `npm run test:watch` | Run tests in watch mode |
+| `npm run test:coverage` | Run tests with coverage |
+
+## Tech Stack
+
+- **Framework**: Next.js 16 (App Router)
+- **UI**: React 19, Tailwind CSS 4, shadcn/ui (Radix UI)
+- **State**: Zustand 5
+- **Data Fetching**: TanStack React Query 5
+- **Wallet**: Solana Wallet Adapter
+- **Testing**: Jest 29, React Testing Library 16
