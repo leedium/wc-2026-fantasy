@@ -165,3 +165,39 @@ Started: Tue Jan 21 2026
   - Browser verification not available in this environment - manual testing needed
 ---
 
+## 2026-01-21 - US-010
+- Created TiebreakerInput component for predicting total tournament goals
+- Files changed:
+  - frontend/src/components/predictions/TiebreakerInput.tsx (new)
+  - frontend/src/components/ui/label.tsx (new - installed via shadcn)
+  - frontend/package.json (updated - @radix-ui/react-label added)
+- **Learnings for future iterations:**
+  - TiebreakerInput accepts `value: number | null`, `onChange: (value: number | null) => void`, `disabled?: boolean`
+  - Validation constants: MIN_GOALS = 100, MAX_GOALS = 300 (WC2022 had 172 goals in 64 matches)
+  - Input syncing pattern: use `useEffect` to sync local `inputValue` state with prop `value`
+  - Error handling: validate on change - check for NaN, positive integer, and range
+  - Valid input styling: Card gets `border-green-500/50 bg-green-500/5` class via cn()
+  - Error styling: Input gets `border-red-500 focus-visible:ring-red-500`
+  - Helper text block: use `bg-muted/50` with HelpCircle icon for explanation
+  - ARIA attributes: `aria-describedby` links to help and error elements, `aria-invalid` for error state
+  - Label component needed to be installed separately via shadcn (not included by default)
+  - Browser verification not available in this environment - manual testing needed
+---
+
+## 2026-01-21 - US-011
+- Implemented Predictions page with full bracket prediction flow
+- Files changed:
+  - frontend/src/app/predictions/page.tsx (new)
+- **Learnings for future iterations:**
+  - Use `useWallet()` hook from `@solana/wallet-adapter-react` to check `connected` status
+  - Page state management: use useState for groupPredictions, knockoutPredictions, totalGoals
+  - Initialize knockout predictions from knockoutMatches: `knockoutMatches.map(m => ({ matchId: m.id, winnerId: null }))`
+  - Validation summary pattern: calculate completion stats (completedGroups, completedKnockoutMatches) from prediction arrays
+  - isLocked check: compare `new Date() >= lockTime` to disable editing after lock
+  - Toast notifications via `toast.success()` and `toast.error()` from sonner
+  - Submit button disabled when: !connected || !isPredictionsComplete || isLocked || isSubmitting
+  - Tabs with completion indicators: add CheckCircle2 icon with absolute positioning for visual feedback
+  - Entry fee display in both status card and submit section for clarity
+  - Browser verification not available in this environment - manual testing needed
+---
+
