@@ -1,9 +1,15 @@
 'use client';
 
 import Link from 'next/link';
+import dynamic from 'next/dynamic';
 import { usePathname } from 'next/navigation';
 import { Menu } from 'lucide-react';
-import { WalletMultiButton } from '@solana/wallet-adapter-react-ui';
+
+// Dynamic import to avoid SSR hydration mismatch (wallet state differs server vs client)
+const WalletMultiButton = dynamic(
+  () => import('@solana/wallet-adapter-react-ui').then((mod) => mod.WalletMultiButton),
+  { ssr: false }
+);
 
 import { cn } from '@/lib/utils';
 import { ROUTES } from '@/lib/constants';
