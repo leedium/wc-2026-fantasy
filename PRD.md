@@ -303,28 +303,47 @@ pub struct Predictions {
 
 #### 2. Scoring Engine Program
 
-**Purpose:** Calculate points based on match results from admin.
+**Purpose:** Calculate points based on admin-submitted group standings and knockout results.
 
 **Accounts:**
 ```rust
+/// Final standings for a single group (submitted once after group stage ends)
 #[account]
-pub struct MatchResult {
+pub struct GroupStandings {
     pub tournament: Pubkey,
-    pub match_id: u16,
-    pub match_type: MatchType,       // Group, R32, R16, QF, SF, Third, Final
+    pub group_id: u8,                // 0-11 for groups A-L
+    pub standings: [u8; 4],          // Team IDs in order: [1st, 2nd, 3rd, 4th]
+    pub timestamp: i64,
+}
+
+/// Single knockout match result (submitted as each match completes)
+#[account]
+pub struct KnockoutResult {
+    pub tournament: Pubkey,
+    pub match_id: u8,                // 0-30 for 31 knockout matches
+    pub match_type: MatchType,       // R32, R16, QF, SF, Third, Final
     pub team_a: u8,
     pub team_b: u8,
-    pub score_a: u8,
-    pub score_b: u8,
-    pub winner: u8,                  // 0 = draw (group only), else team ID
+    pub winner: u8,                  // Winning team ID
     pub timestamp: i64,
+}
+
+#[derive(AnchorSerialize, AnchorDeserialize, Clone, PartialEq, Eq)]
+pub enum MatchType {
+    RoundOf32,
+    RoundOf16,
+    QuarterFinal,
+    SemiFinal,
+    ThirdPlace,
+    Final,
 }
 ```
 
 Note: Leaderboard computed off-chain in Supabase via SQL, not stored on-chain. This reduces on-chain storage costs significantly.
 
 **Instructions:**
-- `submit_match_result` - Admin submits verified result
+- `submit_group_standings` - Admin submits final standings for one group (12 total)
+- `submit_knockout_result` - Admin submits knockout match result (31 total)
 - `calculate_user_points` - Compute points for one user (can be batched)
 - `finalize_tournament` - Lock final rankings
 
@@ -393,9 +412,17 @@ pub struct PrizeClaim {
 ```
 
 **v1 Process:**
-- Admin monitors match results from trusted sports data sources
-- After match ends, admin verifies result and submits on-chain
-- All submissions logged for transparency
+
+*Group Stage (12 submissions total):*
+- Admin waits until all group stage matches complete
+- Admin submits final standings (positions 1-4) for each of the 12 groups
+- Group scoring calculated for all users after standings submitted
+
+*Knockout Stage (31 submissions total):*
+- Admin submits each knockout match result as games finish
+- Points calculated incrementally per match
+
+All submissions logged for transparency.
 
 **v2 Upgrade Path:** Multi-sig oracle with automated multi-source verification can be added later.
 

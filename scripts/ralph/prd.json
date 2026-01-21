@@ -1,0 +1,203 @@
+{
+  "project": "WC2026",
+  "branchName": "ralph/frontend-setup",
+  "description": "Frontend Application Setup - Foundational Next.js 15 web application for the World Cup 2026 Decentralized Prediction Game",
+  "userStories": [
+    {
+      "id": "US-001",
+      "title": "Initialize Next.js 15 Project",
+      "description": "As a developer, I need a properly initialized Next.js 15 project so that I can build the prediction game frontend.",
+      "acceptanceCriteria": [
+        "Next.js 15 project created using create-next-app with App Router",
+        "TypeScript configured with strict mode enabled in tsconfig.json",
+        "Project builds successfully with npm run build",
+        "Development server starts with npm run dev",
+        "Typecheck passes"
+      ],
+      "priority": 1,
+      "passes": true,
+      "notes": "Next.js 16.1.4 installed (exceeds 15 requirement)"
+    },
+    {
+      "id": "US-002",
+      "title": "Configure Environment Variables",
+      "description": "As a developer, I need environment configuration so that I can switch between devnet and mainnet.",
+      "acceptanceCriteria": [
+        ".env.example file created with all required variables documented",
+        ".env.local added to .gitignore",
+        "Environment variables defined: NEXT_PUBLIC_SOLANA_NETWORK, NEXT_PUBLIC_SOLANA_RPC_URL, NEXT_PUBLIC_API_URL",
+        "config/env.ts created to validate and export typed env variables",
+        "Typecheck passes"
+      ],
+      "priority": 2,
+      "passes": true,
+      "notes": "Added .env.example with devnet/mainnet config, created src/config/env.ts with runtime validation"
+    },
+    {
+      "id": "US-003",
+      "title": "Configure Tailwind CSS with WC2026 Theme",
+      "description": "As a developer, I need Tailwind CSS configured so that I can style components efficiently.",
+      "acceptanceCriteria": [
+        "Tailwind CSS installed and configured with tailwind.config.ts",
+        "Global styles imported in app/globals.css",
+        "Content paths configured for app/**/*.{ts,tsx} and components/**/*.{ts,tsx}",
+        "Custom theme colors defined: primary (#1a365d), secondary (#2d3748), accent (#38a169)",
+        "Dark mode support configured (class-based)",
+        "Typecheck passes"
+      ],
+      "priority": 3,
+      "passes": true,
+      "notes": "Tailwind v4 uses @theme blocks in CSS. Created tailwind.config.ts for compatibility and globals.css with full color scales."
+    },
+    {
+      "id": "US-004",
+      "title": "Install and Configure shadcn/ui",
+      "description": "As a developer, I need shadcn/ui initialized so that I can use pre-built accessible components.",
+      "acceptanceCriteria": [
+        "shadcn/ui initialized with npx shadcn@latest init",
+        "components.json configuration file created",
+        "Base components installed: Button, Card, Input, Dialog, Toast",
+        "Components directory structure: components/ui/ for shadcn components",
+        "lib/utils.ts created with cn() helper function",
+        "Typecheck passes"
+      ],
+      "priority": 4,
+      "passes": true,
+      "notes": "Used sonner instead of deprecated toast component. Added tw-animate-css package for animations."
+    },
+    {
+      "id": "US-005",
+      "title": "Establish Folder Structure",
+      "description": "As a developer, I need a consistent folder structure so that the codebase is organized and maintainable.",
+      "acceptanceCriteria": [
+        "app/(routes)/ directory created for route groups",
+        "components/layout/ directory created for Header, Footer, etc.",
+        "components/shared/ directory created for reusable components",
+        "hooks/ directory created for custom React hooks",
+        "stores/ directory created for Zustand stores",
+        "types/ directory created for TypeScript type definitions",
+        "providers/ directory created for React context providers",
+        "lib/constants.ts created for app constants",
+        "Each directory contains a placeholder file or .gitkeep",
+        "Typecheck passes"
+      ],
+      "priority": 5,
+      "passes": true,
+      "notes": "Created all directory structures with .gitkeep placeholders. Added lib/constants.ts with app constants."
+    },
+    {
+      "id": "US-006",
+      "title": "Configure ESLint and Prettier",
+      "description": "As a developer, I need consistent code formatting so that the codebase maintains quality standards.",
+      "acceptanceCriteria": [
+        "ESLint configured with Next.js recommended rules",
+        "Prettier installed and configured (.prettierrc)",
+        "ESLint Prettier plugin installed to avoid conflicts",
+        "npm run lint script works",
+        "npm run format script added for Prettier",
+        "Typecheck passes"
+      ],
+      "priority": 6,
+      "passes": true,
+      "notes": "Added eslint-config-prettier for conflict avoidance, prettier-plugin-tailwindcss for class sorting. Scripts: format, format:check, lint:fix."
+    },
+    {
+      "id": "US-007",
+      "title": "Set Up React Query Provider",
+      "description": "As a developer, I need React Query configured so that I can manage server state and API caching.",
+      "acceptanceCriteria": [
+        "@tanstack/react-query and @tanstack/react-query-devtools installed",
+        "QueryClientProvider component created in providers/QueryProvider.tsx",
+        "Query client configured with sensible defaults (staleTime, retry logic)",
+        "React Query Devtools enabled in development mode",
+        "Typecheck passes"
+      ],
+      "priority": 7,
+      "passes": true,
+      "notes": "Configured with sensible defaults: staleTime 1min, gcTime 5min, retry 3 for queries, retry 1 for mutations. Devtools enabled in development only."
+    },
+    {
+      "id": "US-008",
+      "title": "Configure Solana Wallet Adapter",
+      "description": "As a developer, I need wallet adapter integration so that users can connect their Solana wallets.",
+      "acceptanceCriteria": [
+        "@solana/wallet-adapter-react, @solana/wallet-adapter-react-ui, and @solana/wallet-adapter-wallets installed",
+        "@solana/web3.js installed for Solana interactions",
+        "WalletContextProvider component created in providers/WalletProvider.tsx",
+        "Wallet adapters configured: Phantom, Backpack, Solflare",
+        "Wallet adapter CSS imported (@solana/wallet-adapter-react-ui/styles.css)",
+        "Network configurable via environment variable (devnet/mainnet)",
+        "Typecheck passes"
+      ],
+      "priority": 8,
+      "passes": true,
+      "notes": "Installed @solana/wallet-adapter packages. Configured Phantom, Solflare, Coinbase adapters. Backpack auto-detected via Wallet Standard."
+    },
+    {
+      "id": "US-009",
+      "title": "Set Up Zustand State Management",
+      "description": "As a developer, I need Zustand configured so that I can manage client-side state.",
+      "acceptanceCriteria": [
+        "zustand package installed",
+        "Example store created in stores/useAppStore.ts with basic structure",
+        "Store includes: wallet connection status, selected network, UI state (loading, modals)",
+        "Zustand devtools middleware enabled in development",
+        "Persist middleware example for relevant state",
+        "Typecheck passes"
+      ],
+      "priority": 9,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-010",
+      "title": "Create Root Layout with Providers",
+      "description": "As a developer, I need a root layout that wraps the app with all necessary providers.",
+      "acceptanceCriteria": [
+        "app/layout.tsx created with proper HTML structure",
+        "All providers wrapped in correct order: QueryProvider > WalletProvider > children",
+        "Metadata configured (title, description, OpenGraph basics)",
+        "Font configured (Inter)",
+        "Toaster component from shadcn/ui included for notifications",
+        "Typecheck passes",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 10,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-011",
+      "title": "Create Navigation Header Component",
+      "description": "As a developer, I need a navigation header component so that users can navigate the app and connect their wallet.",
+      "acceptanceCriteria": [
+        "components/layout/Header.tsx component created",
+        "Logo/brand placeholder displayed",
+        "Navigation links placeholder (to be populated in future PRDs)",
+        "WalletMultiButton integrated in header",
+        "Responsive design (mobile hamburger menu structure, content deferred)",
+        "Typecheck passes",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 11,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-012",
+      "title": "Create Placeholder Landing Page",
+      "description": "As a developer, I need a placeholder landing page so that I can verify the setup is working.",
+      "acceptanceCriteria": [
+        "app/page.tsx displays World Cup 2026 Prediction Game heading",
+        "Shows wallet connection status (connected/disconnected)",
+        "Displays current network (devnet/mainnet)",
+        "Basic styling with Tailwind CSS",
+        "Typecheck passes",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 12,
+      "passes": false,
+      "notes": ""
+    }
+  ]
+}
