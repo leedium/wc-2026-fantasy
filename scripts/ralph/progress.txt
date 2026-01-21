@@ -201,3 +201,37 @@ Started: Tue Jan 21 2026
   - Browser verification not available in this environment - manual testing needed
 ---
 
+## 2026-01-21 - US-012
+- Created LeaderboardTable component for displaying rankings
+- Files changed:
+  - frontend/src/components/leaderboard/LeaderboardTable.tsx (new)
+- **Learnings for future iterations:**
+  - Leaderboard components go in `components/leaderboard/` directory
+  - LeaderboardTable accepts: `entries: LeaderboardEntry[]`, `currentUserWallet?: string | null`, `highlightedRank?: number | null`
+  - Wallet truncation pattern: `${wallet.slice(0, 4)}...${wallet.slice(-4)}` for display
+  - Rank badges for top 3: gold (bg-yellow-500), silver (bg-gray-400), bronze (bg-amber-600)
+  - Change indicator: TrendingUp (green) for positive, TrendingDown (red) for negative, Minus for no change
+  - Alternating row colors: `isEvenRow && 'bg-muted/30'`
+  - Current user highlight: `bg-primary/10 hover:bg-primary/15` with "(You)" label
+  - Row IDs for scroll targeting: `id={`rank-${entry.rank}`}` enables "Find My Rank" scroll functionality
+  - Uses Table components from shadcn/ui for consistent styling
+  - Browser verification not available in this environment - manual testing needed
+---
+
+## 2026-01-21 - US-013
+- Implemented Leaderboard page with full functionality
+- Files changed:
+  - frontend/src/app/leaderboard/page.tsx (new)
+- **Learnings for future iterations:**
+  - Leaderboard page uses simulated loading state with setTimeout to mock data fetching
+  - Pagination: use `DEFAULT_ITEMS_PER_PAGE` from Pagination component, slice array for current page
+  - Find My Rank: calculates user's page, navigates if needed, scrolls to row, highlights with ring
+  - Sticky user rank banner: uses negative margins (-mx-4) to extend to full width, z-40 below header
+  - User entry lookup: use `useMemo` to find entry by wallet address (case-insensitive comparison)
+  - Highlight auto-clears after 3 seconds via setTimeout
+  - Shows different messages when: wallet not connected, connected but no predictions
+  - Mobile "Find My Rank" button fixed at bottom center with `fixed bottom-4 left-1/2 -translate-x-1/2`
+  - Loading skeleton pattern: create separate component with Skeleton elements matching table layout
+  - Browser verification not available in this environment - manual testing needed
+---
+
