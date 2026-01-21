@@ -131,3 +131,37 @@ Started: Tue Jan 21 2026
   - Browser verification not available in this environment - manual testing needed
 ---
 
+## 2026-01-21 - US-008
+- Created Group Stage Prediction component for predicting group standings
+- Files changed:
+  - frontend/src/components/predictions/GroupStageForm.tsx (new)
+- **Learnings for future iterations:**
+  - Prediction components go in `components/predictions/` directory
+  - GroupStageForm accepts `predictions: GroupPrediction[]` and `onPredictionChange` callback
+  - Uses `mockGroups` from mock-data.ts for group/team data
+  - Team filtering pattern: use `Set` for selected team IDs, filter available teams excluding already selected
+  - Position labels defined as const object with keys: first, second, third, fourth
+  - Complete/incomplete state: Badge with CheckCircle2 (green) or Circle + count
+  - Card styling for complete group: `border-green-500/50 bg-green-500/5`
+  - Select component value must be string (empty string for null), use `value ?? ''`
+  - Browser verification not available in this environment - manual testing needed
+---
+
+## 2026-01-21 - US-009
+- Created Knockout Bracket component for predicting knockout match winners
+- Files changed:
+  - frontend/src/components/predictions/KnockoutBracket.tsx (new)
+- **Learnings for future iterations:**
+  - KnockoutBracket accepts `groupPredictions`, `knockoutPredictions`, and `onPredictionChange` callback
+  - Teams are resolved from sources: "1A" = 1st place Group A, "M1" = winner of match M1, "L-M29" = loser of match M29
+  - Uses Tabs component for responsive navigation between knockout stages (R32, R16, QF, SF, Final, 3rd Place)
+  - Match cards show: match ID (M1, M2, etc.), point value badge (+2, +4, etc.), team buttons with Trophy icon for winner
+  - TBD display pattern: show source reference (e.g., "TBD (1A)") when team not yet determined from group predictions
+  - Winner validation: if selected winner no longer valid (team didn't advance), auto-clear selection via useEffect
+  - Stage config pattern: `Record<KnockoutStage, { label, shortLabel, pointValue }>` for display configuration
+  - Mobile responsive: TabsTrigger shows shortLabel on mobile (R32, R16) and full label on desktop
+  - Helper function `resolveTeamSource()` recursively resolves team ID from group position or previous match winner/loser
+  - Grid layout adapts to match count: max-w-sm centered for 1 match, 2 cols for 2 matches, 4 cols for 4+ matches
+  - Browser verification not available in this environment - manual testing needed
+---
+
