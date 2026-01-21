@@ -235,3 +235,40 @@ Started: Tue Jan 21 2026
   - Browser verification not available in this environment - manual testing needed
 ---
 
+## 2026-01-21 - US-014
+- Implemented Claims placeholder page with "Coming Soon" messaging
+- Files changed:
+  - frontend/src/app/claims/page.tsx (new)
+- **Learnings for future iterations:**
+  - Placeholder pages follow same pattern: PageLayout wrapper, centered content with max-w-lg Card
+  - "Coming Soon" pattern: large icon in circular bg-primary/10 container, CardTitle + CardDescription, explanation text
+  - Use bg-muted/50 with icon for helper/info blocks (consistent with TiebreakerInput)
+  - lucide-react icons: Award for prizes/claims, Clock for time-related info, ArrowRight for CTA buttons
+  - Always import ROUTES from constants for internal link navigation
+  - Button with Link pattern: `<Button asChild><Link href={...}>...</Link></Button>`
+  - Browser verification not available in this environment - manual testing needed
+---
+
+## 2026-01-21 - US-015
+- Added route metadata and loading states for all pages
+- Files changed:
+  - frontend/src/app/predictions/page.tsx (updated - server component with metadata export)
+  - frontend/src/app/predictions/PredictionsPageContent.tsx (new - client component extracted)
+  - frontend/src/app/predictions/loading.tsx (new - skeleton UI)
+  - frontend/src/app/leaderboard/page.tsx (updated - server component with metadata export)
+  - frontend/src/app/leaderboard/LeaderboardPageContent.tsx (new - client component extracted)
+  - frontend/src/app/leaderboard/loading.tsx (new - skeleton UI)
+  - frontend/src/app/claims/page.tsx (updated - server component with metadata export)
+  - frontend/src/app/claims/ClaimsPageContent.tsx (new - client component extracted)
+  - frontend/src/app/claims/loading.tsx (new - skeleton UI)
+- **Learnings for future iterations:**
+  - Next.js App Router requires server components for metadata export - client pages need to be split
+  - Pattern: page.tsx (server component with metadata) imports and renders PageContent.tsx (client component with 'use client')
+  - loading.tsx files are automatically shown during route transitions and Suspense boundaries
+  - Loading skeletons should match the layout structure of the actual page for smooth transitions
+  - Use `CardHeader`, `CardContent` components from shadcn/ui in skeletons for consistent structure
+  - Skeleton component accepts className for sizing: `h-9 w-64` pattern for various dimensions
+  - Array.from({ length: N }) pattern for rendering repeated skeleton rows
+  - Metadata title format: "Page Name | World Cup 2026" for consistent branding
+---
+
