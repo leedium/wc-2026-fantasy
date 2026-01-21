@@ -85,3 +85,49 @@ Started: Tue Jan 21 2026
   - Browser verification not available in this environment - manual testing needed
 ---
 
+## 2026-01-21 - US-005
+- Created PageLayout component for shared Header/Footer layout
+- Files changed:
+  - frontend/src/components/layout/PageLayout.tsx (new)
+- **Learnings for future iterations:**
+  - PageLayout provides consistent layout structure: Header + main content + Footer
+  - Uses `flex min-h-screen flex-col` to ensure footer stays at bottom
+  - Main content uses `flex-1` to fill available space
+  - Consistent padding/max-width matches Header/Footer (max-w-7xl, px-4/sm:px-6/lg:px-8)
+  - Import as `import { PageLayout } from '@/components/layout/PageLayout'`
+  - Browser verification not available in this environment - manual testing needed
+---
+
+## 2026-01-21 - US-006
+- Created Pagination component for leaderboard navigation
+- Files changed:
+  - frontend/src/components/shared/Pagination.tsx (new)
+- **Learnings for future iterations:**
+  - Pagination component exports `DEFAULT_ITEMS_PER_PAGE = 25` constant for consumer use
+  - Import as `import { Pagination, DEFAULT_ITEMS_PER_PAGE } from '@/components/shared/Pagination'`
+  - Uses lucide-react icons: ChevronLeft, ChevronRight, MoreHorizontal for ellipsis
+  - Smart page number display: shows 1...current-1, current, current+1...last when totalPages > 7
+  - Current page button uses `variant="default"`, other pages use `variant="outline"`
+  - Disabled states handled via `disabled` prop on Button
+  - Includes ARIA attributes for accessibility (aria-label, aria-current="page")
+  - Browser verification not available in this environment - manual testing needed
+---
+
+## 2026-01-21 - US-007
+- Implemented full landing page with all required sections
+- Files changed:
+  - frontend/src/app/page.tsx (updated)
+- **Learnings for future iterations:**
+  - Use `PageLayout` component to wrap pages for consistent Header/Footer
+  - lucide-react icons: Clock, Trophy, Users, Wallet, Target, Award, ChevronRight, Coins for iconography
+  - Time remaining helper function: calculate days/hours/minutes from lockTime difference
+  - Status badge helper: switch on status to return appropriate Badge variant
+  - Card component usage: CardHeader with CardDescription for icon+label, CardContent for values
+  - 5-column grid for tournament info stats on desktop: `grid gap-4 sm:grid-cols-2 lg:grid-cols-5`
+  - How It Works section: numbered steps using absolute positioned circle with bg-primary/10 text-primary
+  - Scoring breakdown: two-column grid for Group Stage and Knockout Stage cards
+  - CTA section: Card with bg-primary/5 border-primary/20 for subtle highlight
+  - Button with Link: use `asChild` prop to pass Link as child - `<Button asChild><Link href={...}>...</Link></Button>`
+  - Browser verification not available in this environment - manual testing needed
+---
+
