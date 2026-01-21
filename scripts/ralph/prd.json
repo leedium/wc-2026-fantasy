@@ -30,8 +30,8 @@
         "Typecheck passes"
       ],
       "priority": 2,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Added .env.example with devnet/mainnet config, created src/config/env.ts with runtime validation"
     },
     {
       "id": "US-003",
@@ -46,8 +46,8 @@
         "Typecheck passes"
       ],
       "priority": 3,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Tailwind v4 uses @theme blocks in CSS. Created tailwind.config.ts for compatibility and globals.css with full color scales."
     },
     {
       "id": "US-004",
@@ -62,8 +62,8 @@
         "Typecheck passes"
       ],
       "priority": 4,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Used sonner instead of deprecated toast component. Added tw-animate-css package for animations."
     },
     {
       "id": "US-005",

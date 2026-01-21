@@ -7,6 +7,11 @@ Started: Wed Jan 21 12:20:21 CET 2026
 - TypeScript strict mode enabled in tsconfig.json
 - Next.js App Router in `src/app/` directory
 - Path alias `@/*` maps to `./src/*`
+- Environment config files go in `src/config/` directory
+- Tailwind v4 uses `@theme inline { }` blocks in `globals.css` for theme configuration
+- Dark mode is class-based - add `.dark` class to html element to enable
+- shadcn/ui components in `src/components/ui/` - use sonner for toasts (toast deprecated)
+- Use `cn()` from `@/lib/utils` for conditional Tailwind classes
 
 ---
 
@@ -18,4 +23,50 @@ Started: Wed Jan 21 12:20:21 CET 2026
   - Next.js 16.1.4 is installed (exceeds the 15 requirement in PRD)
   - Tailwind CSS 4 is already configured (via @tailwindcss/postcss)
   - There's a warning about workspace root detection due to multiple lockfiles - can be fixed via turbopack.root config if needed
+---
+
+## 2026-01-21 - US-002
+- What was implemented: Environment variable configuration for switching between devnet and mainnet
+- Files changed:
+  - `frontend/.env.example` (new) - Template with NEXT_PUBLIC_SOLANA_NETWORK, NEXT_PUBLIC_SOLANA_RPC_URL, NEXT_PUBLIC_API_URL
+  - `frontend/src/config/env.ts` (new) - Typed environment config with runtime validation
+  - `frontend/.gitignore` (modified) - Added exception for .env.example
+- **Learnings for future iterations:**
+  - `.gitignore` has `.env*` pattern which catches `.env.example` - need `!.env.example` to allow tracking
+  - `.env.local` was already covered by `.env*` pattern in gitignore
+  - Environment validation uses `createEnvConfig()` that runs at module load time
+  - SolanaNetwork type is 'devnet' | 'mainnet-beta' (not just 'mainnet')
+---
+
+## 2026-01-21 - US-003
+- What was implemented: Tailwind CSS v4 configuration with WC2026 theme colors and class-based dark mode
+- Files changed:
+  - `frontend/tailwind.config.ts` (new) - TypeScript config with content paths and theme color definitions
+  - `frontend/src/app/globals.css` (modified) - Added @theme block with WC2026 colors and dark mode support
+- **Learnings for future iterations:**
+  - Tailwind v4 uses `@theme inline { }` blocks in CSS for configuration instead of tailwind.config.js
+  - Still created tailwind.config.ts for backward compatibility and to satisfy acceptance criteria
+  - Dark mode is class-based (add `.dark` class to root element to enable)
+  - Theme colors available as CSS variables (e.g., `--color-primary`) and Tailwind classes (e.g., `bg-primary`)
+  - Color scales defined for primary, secondary, accent (50-950 range)
+---
+
+## 2026-01-21 - US-004
+- What was implemented: shadcn/ui initialization and base component installation
+- Files changed:
+  - `frontend/components.json` (new) - shadcn/ui configuration file
+  - `frontend/src/lib/utils.ts` (new) - cn() helper function using clsx and tailwind-merge
+  - `frontend/src/components/ui/button.tsx` (new) - Button component
+  - `frontend/src/components/ui/card.tsx` (new) - Card component
+  - `frontend/src/components/ui/input.tsx` (new) - Input component
+  - `frontend/src/components/ui/dialog.tsx` (new) - Dialog component
+  - `frontend/src/components/ui/sonner.tsx` (new) - Toast/notification component (replaces deprecated toast)
+  - `frontend/src/app/globals.css` (modified) - shadcn CSS variables added
+  - `frontend/package.json` (modified) - Added shadcn dependencies
+- **Learnings for future iterations:**
+  - shadcn/ui toast component is deprecated, use sonner instead
+  - shadcn init adds `tw-animate-css` import to globals.css but doesn't install the package - need to run `npm install tw-animate-css` manually
+  - shadcn uses new-york style by default with oklch color format
+  - Components are installed to `src/components/ui/` directory
+  - utils.ts provides cn() helper that combines clsx and tailwind-merge for conditional classes
 ---
