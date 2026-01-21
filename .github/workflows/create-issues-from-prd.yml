@@ -55,14 +55,14 @@ jobs:
             // Read PRD file
             const prdFile = path.join(process.env.GITHUB_WORKSPACE, prdPath);
             if (!fs.existsSync(prdFile)) {
-              core.setFailed(`PRD file not found: ${prdPath}`);
+              core.setFailed('PRD file not found: ' + prdPath);
               return;
             }
 
             const prd = JSON.parse(fs.readFileSync(prdFile, 'utf8'));
-            console.log(`Processing PRD: ${prd.project} - ${prd.description}`);
-            console.log(`Branch: ${prd.branchName}`);
-            console.log(`Total stories: ${prd.userStories.length}`);
+            console.log('Processing PRD: ' + prd.project + ' - ' + prd.description);
+            console.log('Branch: ' + prd.branchName);
+            console.log('Total stories: ' + prd.userStories.length);
 
             // Get existing issues to avoid duplicates
             const existingIssues = await github.paginate(github.rest.issues.listForRepo, {
@@ -73,7 +73,7 @@ jobs:
             });
 
             const existingTitles = new Set(existingIssues.map(issue => issue.title));
-            console.log(`Found ${existingIssues.length} existing issues`);
+            console.log('Found ' + existingIssues.length + ' existing issues');
 
             // Process each user story
             let created = 0;
@@ -82,46 +82,49 @@ jobs:
             for (const story of prd.userStories) {
               // Skip completed stories if requested
               if (skipCompleted && story.passes) {
-                console.log(`Skipping completed story: ${story.id}`);
+                console.log('Skipping completed story: ' + story.id);
                 skipped++;
                 continue;
               }
 
               // Create issue title
-              const issueTitle = `[${story.id}] ${story.title}`;
+              const issueTitle = '[' + story.id + '] ' + story.title;
 
               // Check if issue already exists
               if (existingTitles.has(issueTitle)) {
-                console.log(`Issue already exists: ${issueTitle}`);
+                console.log('Issue already exists: ' + issueTitle);
                 skipped++;
                 continue;
               }
 
               // Build acceptance criteria as checklist
               const acceptanceCriteria = story.acceptanceCriteria
-                .map(criteria => `- [ ] ${criteria}`)
+                .map(function(criteria) { return '- [ ] ' + criteria; })
                 .join('\n');
 
               // Build issue body
-              const body = `## Description
-
-${story.description}
-
-## Acceptance Criteria
-
-${acceptanceCriteria}
-
-## Details
-
-| Field | Value |
-|-------|-------|
-| **PRD** | ${prd.project} |
-| **Branch** | \`${prd.branchName}\` |
-| **Priority** | ${story.priority} |
-| **Status** | ${story.passes ? '✅ Completed' : '⏳ Pending'} |
-
----
-*Auto-generated from [${prdPath}](${prdPath})*`;
+              const statusText = story.passes ? '✅ Completed' : '⏳ Pending';
+              const body = [
+                '## Description',
+                '',
+                story.description,
+                '',
+                '## Acceptance Criteria',
+                '',
+                acceptanceCriteria,
+                '',
+                '## Details',
+                '',
+                '| Field | Value |',
+                '|-------|-------|',
+                '| **PRD** | ' + prd.project + ' |',
+                '| **Branch** | `' + prd.branchName + '` |',
+                '| **Priority** | ' + story.priority + ' |',
+                '| **Status** | ' + statusText + ' |',
+                '',
+                '---',
+                '*Auto-generated from [' + prdPath + '](' + prdPath + ')*'
+              ].join('\n');
 
               // Determine labels
               const labels = ['prd', 'user-story'];
@@ -139,14 +142,14 @@ ${acceptanceCriteria}
                   labels: labels
                 });
 
-                console.log(`Created issue #${issue.data.number}: ${issueTitle}`);
+                console.log('Created issue #' + issue.data.number + ': ' + issueTitle);
                 created++;
               } catch (error) {
-                console.error(`Failed to create issue: ${issueTitle}`, error.message);
+                console.error('Failed to create issue: ' + issueTitle, error.message);
               }
             }
 
-            console.log(`\nSummary:`);
-            console.log(`- Created: ${created}`);
-            console.log(`- Skipped: ${skipped}`);
-            console.log(`- Total: ${prd.userStories.length}`);
+            console.log('\nSummary:');
+            console.log('- Created: ' + created);
+            console.log('- Skipped: ' + skipped);
+            console.log('- Total: ' + prd.userStories.length);
