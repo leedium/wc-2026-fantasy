@@ -23,35 +23,24 @@ jest.mock('next/navigation', () => ({
   useParams: () => ({}),
 }));
 
-// Mock next/link
+// Mock next/link - simplified for Next.js 13+ (no legacyBehavior needed)
 jest.mock('next/link', () => {
   const MockLink = ({
     children,
     href,
-    legacyBehavior,
-    passHref,
     ...props
   }: {
     children: React.ReactNode;
     href: string;
-    legacyBehavior?: boolean;
-    passHref?: boolean;
     [key: string]: unknown;
   }) => {
     // Filter out Next.js specific props
     const filteredProps = Object.fromEntries(
       Object.entries(props).filter(
-        ([key]) => !['prefetch', 'scroll', 'shallow', 'replace'].includes(key)
+        ([key]) =>
+          !['prefetch', 'scroll', 'shallow', 'replace', 'legacyBehavior', 'passHref'].includes(key)
       )
     );
-
-    // If legacyBehavior and children is a single element, clone and pass href
-    if (legacyBehavior && passHref && React.isValidElement(children)) {
-      return React.cloneElement(children as React.ReactElement, {
-        href,
-        ...filteredProps,
-      });
-    }
 
     return (
       <a href={href} {...filteredProps}>
