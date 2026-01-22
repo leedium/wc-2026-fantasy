@@ -43,3 +43,16 @@ Started: Wed Jan 22 2026
   - Typecheck has pre-existing test mock errors - build passes but typecheck fails on test files
 ---
 
+## 2026-01-23 - dark-mode-toggle-US-005
+- Added ThemeToggle to Header component
+- Desktop: positioned before wallet button in flex container with gap-4
+- Mobile: added in SheetContent with "Theme:" label and border-t separator below nav links
+- Files changed:
+  - frontend/src/components/layout/Header.tsx (modified - added import and ThemeToggle usage)
+  - scripts/ralph/prd.json (updated passes to true)
+- **Learnings for future iterations:**
+  - Header has separate desktop (md:flex) and mobile (md:hidden) sections
+  - Mobile nav uses Sheet from shadcn/ui with SheetContent side="right"
+  - Desktop wallet actions are in a div with `hidden md:flex`, mobile has `flex md:hidden`
+---
+
