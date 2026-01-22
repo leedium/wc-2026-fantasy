@@ -95,8 +95,8 @@
         "Verify in browser using dev-browser skill"
       ],
       "priority": 6,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Added dark: variants for success/error states, enhanced green backgrounds visibility in dark mode"
     },
     {
       "id": "dark-mode-toggle-US-007",
