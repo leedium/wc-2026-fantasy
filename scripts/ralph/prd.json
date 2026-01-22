@@ -78,8 +78,8 @@
         "Verify in browser using dev-browser skill"
       ],
       "priority": 5,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Added ThemeToggle to Header - desktop before wallet button, mobile in sheet with label"
     },
     {
       "id": "dark-mode-toggle-US-006",

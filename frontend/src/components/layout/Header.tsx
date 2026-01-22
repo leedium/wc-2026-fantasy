@@ -13,6 +13,7 @@ const WalletMultiButton = dynamic(
 
 import { cn } from '@/lib/utils';
 import { ROUTES } from '@/lib/constants';
+import { ThemeToggle } from '@/components/shared/ThemeToggle';
 import {
   NavigationMenu,
   NavigationMenuList,
@@ -69,8 +70,9 @@ export function Header() {
           </NavigationMenuList>
         </NavigationMenu>
 
-        {/* Desktop Wallet Button */}
+        {/* Desktop Theme Toggle & Wallet Button */}
         <div className="hidden items-center gap-4 md:flex">
+          <ThemeToggle />
           <WalletMultiButton />
         </div>
 
@@ -103,6 +105,10 @@ export function Header() {
                   </Link>
                 ))}
               </nav>
+              <div className="mt-6 flex items-center gap-2 border-t pt-6">
+                <span className="text-muted-foreground text-sm">Theme:</span>
+                <ThemeToggle />
+              </div>
             </SheetContent>
           </Sheet>
         </div>
