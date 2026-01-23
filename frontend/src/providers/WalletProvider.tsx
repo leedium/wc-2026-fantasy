@@ -1,6 +1,12 @@
 'use client';
 
-import { WalletAdapterNetwork } from '@solana/wallet-adapter-base';
+import {
+  WalletAdapterNetwork,
+  WalletError,
+  WalletNotReadyError,
+  WalletConnectionError,
+  WalletWindowClosedError,
+} from '@solana/wallet-adapter-base';
 import {
   ConnectionProvider,
   WalletProvider as SolanaWalletProvider,
@@ -13,7 +19,8 @@ import {
   LedgerWalletAdapter,
 } from '@solana/wallet-adapter-wallets';
 import { clusterApiUrl } from '@solana/web3.js';
-import { useMemo, type ReactNode } from 'react';
+import { useMemo, useCallback, type ReactNode } from 'react';
+import { toast } from 'sonner';
 import { useSelectedNetwork } from '@/stores/useAppStore';
 import type { SolanaNetwork } from '@/config/env';
 
@@ -64,11 +71,43 @@ export function WalletProvider({ children }: WalletProviderProps) {
     [network]
   );
 
+  // Handle wallet errors with toast notifications
+  const onError = useCallback((error: WalletError) => {
+    // User cancelled connection (closed wallet popup)
+    if (error instanceof WalletWindowClosedError) {
+      toast.error('Connection cancelled', { duration: 5000 });
+      return;
+    }
+
+    // Wallet not installed or not ready
+    if (error instanceof WalletNotReadyError) {
+      const walletName = error.message.includes('wallet')
+        ? error.message.split(' ')[0]
+        : 'Wallet';
+      toast.error(`Wallet not found. Please install ${walletName}`, { duration: 5000 });
+      return;
+    }
+
+    // Connection failed (network error, wallet rejected, etc.)
+    if (error instanceof WalletConnectionError) {
+      toast.error('Failed to connect. Please try again', { duration: 5000 });
+      return;
+    }
+
+    // Generic wallet error fallback
+    toast.error(error.message || 'An error occurred', { duration: 5000 });
+  }, []);
+
   // Use network as key to force re-mount when network changes
   // This triggers wallet reconnection with the new network
   return (
     <ConnectionProvider endpoint={endpoint} key={`connection-${selectedNetwork}`}>
-      <SolanaWalletProvider wallets={wallets} autoConnect key={`wallet-${selectedNetwork}`}>
+      <SolanaWalletProvider
+        wallets={wallets}
+        autoConnect
+        onError={onError}
+        key={`wallet-${selectedNetwork}`}
+      >
         <WalletModalProvider>{children}</WalletModalProvider>
       </SolanaWalletProvider>
     </ConnectionProvider>
