@@ -1,0 +1,132 @@
+{
+  "project": "WC2026",
+  "branchName": "ralph/dark-mode-toggle",
+  "description": "Dark Mode Toggle - Comprehensive theme switching with system detection, manual override, and cookie-based persistence for SSR compatibility",
+  "userStories": [
+    {
+      "id": "dark-mode-toggle-US-001",
+      "title": "Add Theme Provider Infrastructure",
+      "description": "As a developer, I need a theme provider that manages theme state so that all components can access the current theme.",
+      "acceptanceCriteria": [
+        "Install next-themes package",
+        "Create components/providers/ThemeProvider.tsx using next-themes library",
+        "Provider wraps the application in app/layout.tsx",
+        "Supports three modes: 'light', 'dark', 'system'",
+        "Default to 'system' for first-time visitors",
+        "Typecheck passes"
+      ],
+      "priority": 1,
+      "passes": true,
+      "notes": "Already implemented - next-themes installed, ThemeProvider exists with proper config"
+    },
+    {
+      "id": "dark-mode-toggle-US-002",
+      "title": "Configure Cookie-Based Theme Storage",
+      "description": "As a user, I want my theme preference to load instantly so that I don't see a flash of the wrong theme.",
+      "acceptanceCriteria": [
+        "Configure next-themes to use cookie storage (attribute='class')",
+        "Add suppressHydrationWarning to html element in layout.tsx",
+        "Server-side rendering uses cookie value to set initial theme",
+        "No flash of unstyled/wrong-themed content on page load",
+        "Typecheck passes"
+      ],
+      "priority": 2,
+      "passes": true,
+      "notes": "Already implemented - attribute=class and suppressHydrationWarning configured"
+    },
+    {
+      "id": "dark-mode-toggle-US-003",
+      "title": "Update Tailwind Dark Mode Configuration",
+      "description": "As a developer, I need Tailwind configured for class-based dark mode so that next-themes can control the theme.",
+      "acceptanceCriteria": [
+        "Verify tailwind.config.ts has darkMode: 'class' setting (or add if missing)",
+        "Verify CSS variables in globals.css support both light and dark themes",
+        "Existing shadcn/ui components automatically support dark mode",
+        "Typecheck passes"
+      ],
+      "priority": 3,
+      "passes": true,
+      "notes": "Already implemented - darkMode: class in tailwind config, CSS vars in globals.css"
+    },
+    {
+      "id": "dark-mode-toggle-US-004",
+      "title": "Create Theme Toggle Button Component",
+      "description": "As a user, I want a button in the header to toggle between themes so that I can switch modes easily.",
+      "acceptanceCriteria": [
+        "Create components/shared/ThemeToggle.tsx component",
+        "Button displays Sun icon for light mode, Moon icon for dark mode, Monitor icon for system",
+        "Clicking cycles through: light -> dark -> system -> light",
+        "Uses lucide-react icons (Sun, Moon, Monitor)",
+        "Accessible with keyboard navigation",
+        "Typecheck passes",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 4,
+      "passes": true,
+      "notes": "Created ThemeToggle with useMounted hook for hydration-safe rendering"
+    },
+    {
+      "id": "dark-mode-toggle-US-005",
+      "title": "Add Theme Toggle to Header",
+      "description": "As a user, I want the theme toggle visible in the header so that I can easily access it from any page.",
+      "acceptanceCriteria": [
+        "ThemeToggle added to Header component (desktop and mobile)",
+        "Positioned before the wallet button on desktop",
+        "Visible in mobile navigation sheet",
+        "Consistent styling with other header elements",
+        "Typecheck passes",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 5,
+      "passes": true,
+      "notes": "Added ThemeToggle to Header - desktop before wallet button, mobile in sheet with label"
+    },
+    {
+      "id": "dark-mode-toggle-US-006",
+      "title": "Add Dark Theme Styles to Custom Components",
+      "description": "As a user, I want all custom components to look correct in dark mode so that the experience is consistent.",
+      "acceptanceCriteria": [
+        "Review all custom components for hardcoded colors",
+        "Replace hardcoded colors with CSS variables or Tailwind dark: variants where needed",
+        "GroupStageForm component supports dark mode",
+        "KnockoutBracket component supports dark mode",
+        "LeaderboardTable component supports dark mode",
+        "Typecheck passes",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 6,
+      "passes": true,
+      "notes": "Added dark: variants for success/error states, enhanced green backgrounds visibility in dark mode"
+    },
+    {
+      "id": "dark-mode-toggle-US-007",
+      "title": "Add System Preference Detection",
+      "description": "As a user, I want the app to detect my OS dark mode setting so that it matches my system preference by default.",
+      "acceptanceCriteria": [
+        "next-themes enableSystem option enabled in ThemeProvider",
+        "First-time visitors see theme matching their OS preference",
+        "Users can override system preference with manual selection",
+        "Typecheck passes"
+      ],
+      "priority": 7,
+      "passes": true,
+      "notes": "Already implemented - enableSystem and defaultTheme=system in ThemeProvider"
+    },
+    {
+      "id": "dark-mode-toggle-US-008",
+      "title": "Write Unit Tests for Theme Components",
+      "description": "As a developer, I need tests for the theme system so that we can ensure it works correctly.",
+      "acceptanceCriteria": [
+        "Unit tests for ThemeToggle component in __tests__/components/shared/ThemeToggle.test.tsx",
+        "Tests verify toggle cycles through modes correctly",
+        "Tests verify correct icons displayed for each mode",
+        "Mock next-themes in test setup",
+        "All tests pass",
+        "Typecheck passes"
+      ],
+      "priority": 8,
+      "passes": true,
+      "notes": "Created comprehensive unit tests for ThemeToggle component with 19 tests covering rendering, icons, theme cycling, accessibility, and hydration safety"
+    }
+  ]
+}

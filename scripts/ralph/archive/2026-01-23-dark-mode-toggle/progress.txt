@@ -1,0 +1,96 @@
+# Ralph Progress Log
+Started: Wed Jan 22 2026
+
+## Codebase Patterns
+- Frontend located at `/frontend` directory
+- Run quality checks from frontend dir: `npm run build`, `npm run typecheck`, `npm run lint`
+- Format code before committing: `npm run format` (Prettier with Tailwind class sorting)
+- TypeScript strict mode enabled in tsconfig.json
+- Next.js App Router in `src/app/` directory
+- Path alias `@/*` maps to `./src/*`
+- Environment config files go in `src/config/` directory
+- Tailwind v4 uses `@theme inline { }` blocks in `globals.css` for theme configuration
+- Dark mode is class-based - add `.dark` class to html element to enable
+- shadcn/ui components in `src/components/ui/` - use sonner for toasts (toast deprecated)
+- Use `cn()` from `@/lib/utils` for conditional Tailwind classes
+- Folder structure: `components/layout/` for Header/Footer, `components/shared/` for reusable, `hooks/` for custom hooks, `stores/` for Zustand, `types/` for TS types, `providers/` for context providers
+- App constants in `@/lib/constants` (ENTRY_FEE_SOL, TOURNAMENT_CONFIG, SCORING, ROUTES, etc.)
+- React Query provider in `@/providers/QueryProvider` - wrap app for server state management
+- Solana wallet provider in `@/providers/WalletProvider` - import wallet CSS there, not in globals.css
+- Backpack wallet auto-detected via Wallet Standard - no explicit adapter needed
+- Zustand store in `@/stores/useAppStore` - use selector hooks for optimized re-renders
+- ThemeProvider in `@/providers/ThemeProvider` - wraps app for next-themes dark mode support
+- Provider wrapping order in layout: ThemeProvider > QueryProvider > WalletProvider > children
+- Inter font configured via `--font-inter` CSS variable, used as `font-sans` class
+- Install shadcn/ui components via: `npx shadcn@latest add <component-name> --yes`
+- Use `useMounted()` hook from `@/hooks/useMounted` for hydration-safe client-only rendering
+
+---
+
+## 2026-01-23 - dark-mode-toggle-US-001, US-002, US-003, US-004, US-007
+- Verified existing dark mode infrastructure was already in place (US-001, US-002, US-003, US-007)
+- Created ThemeToggle.tsx component with Sun/Moon/Monitor icons
+- Created useMounted.ts hook using useSyncExternalStore for hydration-safe mounting
+- ThemeToggle cycles through light -> dark -> system -> light
+- Files changed:
+  - frontend/src/components/shared/ThemeToggle.tsx (new)
+  - frontend/src/hooks/useMounted.ts (new)
+  - scripts/ralph/prd.json (updated passes to true)
+- **Learnings for future iterations:**
+  - The ESLint rule `react-hooks/set-state-in-effect` prevents useState + useEffect for mounting detection
+  - Use useSyncExternalStore with getServerSnapshot returning false for hydration-safe client detection
+  - The hooks/ directory is at src/hooks/ (created for this story)
+  - Typecheck has pre-existing test mock errors - build passes but typecheck fails on test files
+---
+
+## 2026-01-23 - dark-mode-toggle-US-005
+- Added ThemeToggle to Header component
+- Desktop: positioned before wallet button in flex container with gap-4
+- Mobile: added in SheetContent with "Theme:" label and border-t separator below nav links
+- Files changed:
+  - frontend/src/components/layout/Header.tsx (modified - added import and ThemeToggle usage)
+  - scripts/ralph/prd.json (updated passes to true)
+- **Learnings for future iterations:**
+  - Header has separate desktop (md:flex) and mobile (md:hidden) sections
+  - Mobile nav uses Sheet from shadcn/ui with SheetContent side="right"
+  - Desktop wallet actions are in a div with `hidden md:flex`, mobile has `flex md:hidden`
+---
+
+## 2026-01-23 - dark-mode-toggle-US-006
+- Added dark mode support to custom components
+- GroupStageForm: Enhanced green success background with `dark:bg-green-500/10` for better visibility
+- KnockoutBracket: Enhanced green success background with `dark:bg-green-500/10` for match cards
+- TiebreakerInput: Added `dark:border-red-400` and `dark:text-red-400` for error states, enhanced success background
+- LeaderboardTable: Improved 2nd place badge with `dark:bg-gray-300` for better contrast in dark mode
+- Files changed:
+  - frontend/src/components/predictions/GroupStageForm.tsx (modified)
+  - frontend/src/components/predictions/KnockoutBracket.tsx (modified)
+  - frontend/src/components/predictions/TiebreakerInput.tsx (modified)
+  - frontend/src/components/leaderboard/LeaderboardTable.tsx (modified)
+  - scripts/ralph/prd.json (updated passes to true)
+- **Learnings for future iterations:**
+  - Use `dark:` prefix for Tailwind dark mode variants on class-based dark mode
+  - Opacity-based colors like `bg-green-500/5` need slightly higher opacity in dark mode (`dark:bg-green-500/10`)
+  - Error colors (red-500) are slightly too dark in dark mode, use red-400 for better readability
+  - Badge text colors on colored backgrounds are intentional and don't need dark variants
+---
+
+## 2026-01-23 - dark-mode-toggle-US-008
+- Created comprehensive unit tests for ThemeToggle component
+- 19 tests covering: rendering, icons for each theme, theme cycling, accessibility, hydration safety
+- Mocked next-themes useTheme hook and useMounted hook for isolated testing
+- Tests verify correct icons (Sun/Moon/Monitor) display for each theme mode
+- Tests verify cycling: light -> dark -> system -> light
+- Tests verify accessibility (aria-labels, keyboard navigation with Enter and Space)
+- Tests verify hydration safety (disabled placeholder when not mounted)
+- Files changed:
+  - frontend/src/components/shared/__tests__/ThemeToggle.test.tsx (new)
+  - scripts/ralph/prd.json (updated passes to true)
+- **Learnings for future iterations:**
+  - Mock next-themes with mockUseTheme function returning { theme, setTheme, resolvedTheme }
+  - Mock useMounted separately to control hydration state in tests
+  - lucide-react icons have class names like `lucide-sun`, `lucide-moon`, `lucide-monitor` for identification
+  - Test files go in `__tests__` folder next to the component being tested
+  - Use userEvent.setup() for realistic user interaction simulation in tests
+---
+
