@@ -6,8 +6,8 @@ import { usePathname } from 'next/navigation';
 import { Menu } from 'lucide-react';
 
 // Dynamic import to avoid SSR hydration mismatch (wallet state differs server vs client)
-const WalletMultiButton = dynamic(
-  () => import('@solana/wallet-adapter-react-ui').then((mod) => mod.WalletMultiButton),
+const ConnectWalletButton = dynamic(
+  () => import('@/components/shared/ConnectWalletButton').then((mod) => mod.ConnectWalletButton),
   { ssr: false }
 );
 
@@ -75,12 +75,12 @@ export function Header() {
         <div className="hidden items-center gap-4 md:flex">
           <ThemeToggle />
           <NetworkSelector className="w-[120px]" />
-          <WalletMultiButton />
+          <ConnectWalletButton />
         </div>
 
         {/* Mobile Navigation */}
         <div className="flex items-center gap-2 md:hidden">
-          <WalletMultiButton />
+          <ConnectWalletButton />
           <Sheet>
             <SheetTrigger asChild>
               <Button variant="ghost" size="icon" aria-label="Open menu">
