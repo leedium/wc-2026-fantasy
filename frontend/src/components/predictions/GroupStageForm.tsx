@@ -61,7 +61,7 @@ function GroupCard({
   };
 
   return (
-    <Card className={cn(isComplete && 'border-green-500/50 bg-green-500/5')}>
+    <Card className={cn(isComplete && 'border-green-500/50 bg-green-500/5 dark:bg-green-500/10')}>
       <CardHeader className="pb-3">
         <div className="flex items-center justify-between">
           <CardTitle className="text-base">{group.name}</CardTitle>

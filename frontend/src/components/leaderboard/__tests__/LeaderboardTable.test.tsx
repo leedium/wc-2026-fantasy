@@ -131,9 +131,7 @@ describe('LeaderboardTable', () => {
   describe('current user highlighting', () => {
     it('should highlight current user row', () => {
       const userWallet = 'ABC123456789012345678901234567890123456789012';
-      render(
-        <LeaderboardTable entries={mockEntries} currentUserWallet={userWallet} />
-      );
+      render(<LeaderboardTable entries={mockEntries} currentUserWallet={userWallet} />);
 
       // Should show "(You)" indicator
       expect(screen.getByText('(You)')).toBeInTheDocument();
@@ -141,9 +139,7 @@ describe('LeaderboardTable', () => {
 
     it('should match wallet case-insensitively', () => {
       const userWallet = 'abc123456789012345678901234567890123456789012';
-      render(
-        <LeaderboardTable entries={mockEntries} currentUserWallet={userWallet} />
-      );
+      render(<LeaderboardTable entries={mockEntries} currentUserWallet={userWallet} />);
 
       expect(screen.getByText('(You)')).toBeInTheDocument();
     });
@@ -155,12 +151,7 @@ describe('LeaderboardTable', () => {
     });
 
     it('should not highlight when currentUserWallet is not in entries', () => {
-      render(
-        <LeaderboardTable
-          entries={mockEntries}
-          currentUserWallet="NonExistentWallet123"
-        />
-      );
+      render(<LeaderboardTable entries={mockEntries} currentUserWallet="NonExistentWallet123" />);
 
       expect(screen.queryByText('(You)')).not.toBeInTheDocument();
     });
@@ -223,9 +214,7 @@ describe('LeaderboardTable', () => {
 
   describe('className prop', () => {
     it('should apply custom className to table', () => {
-      render(
-        <LeaderboardTable entries={mockEntries} className="custom-class" />
-      );
+      render(<LeaderboardTable entries={mockEntries} className="custom-class" />);
 
       const table = screen.getByRole('table');
       expect(table).toHaveClass('custom-class');

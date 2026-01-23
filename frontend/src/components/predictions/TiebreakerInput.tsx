@@ -70,7 +70,7 @@ export function TiebreakerInput({ value, onChange, disabled = false }: Tiebreake
   const isValid = value !== null && error === null;
 
   return (
-    <Card className={cn(isValid && 'border-green-500/50 bg-green-500/5')}>
+    <Card className={cn(isValid && 'border-green-500/50 bg-green-500/5 dark:bg-green-500/10')}>
       <CardHeader>
         <div className="flex items-center gap-2">
           <Target className="text-primary h-5 w-5" />
@@ -92,12 +92,12 @@ export function TiebreakerInput({ value, onChange, disabled = false }: Tiebreake
             disabled={disabled}
             min={MIN_GOALS}
             max={MAX_GOALS}
-            className={cn(error && 'border-red-500 focus-visible:ring-red-500')}
+            className={cn(error && 'border-red-500 focus-visible:ring-red-500 dark:border-red-400')}
             aria-describedby="tiebreaker-help tiebreaker-error"
             aria-invalid={!!error}
           />
           {error && (
-            <p id="tiebreaker-error" className="text-sm text-red-500">
+            <p id="tiebreaker-error" className="text-sm text-red-500 dark:text-red-400">
               {error}
             </p>
           )}

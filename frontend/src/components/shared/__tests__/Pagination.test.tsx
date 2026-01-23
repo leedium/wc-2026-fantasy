@@ -6,30 +6,22 @@ describe('Pagination', () => {
   describe('rendering', () => {
     it('should render without crashing', () => {
       const mockOnChange = jest.fn();
-      render(
-        <Pagination currentPage={1} totalPages={10} onPageChange={mockOnChange} />
-      );
+      render(<Pagination currentPage={1} totalPages={10} onPageChange={mockOnChange} />);
 
       expect(screen.getByRole('navigation', { name: 'Pagination' })).toBeInTheDocument();
     });
 
     it('should render previous and next buttons', () => {
       const mockOnChange = jest.fn();
-      render(
-        <Pagination currentPage={5} totalPages={10} onPageChange={mockOnChange} />
-      );
+      render(<Pagination currentPage={5} totalPages={10} onPageChange={mockOnChange} />);
 
-      expect(
-        screen.getByRole('button', { name: /previous page/i })
-      ).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /previous page/i })).toBeInTheDocument();
       expect(screen.getByRole('button', { name: /next page/i })).toBeInTheDocument();
     });
 
     it('should show page info', () => {
       const mockOnChange = jest.fn();
-      render(
-        <Pagination currentPage={3} totalPages={10} onPageChange={mockOnChange} />
-      );
+      render(<Pagination currentPage={3} totalPages={10} onPageChange={mockOnChange} />);
 
       expect(screen.getByText('Page 3 of 10')).toBeInTheDocument();
     });
@@ -38,9 +30,7 @@ describe('Pagination', () => {
   describe('page numbers', () => {
     it('should show all pages when total is small', () => {
       const mockOnChange = jest.fn();
-      render(
-        <Pagination currentPage={1} totalPages={5} onPageChange={mockOnChange} />
-      );
+      render(<Pagination currentPage={1} totalPages={5} onPageChange={mockOnChange} />);
 
       expect(screen.getByRole('button', { name: 'Go to page 1' })).toBeInTheDocument();
       expect(screen.getByRole('button', { name: 'Go to page 2' })).toBeInTheDocument();
@@ -51,9 +41,7 @@ describe('Pagination', () => {
 
     it('should show ellipsis for large page counts', () => {
       const mockOnChange = jest.fn();
-      render(
-        <Pagination currentPage={5} totalPages={20} onPageChange={mockOnChange} />
-      );
+      render(<Pagination currentPage={5} totalPages={20} onPageChange={mockOnChange} />);
 
       // Should show ellipsis elements
       const ellipses = screen.getAllByRole('generic', { hidden: true });
@@ -62,9 +50,7 @@ describe('Pagination', () => {
 
     it('should always show first and last pages', () => {
       const mockOnChange = jest.fn();
-      render(
-        <Pagination currentPage={5} totalPages={20} onPageChange={mockOnChange} />
-      );
+      render(<Pagination currentPage={5} totalPages={20} onPageChange={mockOnChange} />);
 
       expect(screen.getByRole('button', { name: 'Go to page 1' })).toBeInTheDocument();
       expect(screen.getByRole('button', { name: 'Go to page 20' })).toBeInTheDocument();
@@ -72,9 +58,7 @@ describe('Pagination', () => {
 
     it('should show pages around current page', () => {
       const mockOnChange = jest.fn();
-      render(
-        <Pagination currentPage={10} totalPages={20} onPageChange={mockOnChange} />
-      );
+      render(<Pagination currentPage={10} totalPages={20} onPageChange={mockOnChange} />);
 
       // Should show pages around current page (9, 10, 11)
       expect(screen.getByRole('button', { name: 'Go to page 9' })).toBeInTheDocument();
@@ -86,9 +70,7 @@ describe('Pagination', () => {
   describe('current page highlighting', () => {
     it('should highlight current page button', () => {
       const mockOnChange = jest.fn();
-      render(
-        <Pagination currentPage={3} totalPages={5} onPageChange={mockOnChange} />
-      );
+      render(<Pagination currentPage={3} totalPages={5} onPageChange={mockOnChange} />);
 
       const currentPageButton = screen.getByRole('button', { name: 'Go to page 3' });
       expect(currentPageButton).toHaveAttribute('aria-current', 'page');
@@ -96,9 +78,7 @@ describe('Pagination', () => {
 
     it('should disable current page button', () => {
       const mockOnChange = jest.fn();
-      render(
-        <Pagination currentPage={3} totalPages={5} onPageChange={mockOnChange} />
-      );
+      render(<Pagination currentPage={3} totalPages={5} onPageChange={mockOnChange} />);
 
       const currentPageButton = screen.getByRole('button', { name: 'Go to page 3' });
       expect(currentPageButton).toBeDisabled();
@@ -108,9 +88,7 @@ describe('Pagination', () => {
   describe('navigation buttons', () => {
     it('should disable previous button on first page', () => {
       const mockOnChange = jest.fn();
-      render(
-        <Pagination currentPage={1} totalPages={10} onPageChange={mockOnChange} />
-      );
+      render(<Pagination currentPage={1} totalPages={10} onPageChange={mockOnChange} />);
 
       const prevButton = screen.getByRole('button', { name: /previous page/i });
       expect(prevButton).toBeDisabled();
@@ -118,9 +96,7 @@ describe('Pagination', () => {
 
     it('should enable previous button when not on first page', () => {
       const mockOnChange = jest.fn();
-      render(
-        <Pagination currentPage={5} totalPages={10} onPageChange={mockOnChange} />
-      );
+      render(<Pagination currentPage={5} totalPages={10} onPageChange={mockOnChange} />);
 
       const prevButton = screen.getByRole('button', { name: /previous page/i });
       expect(prevButton).not.toBeDisabled();
@@ -128,9 +104,7 @@ describe('Pagination', () => {
 
     it('should disable next button on last page', () => {
       const mockOnChange = jest.fn();
-      render(
-        <Pagination currentPage={10} totalPages={10} onPageChange={mockOnChange} />
-      );
+      render(<Pagination currentPage={10} totalPages={10} onPageChange={mockOnChange} />);
 
       const nextButton = screen.getByRole('button', { name: /next page/i });
       expect(nextButton).toBeDisabled();
@@ -138,9 +112,7 @@ describe('Pagination', () => {
 
     it('should enable next button when not on last page', () => {
       const mockOnChange = jest.fn();
-      render(
-        <Pagination currentPage={5} totalPages={10} onPageChange={mockOnChange} />
-      );
+      render(<Pagination currentPage={5} totalPages={10} onPageChange={mockOnChange} />);
 
       const nextButton = screen.getByRole('button', { name: /next page/i });
       expect(nextButton).not.toBeDisabled();
@@ -151,9 +123,7 @@ describe('Pagination', () => {
     it('should call onPageChange with previous page when clicking previous', async () => {
       const user = userEvent.setup();
       const mockOnChange = jest.fn();
-      render(
-        <Pagination currentPage={5} totalPages={10} onPageChange={mockOnChange} />
-      );
+      render(<Pagination currentPage={5} totalPages={10} onPageChange={mockOnChange} />);
 
       const prevButton = screen.getByRole('button', { name: /previous page/i });
       await user.click(prevButton);
@@ -164,9 +134,7 @@ describe('Pagination', () => {
     it('should call onPageChange with next page when clicking next', async () => {
       const user = userEvent.setup();
       const mockOnChange = jest.fn();
-      render(
-        <Pagination currentPage={5} totalPages={10} onPageChange={mockOnChange} />
-      );
+      render(<Pagination currentPage={5} totalPages={10} onPageChange={mockOnChange} />);
 
       const nextButton = screen.getByRole('button', { name: /next page/i });
       await user.click(nextButton);
@@ -177,9 +145,7 @@ describe('Pagination', () => {
     it('should call onPageChange with specific page when clicking page number', async () => {
       const user = userEvent.setup();
       const mockOnChange = jest.fn();
-      render(
-        <Pagination currentPage={1} totalPages={5} onPageChange={mockOnChange} />
-      );
+      render(<Pagination currentPage={1} totalPages={5} onPageChange={mockOnChange} />);
 
       const page3Button = screen.getByRole('button', { name: 'Go to page 3' });
       await user.click(page3Button);
@@ -208,9 +174,7 @@ describe('Pagination', () => {
   describe('edge cases', () => {
     it('should handle single page', () => {
       const mockOnChange = jest.fn();
-      render(
-        <Pagination currentPage={1} totalPages={1} onPageChange={mockOnChange} />
-      );
+      render(<Pagination currentPage={1} totalPages={1} onPageChange={mockOnChange} />);
 
       const prevButton = screen.getByRole('button', { name: /previous page/i });
       const nextButton = screen.getByRole('button', { name: /next page/i });
@@ -222,9 +186,7 @@ describe('Pagination', () => {
 
     it('should handle page at start with ellipsis', () => {
       const mockOnChange = jest.fn();
-      render(
-        <Pagination currentPage={2} totalPages={20} onPageChange={mockOnChange} />
-      );
+      render(<Pagination currentPage={2} totalPages={20} onPageChange={mockOnChange} />);
 
       // Should show pages 1, 2, 3 and last page
       expect(screen.getByRole('button', { name: 'Go to page 1' })).toBeInTheDocument();
@@ -235,9 +197,7 @@ describe('Pagination', () => {
 
     it('should handle page at end with ellipsis', () => {
       const mockOnChange = jest.fn();
-      render(
-        <Pagination currentPage={19} totalPages={20} onPageChange={mockOnChange} />
-      );
+      render(<Pagination currentPage={19} totalPages={20} onPageChange={mockOnChange} />);
 
       // Should show pages 1, and 18, 19, 20
       expect(screen.getByRole('button', { name: 'Go to page 1' })).toBeInTheDocument();

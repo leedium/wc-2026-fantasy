@@ -1,10 +1,7 @@
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { LeaderboardPageContent } from '../LeaderboardPageContent';
-import {
-  setWalletConnected,
-  setWalletDisconnected,
-} from '@solana/wallet-adapter-react';
+import { setWalletConnected, setWalletDisconnected } from '@solana/wallet-adapter-react';
 
 // Reset mocks before each test
 beforeEach(() => {
@@ -59,9 +56,7 @@ describe('LeaderboardPageContent', () => {
 
       await waitFor(
         () => {
-          expect(
-            screen.getByText('Connect your wallet to see your rank.')
-          ).toBeInTheDocument();
+          expect(screen.getByText('Connect your wallet to see your rank.')).toBeInTheDocument();
         },
         { timeout: 2000 }
       );
@@ -102,9 +97,7 @@ describe('LeaderboardPageContent', () => {
 
       await waitFor(
         () => {
-          expect(
-            screen.getByText("You haven't submitted predictions yet.")
-          ).toBeInTheDocument();
+          expect(screen.getByText("You haven't submitted predictions yet.")).toBeInTheDocument();
         },
         { timeout: 2000 }
       );

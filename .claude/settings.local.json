@@ -1,0 +1,23 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm test:*)",
+      "Bash(npx jest:*)",
+      "Bash(npm install)",
+      "Bash(npm run test:coverage:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git push:*)",
+      "Bash(gh pr create --base main --head ralph/frontend-pages --title \"feat: Frontend Application Setup and Pages Implementation\" --body \"$\\(cat <<''EOF''\n## Summary\n\nComplete frontend implementation for the World Cup 2026 Prediction Game including:\n\n### Frontend Setup \\(US-001 to US-010\\)\n- Next.js 15 project initialization with App Router and strict TypeScript\n- Tailwind CSS with WC2026 custom theme colors\n- shadcn/ui component library setup\n- Solana wallet adapter integration \\(Phantom, Backpack, Solflare\\)\n- Zustand state management with devtools\n- React Query for server state\n- Environment configuration for devnet/mainnet switching\n\n### Frontend Pages \\(US-001 to US-015\\)\n- **Shared Layout**: Header with navigation \\(Landing, Predictions, Leaderboard, Claims\\) + Footer\n- **Landing Page**: Hero, tournament info, how it works, scoring breakdown\n- **Predictions Page**: Full interactive bracket builder with:\n  - Group stage prediction form \\(12 groups, team selection with validation\\)\n  - Knockout bracket \\(R32 → Final with winner propagation\\)\n  - Tiebreaker input \\(total goals prediction\\)\n- **Leaderboard Page**: Paginated rankings table with user highlighting\n- **Claims Page**: Placeholder for future prize claiming\n\n### Unit Testing Infrastructure\n- Jest + React Testing Library setup\n- 205 tests passing\n- 70%+ code coverage \\(statements, branches, functions, lines\\)\n- Wallet adapter mocks for testing connected/disconnected states\n- Documentation in ENGINEERING.md\n\n## Test plan\n\n- [x] `npm run build` passes\n- [x] `npm run typecheck` passes  \n- [x] `npm run lint` passes\n- [x] `npm test` - all 205 tests pass\n- [x] `npm run test:coverage` - 70%+ coverage thresholds met\n- [ ] Manual browser verification of all pages\n\n🤖 Generated with [Claude Code]\\(https://claude.com/claude-code\\)\nEOF\n\\)\")",
+      "Bash(gh pr view:*)",
+      "Bash(git checkout:*)",
+      "Bash(git pull:*)",
+      "Bash(npm run typecheck:*)",
+      "Bash(git restore:*)",
+      "Bash(npm run build:*)",
+      "Bash(gh pr create:*)",
+      "Bash(gh pr merge:*)",
+      "Skill(prd)"
+    ]
+  }
+}

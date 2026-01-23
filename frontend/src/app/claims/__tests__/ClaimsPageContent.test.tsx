@@ -18,9 +18,7 @@ describe('ClaimsPageContent', () => {
     it('should show description about prize distribution', () => {
       render(<ClaimsPageContent />);
 
-      expect(
-        screen.getByText('Prize distribution is not yet available')
-      ).toBeInTheDocument();
+      expect(screen.getByText('Prize distribution is not yet available')).toBeInTheDocument();
     });
   });
 
@@ -36,9 +34,7 @@ describe('ClaimsPageContent', () => {
     it('should mention final rankings', () => {
       render(<ClaimsPageContent />);
 
-      expect(
-        screen.getByText(/final rankings are calculated/i)
-      ).toBeInTheDocument();
+      expect(screen.getByText(/final rankings are calculated/i)).toBeInTheDocument();
     });
   });
 

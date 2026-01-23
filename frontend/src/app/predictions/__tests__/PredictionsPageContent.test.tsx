@@ -1,11 +1,7 @@
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { PredictionsPageContent } from '../PredictionsPageContent';
-import {
-  useWallet,
-  setWalletConnected,
-  setWalletDisconnected,
-} from '@solana/wallet-adapter-react';
+import { useWallet, setWalletConnected, setWalletDisconnected } from '@solana/wallet-adapter-react';
 
 // Reset mocks before each test
 beforeEach(() => {
@@ -59,9 +55,7 @@ describe('PredictionsPageContent', () => {
       render(<PredictionsPageContent />);
 
       expect(screen.getByText('Ready to submit?')).toBeInTheDocument();
-      expect(
-        screen.getByRole('button', { name: /Submit Predictions/i })
-      ).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /Submit Predictions/i })).toBeInTheDocument();
     });
   });
 
@@ -70,9 +64,7 @@ describe('PredictionsPageContent', () => {
       setWalletDisconnected();
       render(<PredictionsPageContent />);
 
-      expect(
-        screen.getByText('Connect your wallet to submit predictions')
-      ).toBeInTheDocument();
+      expect(screen.getByText('Connect your wallet to submit predictions')).toBeInTheDocument();
     });
 
     it('should disable submit button when wallet is disconnected', () => {
@@ -148,9 +140,7 @@ describe('PredictionsPageContent', () => {
       setWalletConnected();
       render(<PredictionsPageContent />);
 
-      expect(
-        screen.getByText('Complete all predictions to submit')
-      ).toBeInTheDocument();
+      expect(screen.getByText('Complete all predictions to submit')).toBeInTheDocument();
     });
 
     it('should disable submit when predictions are incomplete', () => {

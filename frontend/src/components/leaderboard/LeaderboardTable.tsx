@@ -32,7 +32,7 @@ function getRankBadge(rank: number): { color: string; label: string } | null {
     case 1:
       return { color: 'bg-yellow-500 text-yellow-950', label: '1st' };
     case 2:
-      return { color: 'bg-gray-400 text-gray-950', label: '2nd' };
+      return { color: 'bg-gray-400 dark:bg-gray-300 text-gray-950', label: '2nd' };
     case 3:
       return { color: 'bg-amber-600 text-amber-950', label: '3rd' };
     default:

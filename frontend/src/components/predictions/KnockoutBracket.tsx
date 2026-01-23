@@ -142,7 +142,10 @@ function MatchCard({
 
   return (
     <Card
-      className={cn('w-full transition-colors', hasWinner && 'border-green-500/50 bg-green-500/5')}
+      className={cn(
+        'w-full transition-colors',
+        hasWinner && 'border-green-500/50 bg-green-500/5 dark:bg-green-500/10'
+      )}
     >
       <CardHeader className="p-3 pb-2">
         <div className="flex items-center justify-between">

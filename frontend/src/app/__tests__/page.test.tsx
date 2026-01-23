@@ -133,9 +133,7 @@ describe('Home Page', () => {
       render(<Home />);
 
       expect(screen.getByText('Tiebreaker')).toBeInTheDocument();
-      expect(
-        screen.getByText(/Predict total tournament goals/i)
-      ).toBeInTheDocument();
+      expect(screen.getByText(/Predict total tournament goals/i)).toBeInTheDocument();
     });
   });
 });

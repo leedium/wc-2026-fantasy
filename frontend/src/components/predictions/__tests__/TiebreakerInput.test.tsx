@@ -22,9 +22,7 @@ describe('TiebreakerInput', () => {
       const mockOnChange = jest.fn();
       render(<TiebreakerInput value={null} onChange={mockOnChange} />);
 
-      expect(
-        screen.getByText(/Predict the total number of goals scored/i)
-      ).toBeInTheDocument();
+      expect(screen.getByText(/Predict the total number of goals scored/i)).toBeInTheDocument();
     });
 
     it('should render help text', () => {
@@ -110,8 +108,7 @@ describe('TiebreakerInput', () => {
 
       // Should show error about positive number or range
       expect(
-        screen.queryByText(/must be a positive number/i) ||
-          screen.queryByText(/must be between/i)
+        screen.queryByText(/must be a positive number/i) || screen.queryByText(/must be between/i)
       ).toBeTruthy();
     });
 
@@ -194,9 +191,7 @@ describe('TiebreakerInput', () => {
   describe('visual feedback', () => {
     it('should show green border when valid', () => {
       const mockOnChange = jest.fn();
-      const { container } = render(
-        <TiebreakerInput value={172} onChange={mockOnChange} />
-      );
+      const { container } = render(<TiebreakerInput value={172} onChange={mockOnChange} />);
 
       // Card should have green styling when valid
       const card = container.querySelector('[class*="border-green"]');
