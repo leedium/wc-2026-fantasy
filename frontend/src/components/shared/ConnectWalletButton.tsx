@@ -20,8 +20,17 @@ interface ConnectWalletButtonProps {
   className?: string;
 }
 
+/**
+ * Truncates a wallet address to show first 4 and last 4 characters
+ * e.g., "7xKpR9...3nFq"
+ */
+function truncateAddress(address: string): string {
+  if (address.length <= 8) return address;
+  return `${address.slice(0, 4)}...${address.slice(-4)}`;
+}
+
 export function ConnectWalletButton({ className }: ConnectWalletButtonProps) {
-  const { wallets, select, connecting } = useWallet();
+  const { wallets, select, connecting, connected, publicKey } = useWallet();
   const [isOpen, setIsOpen] = useState(false);
 
   const handleSelectWallet = useCallback(
@@ -43,6 +52,22 @@ export function ConnectWalletButton({ className }: ConnectWalletButtonProps) {
     (wallet) => wallet.readyState === WalletReadyState.NotDetected
   );
 
+  // Render connected state button with truncated address
+  if (connected && publicKey) {
+    const truncatedAddress = truncateAddress(publicKey.toBase58());
+
+    return (
+      <Button
+        variant="outline"
+        className={cn('gap-2 border-green-500/50 bg-green-500/10 hover:bg-green-500/20', className)}
+      >
+        <div className="h-2 w-2 rounded-full bg-green-500" />
+        {truncatedAddress}
+      </Button>
+    );
+  }
+
+  // Render disconnected state button
   return (
     <>
       <Button
