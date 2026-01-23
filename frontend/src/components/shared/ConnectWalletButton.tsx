@@ -4,7 +4,7 @@ import { useState, useCallback } from 'react';
 import { useWallet } from '@solana/wallet-adapter-react';
 import type { WalletName } from '@solana/wallet-adapter-base';
 import { WalletReadyState } from '@solana/wallet-adapter-base';
-import { Wallet, ExternalLink } from 'lucide-react';
+import { Wallet, ExternalLink, Copy, Check, LogOut } from 'lucide-react';
 
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -15,6 +15,8 @@ import {
   DialogTitle,
   DialogDescription,
 } from '@/components/ui/dialog';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { useSolBalance } from '@/hooks/useSolBalance';
 
 interface ConnectWalletButtonProps {
   className?: string;
@@ -30,8 +32,11 @@ function truncateAddress(address: string): string {
 }
 
 export function ConnectWalletButton({ className }: ConnectWalletButtonProps) {
-  const { wallets, select, connecting, connected, publicKey } = useWallet();
+  const { wallets, select, connecting, connected, publicKey, disconnect } = useWallet();
+  const { balance, isLoading: isBalanceLoading, error: balanceError } = useSolBalance();
   const [isOpen, setIsOpen] = useState(false);
+  const [isPopoverOpen, setIsPopoverOpen] = useState(false);
+  const [copied, setCopied] = useState(false);
 
   const handleSelectWallet = useCallback(
     async (walletName: WalletName) => {
@@ -40,6 +45,30 @@ export function ConnectWalletButton({ className }: ConnectWalletButtonProps) {
     },
     [select]
   );
+
+  const handleCopyAddress = useCallback(async () => {
+    if (!publicKey) return;
+    try {
+      await navigator.clipboard.writeText(publicKey.toBase58());
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch (err) {
+      console.error('Failed to copy address:', err);
+    }
+  }, [publicKey]);
+
+  const handleDisconnect = useCallback(async () => {
+    await disconnect();
+    setIsPopoverOpen(false);
+  }, [disconnect]);
+
+  /**
+   * Format SOL balance to 4 decimal places
+   */
+  const formatBalance = (bal: number | null): string => {
+    if (bal === null) return '—';
+    return bal.toFixed(4);
+  };
 
   // Separate wallets into installed and not installed
   const installedWallets = wallets.filter(
@@ -52,18 +81,71 @@ export function ConnectWalletButton({ className }: ConnectWalletButtonProps) {
     (wallet) => wallet.readyState === WalletReadyState.NotDetected
   );
 
-  // Render connected state button with truncated address
+  // Render connected state button with truncated address and popover
   if (connected && publicKey) {
     const truncatedAddress = truncateAddress(publicKey.toBase58());
+    const fullAddress = publicKey.toBase58();
 
     return (
-      <Button
-        variant="outline"
-        className={cn('gap-2 border-green-500/50 bg-green-500/10 hover:bg-green-500/20', className)}
-      >
-        <div className="h-2 w-2 rounded-full bg-green-500" />
-        {truncatedAddress}
-      </Button>
+      <Popover open={isPopoverOpen} onOpenChange={setIsPopoverOpen}>
+        <PopoverTrigger asChild>
+          <Button
+            variant="outline"
+            className={cn(
+              'gap-2 border-green-500/50 bg-green-500/10 hover:bg-green-500/20',
+              className
+            )}
+          >
+            <div className="h-2 w-2 rounded-full bg-green-500" />
+            {truncatedAddress}
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent align="end" className="w-80">
+          <div className="flex flex-col gap-4">
+            {/* Wallet Address */}
+            <div>
+              <p className="text-muted-foreground mb-1 text-xs font-medium">Wallet Address</p>
+              <div className="flex items-center gap-2">
+                <code className="bg-muted flex-1 truncate rounded px-2 py-1 text-sm">
+                  {fullAddress}
+                </code>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8 shrink-0"
+                  onClick={handleCopyAddress}
+                >
+                  {copied ? (
+                    <Check className="h-4 w-4 text-green-500" />
+                  ) : (
+                    <Copy className="h-4 w-4" />
+                  )}
+                </Button>
+              </div>
+            </div>
+
+            {/* SOL Balance */}
+            <div>
+              <p className="text-muted-foreground mb-1 text-xs font-medium">Balance</p>
+              <p className="text-lg font-semibold">
+                {isBalanceLoading ? (
+                  <span className="text-muted-foreground">Loading...</span>
+                ) : balanceError ? (
+                  <span className="text-muted-foreground">—</span>
+                ) : (
+                  `${formatBalance(balance)} SOL`
+                )}
+              </p>
+            </div>
+
+            {/* Disconnect Button */}
+            <Button variant="destructive" className="w-full gap-2" onClick={handleDisconnect}>
+              <LogOut className="h-4 w-4" />
+              Disconnect
+            </Button>
+          </div>
+        </PopoverContent>
+      </Popover>
     );
   }
 
