@@ -1,132 +1,148 @@
 {
   "project": "WC2026",
-  "branchName": "ralph/dark-mode-toggle",
-  "description": "Dark Mode Toggle - Comprehensive theme switching with system detection, manual override, and cookie-based persistence for SSR compatibility",
+  "branchName": "ralph/solana-wallet-connect",
+  "description": "Solana Wallet Connectivity - Enable functional wallet connection with network selection, balance display, and persistent sessions",
   "userStories": [
     {
-      "id": "dark-mode-toggle-US-001",
-      "title": "Add Theme Provider Infrastructure",
-      "description": "As a developer, I need a theme provider that manages theme state so that all components can access the current theme.",
+      "id": "solana-wallet-connect-US-001",
+      "title": "Set up wallet adapter providers",
+      "description": "As a developer, I need to configure the Solana wallet adapter so that wallet functionality is available throughout the app.",
       "acceptanceCriteria": [
-        "Install next-themes package",
-        "Create components/providers/ThemeProvider.tsx using next-themes library",
-        "Provider wraps the application in app/layout.tsx",
-        "Supports three modes: 'light', 'dark', 'system'",
-        "Default to 'system' for first-time visitors",
+        "Install @solana/wallet-adapter-react, @solana/wallet-adapter-react-ui, @solana/wallet-adapter-wallets, @solana/web3.js",
+        "Create WalletContextProvider component wrapping ConnectionProvider and WalletProvider",
+        "Configure adapters for Phantom, Backpack, Solflare, Ledger, and other major wallets",
+        "Wrap app layout with WalletContextProvider",
         "Typecheck passes"
       ],
       "priority": 1,
       "passes": true,
-      "notes": "Already implemented - next-themes installed, ThemeProvider exists with proper config"
+      "notes": "Added LedgerWalletAdapter. Backpack uses Wallet Standard auto-detect."
     },
     {
-      "id": "dark-mode-toggle-US-002",
-      "title": "Configure Cookie-Based Theme Storage",
-      "description": "As a user, I want my theme preference to load instantly so that I don't see a flash of the wrong theme.",
+      "id": "solana-wallet-connect-US-002",
+      "title": "Add network selector",
+      "description": "As a user, I want to select which Solana network to connect to so I can use devnet for testing or mainnet for real transactions.",
       "acceptanceCriteria": [
-        "Configure next-themes to use cookie storage (attribute='class')",
-        "Add suppressHydrationWarning to html element in layout.tsx",
-        "Server-side rendering uses cookie value to set initial theme",
-        "No flash of unstyled/wrong-themed content on page load",
-        "Typecheck passes"
+        "Network selector dropdown with options: Mainnet, Devnet, Testnet",
+        "Selected network stored in localStorage and persists across sessions",
+        "Network selection updates the RPC endpoint used by ConnectionProvider",
+        "Default to Devnet if no network previously selected",
+        "Network change triggers wallet reconnection if already connected",
+        "Typecheck passes",
+        "Verify in browser using dev-browser skill"
       ],
       "priority": 2,
       "passes": true,
-      "notes": "Already implemented - attribute=class and suppressHydrationWarning configured"
+      "notes": "Uses Zustand store with persistence. Network change forces provider re-mount via key prop."
     },
     {
-      "id": "dark-mode-toggle-US-003",
-      "title": "Update Tailwind Dark Mode Configuration",
-      "description": "As a developer, I need Tailwind configured for class-based dark mode so that next-themes can control the theme.",
+      "id": "solana-wallet-connect-US-003",
+      "title": "Implement connect wallet button",
+      "description": "As a user, I want to click 'Connect Wallet' to see a list of available wallets so I can connect my preferred wallet.",
       "acceptanceCriteria": [
-        "Verify tailwind.config.ts has darkMode: 'class' setting (or add if missing)",
-        "Verify CSS variables in globals.css support both light and dark themes",
-        "Existing shadcn/ui components automatically support dark mode",
-        "Typecheck passes"
+        "Replace placeholder button with functional connect button",
+        "Clicking button opens wallet selection modal showing installed wallets",
+        "Wallets that are not installed show 'Install' link to their respective stores",
+        "Modal is styled consistently with existing UI (shadcn/ui, Tailwind)",
+        "Typecheck passes",
+        "Verify in browser using dev-browser skill"
       ],
       "priority": 3,
       "passes": true,
-      "notes": "Already implemented - darkMode: class in tailwind config, CSS vars in globals.css"
+      "notes": "Custom ConnectWalletButton using shadcn/ui Dialog and Button. Detects installed wallets via readyState. Links to wallet store for not-installed wallets."
     },
     {
-      "id": "dark-mode-toggle-US-004",
-      "title": "Create Theme Toggle Button Component",
-      "description": "As a user, I want a button in the header to toggle between themes so that I can switch modes easily.",
+      "id": "solana-wallet-connect-US-004",
+      "title": "Display connected state with truncated address",
+      "description": "As a user, I want to see my truncated wallet address on the button after connecting so I know which wallet is active.",
       "acceptanceCriteria": [
-        "Create components/shared/ThemeToggle.tsx component",
-        "Button displays Sun icon for light mode, Moon icon for dark mode, Monitor icon for system",
-        "Clicking cycles through: light -> dark -> system -> light",
-        "Uses lucide-react icons (Sun, Moon, Monitor)",
-        "Accessible with keyboard navigation",
+        "After successful connection, button shows truncated address (e.g., '7xKp...3nFq')",
+        "Truncation shows first 4 and last 4 characters of the address",
+        "Button styling changes to indicate connected state (e.g., different background color or border)",
         "Typecheck passes",
         "Verify in browser using dev-browser skill"
       ],
       "priority": 4,
       "passes": true,
-      "notes": "Created ThemeToggle with useMounted hook for hydration-safe rendering"
+      "notes": "Uses truncateAddress helper function. Connected state shows green indicator dot and green-tinted outline button variant."
     },
     {
-      "id": "dark-mode-toggle-US-005",
-      "title": "Add Theme Toggle to Header",
-      "description": "As a user, I want the theme toggle visible in the header so that I can easily access it from any page.",
+      "id": "solana-wallet-connect-US-005",
+      "title": "Fetch SOL balance",
+      "description": "As a developer, I need to fetch the user's SOL balance from the blockchain so it can be displayed in the wallet popup.",
       "acceptanceCriteria": [
-        "ThemeToggle added to Header component (desktop and mobile)",
-        "Positioned before the wallet button on desktop",
-        "Visible in mobile navigation sheet",
-        "Consistent styling with other header elements",
-        "Typecheck passes",
-        "Verify in browser using dev-browser skill"
+        "Fetch balance using connection.getBalance() after wallet connects",
+        "Convert lamports to SOL (divide by 1e9)",
+        "Update balance when network changes",
+        "Handle errors gracefully (show '—' if balance fetch fails)",
+        "Typecheck passes"
       ],
       "priority": 5,
       "passes": true,
-      "notes": "Added ThemeToggle to Header - desktop before wallet button, mobile in sheet with label"
+      "notes": "Created useSolBalance hook using useConnection and useWallet. Uses LAMPORTS_PER_SOL constant for conversion. Provides balance, isLoading, error, and refetch."
     },
     {
-      "id": "dark-mode-toggle-US-006",
-      "title": "Add Dark Theme Styles to Custom Components",
-      "description": "As a user, I want all custom components to look correct in dark mode so that the experience is consistent.",
+      "id": "solana-wallet-connect-US-006",
+      "title": "Show wallet details popup",
+      "description": "As a user, I want to click my connected wallet button to see my full address, balance, and disconnect option.",
       "acceptanceCriteria": [
-        "Review all custom components for hardcoded colors",
-        "Replace hardcoded colors with CSS variables or Tailwind dark: variants where needed",
-        "GroupStageForm component supports dark mode",
-        "KnockoutBracket component supports dark mode",
-        "LeaderboardTable component supports dark mode",
+        "Clicking connected wallet button opens a popup/dropdown",
+        "Popup displays full wallet address with copy-to-clipboard button",
+        "Popup displays current SOL balance (formatted to 4 decimal places)",
+        "Popup includes 'Disconnect' button",
+        "Popup closes when clicking outside or pressing Escape",
         "Typecheck passes",
         "Verify in browser using dev-browser skill"
       ],
       "priority": 6,
       "passes": true,
-      "notes": "Added dark: variants for success/error states, enhanced green backgrounds visibility in dark mode"
+      "notes": "Uses Radix Popover via shadcn/ui. Integrates useSolBalance hook for balance display. Copy-to-clipboard with visual feedback (Check icon). Escape/click-outside handled by Radix."
     },
     {
-      "id": "dark-mode-toggle-US-007",
-      "title": "Add System Preference Detection",
-      "description": "As a user, I want the app to detect my OS dark mode setting so that it matches my system preference by default.",
+      "id": "solana-wallet-connect-US-007",
+      "title": "Implement disconnect functionality",
+      "description": "As a user, I want to disconnect my wallet so I can switch accounts or protect my privacy.",
       "acceptanceCriteria": [
-        "next-themes enableSystem option enabled in ThemeProvider",
-        "First-time visitors see theme matching their OS preference",
-        "Users can override system preference with manual selection",
-        "Typecheck passes"
+        "Clicking 'Disconnect' in popup disconnects the wallet",
+        "Button returns to 'Connect Wallet' state after disconnect",
+        "Popup closes after disconnect",
+        "Typecheck passes",
+        "Verify in browser using dev-browser skill"
       ],
       "priority": 7,
       "passes": true,
-      "notes": "Already implemented - enableSystem and defaultTheme=system in ThemeProvider"
+      "notes": "Functionality was already implemented in US-006. Uses handleDisconnect callback that calls disconnect() from useWallet and closes popover."
     },
     {
-      "id": "dark-mode-toggle-US-008",
-      "title": "Write Unit Tests for Theme Components",
-      "description": "As a developer, I need tests for the theme system so that we can ensure it works correctly.",
+      "id": "solana-wallet-connect-US-008",
+      "title": "Auto-reconnect on page refresh",
+      "description": "As a user, I want my wallet to stay connected when I refresh the page so I don't have to reconnect every time.",
       "acceptanceCriteria": [
-        "Unit tests for ThemeToggle component in __tests__/components/shared/ThemeToggle.test.tsx",
-        "Tests verify toggle cycles through modes correctly",
-        "Tests verify correct icons displayed for each mode",
-        "Mock next-themes in test setup",
-        "All tests pass",
+        "Wallet adapter configured with autoConnect: true",
+        "Previously connected wallet automatically reconnects on page load",
+        "If auto-reconnect fails (e.g., wallet locked), button shows 'Connect Wallet' state",
         "Typecheck passes"
       ],
       "priority": 8,
       "passes": true,
-      "notes": "Created comprehensive unit tests for ThemeToggle component with 19 tests covering rendering, icons, theme cycling, accessibility, and hydration safety"
+      "notes": "autoConnect: true was already configured in WalletProvider. ConnectWalletButton already handles fallback to disconnected state when connected/publicKey are falsy."
+    },
+    {
+      "id": "solana-wallet-connect-US-009",
+      "title": "Handle connection errors with toast notifications",
+      "description": "As a user, I want to see a clear error message if my wallet connection fails so I know what went wrong.",
+      "acceptanceCriteria": [
+        "User rejection shows toast: 'Connection cancelled'",
+        "Wallet not found shows toast: 'Wallet not found. Please install [wallet name]'",
+        "Network error shows toast: 'Failed to connect. Please try again'",
+        "Toast notifications use existing toast system (sonner)",
+        "Toasts auto-dismiss after 5 seconds",
+        "Typecheck passes",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 9,
+      "passes": true,
+      "notes": "Added onError callback to WalletProvider using wallet-adapter-base error types. Uses sonner toast with 5s duration. Handles WalletWindowClosedError, WalletNotReadyError, WalletConnectionError, and generic fallback."
     }
   ]
 }

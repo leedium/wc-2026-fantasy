@@ -2,7 +2,7 @@
  * Environment configuration with runtime validation
  */
 
-export type SolanaNetwork = 'devnet' | 'mainnet-beta';
+export type SolanaNetwork = 'devnet' | 'testnet' | 'mainnet-beta';
 
 interface EnvConfig {
   solanaNetwork: SolanaNetwork;
@@ -11,9 +11,9 @@ interface EnvConfig {
 }
 
 function validateNetwork(network: string | undefined): SolanaNetwork {
-  if (network !== 'devnet' && network !== 'mainnet-beta') {
+  if (network !== 'devnet' && network !== 'testnet' && network !== 'mainnet-beta') {
     throw new Error(
-      `Invalid NEXT_PUBLIC_SOLANA_NETWORK: "${network}". Must be "devnet" or "mainnet-beta".`
+      `Invalid NEXT_PUBLIC_SOLANA_NETWORK: "${network}". Must be "devnet", "testnet", or "mainnet-beta".`
     );
   }
   return network;

@@ -17,7 +17,8 @@
       "Bash(npm run build:*)",
       "Bash(gh pr create:*)",
       "Bash(gh pr merge:*)",
-      "Skill(prd)"
+      "Skill(prd)",
+      "Skill(ralph)"
     ]
   }
 }

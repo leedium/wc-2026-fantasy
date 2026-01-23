@@ -1,5 +1,5 @@
 # Ralph Progress Log
-Started: Wed Jan 22 2026
+Started: Thu Jan 23 2026
 
 ## Codebase Patterns
 - Frontend located at `/frontend` directory
@@ -27,70 +27,106 @@ Started: Wed Jan 22 2026
 
 ---
 
-## 2026-01-23 - dark-mode-toggle-US-001, US-002, US-003, US-004, US-007
-- Verified existing dark mode infrastructure was already in place (US-001, US-002, US-003, US-007)
-- Created ThemeToggle.tsx component with Sun/Moon/Monitor icons
-- Created useMounted.ts hook using useSyncExternalStore for hydration-safe mounting
-- ThemeToggle cycles through light -> dark -> system -> light
-- Files changed:
-  - frontend/src/components/shared/ThemeToggle.tsx (new)
-  - frontend/src/hooks/useMounted.ts (new)
-  - scripts/ralph/prd.json (updated passes to true)
+## 2026-01-23 - solana-wallet-connect-US-001
+- What was implemented: Added LedgerWalletAdapter to the WalletProvider component
+- Files changed: frontend/src/providers/WalletProvider.tsx
 - **Learnings for future iterations:**
-  - The ESLint rule `react-hooks/set-state-in-effect` prevents useState + useEffect for mounting detection
-  - Use useSyncExternalStore with getServerSnapshot returning false for hydration-safe client detection
-  - The hooks/ directory is at src/hooks/ (created for this story)
-  - Typecheck has pre-existing test mock errors - build passes but typecheck fails on test files
+  - Wallet adapter packages were already installed; just needed to add Ledger adapter
+  - The WalletProvider was already properly structured with ConnectionProvider, WalletProvider, and WalletModalProvider
+  - Backpack wallet uses Wallet Standard protocol and is auto-detected - no explicit adapter needed
+  - Build passes but typecheck has pre-existing errors in test mocks and .next validator - use `npm run build` as the primary check
 ---
 
-## 2026-01-23 - dark-mode-toggle-US-005
-- Added ThemeToggle to Header component
-- Desktop: positioned before wallet button in flex container with gap-4
-- Mobile: added in SheetContent with "Theme:" label and border-t separator below nav links
+## 2026-01-23 - solana-wallet-connect-US-002
+- What was implemented: Network selector dropdown with Mainnet/Devnet/Testnet options
 - Files changed:
-  - frontend/src/components/layout/Header.tsx (modified - added import and ThemeToggle usage)
-  - scripts/ralph/prd.json (updated passes to true)
+  - frontend/src/config/env.ts - Added 'testnet' to SolanaNetwork type
+  - frontend/src/components/shared/NetworkSelector.tsx - New component using shadcn/ui Select
+  - frontend/src/providers/WalletProvider.tsx - Now uses network from Zustand store, forces reconnect via key prop
+  - frontend/src/components/layout/Header.tsx - Added NetworkSelector to desktop and mobile nav
 - **Learnings for future iterations:**
-  - Header has separate desktop (md:flex) and mobile (md:hidden) sections
-  - Mobile nav uses Sheet from shadcn/ui with SheetContent side="right"
-  - Desktop wallet actions are in a div with `hidden md:flex`, mobile has `flex md:hidden`
+  - useAppStore already had selectedNetwork state with localStorage persistence via Zustand persist middleware
+  - To force wallet reconnection on network change, use key prop on ConnectionProvider and WalletProvider components
+  - Network selector should use useMounted() hook to avoid hydration mismatch
+  - clusterApiUrl(network) returns the default RPC URL for each network
 ---
 
-## 2026-01-23 - dark-mode-toggle-US-006
-- Added dark mode support to custom components
-- GroupStageForm: Enhanced green success background with `dark:bg-green-500/10` for better visibility
-- KnockoutBracket: Enhanced green success background with `dark:bg-green-500/10` for match cards
-- TiebreakerInput: Added `dark:border-red-400` and `dark:text-red-400` for error states, enhanced success background
-- LeaderboardTable: Improved 2nd place badge with `dark:bg-gray-300` for better contrast in dark mode
+## 2026-01-23 - solana-wallet-connect-US-003
+- What was implemented: Custom ConnectWalletButton component with shadcn/ui Dialog modal
 - Files changed:
-  - frontend/src/components/predictions/GroupStageForm.tsx (modified)
-  - frontend/src/components/predictions/KnockoutBracket.tsx (modified)
-  - frontend/src/components/predictions/TiebreakerInput.tsx (modified)
-  - frontend/src/components/leaderboard/LeaderboardTable.tsx (modified)
-  - scripts/ralph/prd.json (updated passes to true)
+  - frontend/src/components/shared/ConnectWalletButton.tsx - New component replacing WalletMultiButton
+  - frontend/src/components/layout/Header.tsx - Now uses ConnectWalletButton instead of WalletMultiButton
 - **Learnings for future iterations:**
-  - Use `dark:` prefix for Tailwind dark mode variants on class-based dark mode
-  - Opacity-based colors like `bg-green-500/5` need slightly higher opacity in dark mode (`dark:bg-green-500/10`)
-  - Error colors (red-500) are slightly too dark in dark mode, use red-400 for better readability
-  - Badge text colors on colored backgrounds are intentional and don't need dark variants
+  - WalletReadyState enum: Installed, Loadable (both mean usable), NotDetected (needs install link)
+  - Use `select(walletName)` from useWallet hook to programmatically select a wallet
+  - Wallet adapter provides `wallet.adapter.icon` (data URL) and `wallet.adapter.url` (store link)
+  - Dynamic import with `{ ssr: false }` needed for wallet components to avoid hydration mismatch
 ---
 
-## 2026-01-23 - dark-mode-toggle-US-008
-- Created comprehensive unit tests for ThemeToggle component
-- 19 tests covering: rendering, icons for each theme, theme cycling, accessibility, hydration safety
-- Mocked next-themes useTheme hook and useMounted hook for isolated testing
-- Tests verify correct icons (Sun/Moon/Monitor) display for each theme mode
-- Tests verify cycling: light -> dark -> system -> light
-- Tests verify accessibility (aria-labels, keyboard navigation with Enter and Space)
-- Tests verify hydration safety (disabled placeholder when not mounted)
+## 2026-01-23 - solana-wallet-connect-US-004
+- What was implemented: Connected state display with truncated wallet address
 - Files changed:
-  - frontend/src/components/shared/__tests__/ThemeToggle.test.tsx (new)
-  - scripts/ralph/prd.json (updated passes to true)
+  - frontend/src/components/shared/ConnectWalletButton.tsx - Added truncateAddress helper and connected state rendering
 - **Learnings for future iterations:**
-  - Mock next-themes with mockUseTheme function returning { theme, setTheme, resolvedTheme }
-  - Mock useMounted separately to control hydration state in tests
-  - lucide-react icons have class names like `lucide-sun`, `lucide-moon`, `lucide-monitor` for identification
-  - Test files go in `__tests__` folder next to the component being tested
-  - Use userEvent.setup() for realistic user interaction simulation in tests
+  - Use `connected` and `publicKey` from useWallet to detect connection state
+  - `publicKey.toBase58()` returns the full address string
+  - Green tint with `border-green-500/50 bg-green-500/10` gives a clear visual distinction for connected state
+  - Button returns early for connected state to avoid rendering the wallet selection dialog
+---
+
+## 2026-01-23 - solana-wallet-connect-US-005
+- What was implemented: useSolBalance hook for fetching wallet SOL balance
+- Files changed:
+  - frontend/src/hooks/useSolBalance.ts - New hook to fetch and manage SOL balance state
+- **Learnings for future iterations:**
+  - Use `useConnection` to get the connection object for RPC calls
+  - `connection.getBalance(publicKey)` returns balance in lamports
+  - Use `LAMPORTS_PER_SOL` constant from `@solana/web3.js` (equals 1e9) for conversion
+  - Hook dependencies on connection, publicKey, and connected trigger refetch when network changes
+  - Return object should include balance, isLoading, error, and refetch for flexibility in UI consumption
+---
+
+## 2026-01-23 - solana-wallet-connect-US-006
+- What was implemented: Wallet details popup with full address, balance, and disconnect button
+- Files changed:
+  - frontend/src/components/ui/popover.tsx - New shadcn/ui Popover component (installed via CLI)
+  - frontend/src/components/shared/ConnectWalletButton.tsx - Added Popover for connected state, integrated useSolBalance
+- **Learnings for future iterations:**
+  - Use shadcn/ui Popover (Radix-based) for dropdowns attached to buttons - handles click-outside and Escape key automatically
+  - `navigator.clipboard.writeText()` for copy-to-clipboard, wrapped in try-catch for browser support
+  - Use `setCopied(true)` with `setTimeout` to show visual feedback (Check icon) for 2 seconds
+  - `disconnect()` from useWallet hook to programmatically disconnect the wallet
+  - Radix Popover uses `onOpenChange` prop for controlled state, no need to handle click-outside manually
+---
+
+## 2026-01-23 - solana-wallet-connect-US-007
+- What was implemented: Verified disconnect functionality (already implemented in US-006)
+- Files changed: None - functionality was already complete
+- **Learnings for future iterations:**
+  - When a story depends on UI implemented in a prior story, the functionality may already be there
+  - US-006 implemented the full disconnect flow: button in popup → handleDisconnect → disconnect() → close popover
+  - The conditional rendering pattern `if (connected && publicKey)` automatically handles the state transition back to "Connect Wallet"
+---
+
+## 2026-01-23 - solana-wallet-connect-US-008
+- What was implemented: Verified auto-reconnect functionality (already configured in WalletProvider)
+- Files changed: None - functionality was already complete
+- **Learnings for future iterations:**
+  - `autoConnect: true` prop on SolanaWalletProvider enables auto-reconnect behavior
+  - Wallet adapter automatically persists last connected wallet in localStorage and attempts reconnection on page load
+  - ConnectWalletButton's conditional `if (connected && publicKey)` handles failed auto-reconnect gracefully - falls through to "Connect Wallet" state
+  - When multiple stories share foundational setup (like US-001 configuring WalletProvider), later stories may find functionality already implemented
+---
+
+## 2026-01-23 - solana-wallet-connect-US-009
+- What was implemented: Added wallet connection error handling with toast notifications
+- Files changed:
+  - frontend/src/providers/WalletProvider.tsx - Added onError callback with toast notifications
+- **Learnings for future iterations:**
+  - Wallet adapter error types are exported from `@solana/wallet-adapter-base`: WalletError, WalletNotReadyError, WalletConnectionError, WalletWindowClosedError
+  - Use `instanceof` checks to determine error type and show appropriate message
+  - WalletWindowClosedError = user cancelled/closed popup; WalletNotReadyError = wallet not installed; WalletConnectionError = network/connection failure
+  - Sonner toast is already configured in layout.tsx - just import `toast` from 'sonner' and call `toast.error()` with `duration` option
+  - The `onError` prop on SolanaWalletProvider receives a WalletError and an adapter reference
 ---
 
