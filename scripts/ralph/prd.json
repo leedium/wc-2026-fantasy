@@ -124,8 +124,8 @@
         "Typecheck passes"
       ],
       "priority": 8,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "autoConnect: true was already configured in WalletProvider. ConnectWalletButton already handles fallback to disconnected state when connected/publicKey are falsy."
     },
     {
       "id": "solana-wallet-connect-US-009",
@@ -141,8 +141,8 @@
         "Verify in browser using dev-browser skill"
       ],
       "priority": 9,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Added onError callback to WalletProvider using wallet-adapter-base error types. Uses sonner toast with 5s duration. Handles WalletWindowClosedError, WalletNotReadyError, WalletConnectionError, and generic fallback."
     }
   ]
 }

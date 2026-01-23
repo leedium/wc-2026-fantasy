@@ -108,3 +108,25 @@ Started: Thu Jan 23 2026
   - The conditional rendering pattern `if (connected && publicKey)` automatically handles the state transition back to "Connect Wallet"
 ---
 
+## 2026-01-23 - solana-wallet-connect-US-008
+- What was implemented: Verified auto-reconnect functionality (already configured in WalletProvider)
+- Files changed: None - functionality was already complete
+- **Learnings for future iterations:**
+  - `autoConnect: true` prop on SolanaWalletProvider enables auto-reconnect behavior
+  - Wallet adapter automatically persists last connected wallet in localStorage and attempts reconnection on page load
+  - ConnectWalletButton's conditional `if (connected && publicKey)` handles failed auto-reconnect gracefully - falls through to "Connect Wallet" state
+  - When multiple stories share foundational setup (like US-001 configuring WalletProvider), later stories may find functionality already implemented
+---
+
+## 2026-01-23 - solana-wallet-connect-US-009
+- What was implemented: Added wallet connection error handling with toast notifications
+- Files changed:
+  - frontend/src/providers/WalletProvider.tsx - Added onError callback with toast notifications
+- **Learnings for future iterations:**
+  - Wallet adapter error types are exported from `@solana/wallet-adapter-base`: WalletError, WalletNotReadyError, WalletConnectionError, WalletWindowClosedError
+  - Use `instanceof` checks to determine error type and show appropriate message
+  - WalletWindowClosedError = user cancelled/closed popup; WalletNotReadyError = wallet not installed; WalletConnectionError = network/connection failure
+  - Sonner toast is already configured in layout.tsx - just import `toast` from 'sonner' and call `toast.error()` with `duration` option
+  - The `onError` prop on SolanaWalletProvider receives a WalletError and an adapter reference
+---
+
