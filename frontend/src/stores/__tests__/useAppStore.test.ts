@@ -129,8 +129,7 @@ describe('useAppStore', () => {
     });
 
     it('should reset UI state', () => {
-      const { setLoading, openModal, toggleMobileMenu, resetUIState } =
-        useAppStore.getState();
+      const { setLoading, openModal, toggleMobileMenu, resetUIState } = useAppStore.getState();
 
       act(() => {
         setLoading(true);

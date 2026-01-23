@@ -65,10 +65,7 @@ describe('GroupStageForm', () => {
     it('should render without crashing', () => {
       const mockOnChange = jest.fn();
       render(
-        <GroupStageForm
-          predictions={createEmptyPredictions()}
-          onPredictionChange={mockOnChange}
-        />
+        <GroupStageForm predictions={createEmptyPredictions()} onPredictionChange={mockOnChange} />
       );
 
       expect(screen.getByText('Group Stage Predictions')).toBeInTheDocument();
@@ -77,10 +74,7 @@ describe('GroupStageForm', () => {
     it('should render all 12 groups', () => {
       const mockOnChange = jest.fn();
       render(
-        <GroupStageForm
-          predictions={createEmptyPredictions()}
-          onPredictionChange={mockOnChange}
-        />
+        <GroupStageForm predictions={createEmptyPredictions()} onPredictionChange={mockOnChange} />
       );
 
       // Check for all group headers
@@ -101,10 +95,7 @@ describe('GroupStageForm', () => {
     it('should render position labels', () => {
       const mockOnChange = jest.fn();
       render(
-        <GroupStageForm
-          predictions={createEmptyPredictions()}
-          onPredictionChange={mockOnChange}
-        />
+        <GroupStageForm predictions={createEmptyPredictions()} onPredictionChange={mockOnChange} />
       );
 
       // Each group has 4 position labels
@@ -122,15 +113,10 @@ describe('GroupStageForm', () => {
     it('should render helper text', () => {
       const mockOnChange = jest.fn();
       render(
-        <GroupStageForm
-          predictions={createEmptyPredictions()}
-          onPredictionChange={mockOnChange}
-        />
+        <GroupStageForm predictions={createEmptyPredictions()} onPredictionChange={mockOnChange} />
       );
 
-      expect(
-        screen.getByText(/Predict the final standings for each group/i)
-      ).toBeInTheDocument();
+      expect(screen.getByText(/Predict the final standings for each group/i)).toBeInTheDocument();
     });
   });
 
@@ -138,10 +124,7 @@ describe('GroupStageForm', () => {
     it('should show 0/12 groups complete when empty', () => {
       const mockOnChange = jest.fn();
       render(
-        <GroupStageForm
-          predictions={createEmptyPredictions()}
-          onPredictionChange={mockOnChange}
-        />
+        <GroupStageForm predictions={createEmptyPredictions()} onPredictionChange={mockOnChange} />
       );
 
       expect(screen.getByText('0 / 12 groups complete')).toBeInTheDocument();
@@ -207,10 +190,7 @@ describe('GroupStageForm', () => {
     it('should render select triggers for each position', () => {
       const mockOnChange = jest.fn();
       render(
-        <GroupStageForm
-          predictions={createEmptyPredictions()}
-          onPredictionChange={mockOnChange}
-        />
+        <GroupStageForm predictions={createEmptyPredictions()} onPredictionChange={mockOnChange} />
       );
 
       // 12 groups × 4 positions = 48 select triggers
@@ -221,10 +201,7 @@ describe('GroupStageForm', () => {
     it('should show placeholder text when no selection', () => {
       const mockOnChange = jest.fn();
       render(
-        <GroupStageForm
-          predictions={createEmptyPredictions()}
-          onPredictionChange={mockOnChange}
-        />
+        <GroupStageForm predictions={createEmptyPredictions()} onPredictionChange={mockOnChange} />
       );
 
       const placeholders = screen.getAllByText('Select team');
@@ -271,10 +248,7 @@ describe('GroupStageForm', () => {
       const mockOnChange = jest.fn();
 
       render(
-        <GroupStageForm
-          predictions={createEmptyPredictions()}
-          onPredictionChange={mockOnChange}
-        />
+        <GroupStageForm predictions={createEmptyPredictions()} onPredictionChange={mockOnChange} />
       );
 
       // Verify select triggers are rendered and can receive interactions
@@ -288,9 +262,7 @@ describe('GroupStageForm', () => {
       const predictions = createEmptyPredictions();
       predictions[0].positions.first = 'usa';
 
-      render(
-        <GroupStageForm predictions={predictions} onPredictionChange={mockOnChange} />
-      );
+      render(<GroupStageForm predictions={predictions} onPredictionChange={mockOnChange} />);
 
       // The selected team should be visible in the trigger
       expect(screen.getByText('United States')).toBeInTheDocument();
