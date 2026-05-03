@@ -8,9 +8,11 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { cn } from '@/lib/utils';
 
-// Validation range for total goals
-const MIN_GOALS = 100;
-const MAX_GOALS = 300;
+// Validation range for the champion's tournament-goal tally.
+// Champion plays 8 matches (3 group + R32 + R16 + QF + SF + Final);
+// realistic range is roughly 5-25, with 0-50 as the hard bound.
+const MIN_GOALS = 0;
+const MAX_GOALS = 50;
 
 interface TiebreakerInputProps {
   value: number | null;
@@ -48,13 +50,6 @@ export function TiebreakerInput({ value, onChange, disabled = false }: Tiebreake
       return;
     }
 
-    // Check if positive integer
-    if (parsed <= 0) {
-      setError('Goals must be a positive number');
-      onChange(null);
-      return;
-    }
-
     // Check range
     if (parsed < MIN_GOALS || parsed > MAX_GOALS) {
       setError(`Goals must be between ${MIN_GOALS} and ${MAX_GOALS}`);
@@ -74,15 +69,15 @@ export function TiebreakerInput({ value, onChange, disabled = false }: Tiebreake
       <CardHeader>
         <div className="flex items-center gap-2">
           <Target className="text-primary h-5 w-5" />
-          <CardTitle className="text-base">Tiebreaker: Total Goals</CardTitle>
+          <CardTitle className="text-base">Tiebreaker: Champion&apos;s Total Goals</CardTitle>
         </div>
         <CardDescription>
-          Predict the total number of goals scored in the entire tournament
+          Predict the total goals the World Cup champion scores across their 8 tournament matches
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="space-y-2">
-          <Label htmlFor="total-goals">Total Goals Prediction</Label>
+          <Label htmlFor="total-goals">Champion&apos;s Total Goals</Label>
           <Input
             id="total-goals"
             type="number"
@@ -110,12 +105,12 @@ export function TiebreakerInput({ value, onChange, disabled = false }: Tiebreake
           <HelpCircle className="text-muted-foreground mt-0.5 h-4 w-4 shrink-0" />
           <div className="text-muted-foreground space-y-1">
             <p>
-              <strong>How it works:</strong> If two or more players have the same total points, the
-              tiebreaker determines rankings.
+              <strong>How it works:</strong> if two or more players are tied on total points, the
+              prediction closest to the champion&apos;s actual goal tally wins the tie.
             </p>
-            <p>The player whose prediction is closest to the actual total goals wins the tie.</p>
             <p className="text-xs">
-              Hint: World Cup 2022 had 172 goals in 64 matches. WC2026 will have 104 matches.
+              Counts every goal the champion scores in regulation and extra time across all 8 of
+              their matches (group stage through final). Penalty-shootout goals don&apos;t count.
             </p>
           </div>
         </div>

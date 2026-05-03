@@ -1,20 +1,14 @@
 'use client';
 
 import Link from 'next/link';
-import dynamic from 'next/dynamic';
 import { usePathname } from 'next/navigation';
 import { Menu } from 'lucide-react';
 
-// Dynamic import to avoid SSR hydration mismatch (wallet state differs server vs client)
-const ConnectWalletButton = dynamic(
-  () => import('@/components/shared/ConnectWalletButton').then((mod) => mod.ConnectWalletButton),
-  { ssr: false }
-);
-
 import { cn } from '@/lib/utils';
 import { ROUTES } from '@/lib/constants';
+import { AuthMenu } from '@/components/layout/AuthMenu';
 import { ThemeToggle } from '@/components/shared/ThemeToggle';
-import { NetworkSelector } from '@/components/shared/NetworkSelector';
+import { useAuthContext } from '@/providers/AuthProvider';
 import {
   NavigationMenu,
   NavigationMenuList,
@@ -25,15 +19,18 @@ import {
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
 
-const navLinks = [
+const baseNavLinks = [
   { label: 'Home', href: ROUTES.home },
   { label: 'Predictions', href: ROUTES.predictions },
   { label: 'Leaderboard', href: ROUTES.leaderboard },
-  { label: 'Claims', href: ROUTES.claims },
 ];
 
 export function Header() {
   const pathname = usePathname();
+  const { profile } = useAuthContext();
+  const navLinks = profile?.isAdmin
+    ? [...baseNavLinks, { label: 'Admin', href: ROUTES.admin }]
+    : baseNavLinks;
 
   const isActive = (href: string) => {
     if (href === ROUTES.home) {
@@ -45,12 +42,10 @@ export function Header() {
   return (
     <header className="border-border bg-background/95 supports-[backdrop-filter]:bg-background/60 sticky top-0 z-50 w-full border-b backdrop-blur">
       <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
-        {/* Logo/Brand */}
         <Link href={ROUTES.home} className="flex items-center space-x-2">
           <span className="text-foreground text-xl font-bold">WC2026</span>
         </Link>
 
-        {/* Desktop Navigation */}
         <NavigationMenu className="hidden md:flex">
           <NavigationMenuList>
             {navLinks.map((link) => (
@@ -71,16 +66,13 @@ export function Header() {
           </NavigationMenuList>
         </NavigationMenu>
 
-        {/* Desktop Theme Toggle, Network Selector & Wallet Button */}
         <div className="hidden items-center gap-4 md:flex">
           <ThemeToggle />
-          <NetworkSelector className="w-[120px]" />
-          <ConnectWalletButton />
+          <AuthMenu />
         </div>
 
-        {/* Mobile Navigation */}
         <div className="flex items-center gap-2 md:hidden">
-          <ConnectWalletButton />
+          <AuthMenu />
           <Sheet>
             <SheetTrigger asChild>
               <Button variant="ghost" size="icon" aria-label="Open menu">
@@ -111,10 +103,6 @@ export function Header() {
                 <div className="flex items-center gap-2">
                   <span className="text-muted-foreground text-sm">Theme:</span>
                   <ThemeToggle />
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className="text-muted-foreground text-sm">Network:</span>
-                  <NetworkSelector className="w-[120px]" />
                 </div>
               </div>
             </SheetContent>

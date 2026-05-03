@@ -1,0 +1,76 @@
+'use client';
+
+import * as React from 'react';
+import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { LogOut, User as UserIcon } from 'lucide-react';
+import { toast } from 'sonner';
+
+import { Button } from '@/components/ui/button';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { useAuth } from '@/hooks/useAuth';
+import { ROUTES } from '@/lib/constants';
+
+export function AuthMenu() {
+  const { user, profile, signOut } = useAuth();
+  const router = useRouter();
+  const [isSigningOut, setIsSigningOut] = React.useState(false);
+
+  const handleSignOut = async () => {
+    setIsSigningOut(true);
+    try {
+      await signOut();
+      toast.success('Signed out');
+      router.push(ROUTES.home);
+      router.refresh();
+    } catch {
+      toast.error('Failed to sign out');
+    } finally {
+      setIsSigningOut(false);
+    }
+  };
+
+  if (!user) {
+    return (
+      <div className="flex items-center gap-2">
+        <Button variant="ghost" size="sm" asChild>
+          <Link href={ROUTES.login}>Sign in</Link>
+        </Button>
+        <Button size="sm" asChild>
+          <Link href={ROUTES.register}>Sign up</Link>
+        </Button>
+      </div>
+    );
+  }
+
+  const displayName = profile?.displayName || profile?.username || user.email;
+
+  return (
+    <Popover>
+      <PopoverTrigger asChild>
+        <Button variant="outline" size="sm" className="gap-2">
+          <UserIcon className="h-4 w-4" />
+          <span className="max-w-[120px] truncate">{displayName}</span>
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent align="end" className="w-56">
+        <div className="space-y-3">
+          <div>
+            <p className="text-sm font-medium">{profile?.username ?? 'Account'}</p>
+            <p className="text-muted-foreground truncate text-xs">{user.email}</p>
+          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            className="w-full justify-start gap-2"
+            onClick={handleSignOut}
+            disabled={isSigningOut}
+          >
+            <LogOut className="h-4 w-4" />
+            {isSigningOut ? 'Signing out…' : 'Sign out'}
+          </Button>
+        </div>
+      </PopoverContent>
+    </Popover>
+  );
+}

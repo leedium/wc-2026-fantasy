@@ -140,3 +140,12 @@ vite.config.ts.timestamp-*
 
 .idea
 
+# Claude Code local state (keep .claude/skills/ shared)
+.claude/settings.local.json
+.claude/projects/
+.claude/sessions/
+
+# Supabase CLI local state
+supabase/.branches/
+supabase/.temp/
+

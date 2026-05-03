@@ -12,7 +12,7 @@ describe('Footer', () => {
       render(<Footer />);
 
       expect(screen.getByText('WC2026 Prediction Game')).toBeInTheDocument();
-      expect(screen.getByText('Decentralized predictions on Solana')).toBeInTheDocument();
+      expect(screen.getByText('Bracket predictions for the FIFA World Cup 2026')).toBeInTheDocument();
     });
 
     it('should render copyright text with current year', () => {
