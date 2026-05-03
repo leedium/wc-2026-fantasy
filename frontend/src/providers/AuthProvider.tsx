@@ -66,7 +66,7 @@ export function AuthProvider({ children, initialUser, initialProfile }: AuthProv
   const signOut = React.useCallback(async () => {
     setLoading(true);
     const userId = user?.id;
-    await supabase.auth.signOut();
+    await supabase.auth.signOut({ scope: 'local' });
     if (userId) clearAllDrafts(userId);
     setUser(null);
     setProfile(null);
