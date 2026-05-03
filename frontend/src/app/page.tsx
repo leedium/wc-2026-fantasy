@@ -1,41 +1,46 @@
 'use client';
 
 import Link from 'next/link';
-import { Clock, Trophy, Users, Wallet, Target, Award, ChevronRight, Coins } from 'lucide-react';
+import { useQuery } from '@tanstack/react-query';
+import { Clock, Trophy, Users, UserPlus, Target, Award, ChevronRight } from 'lucide-react';
 
 import { PageLayout } from '@/components/layout/PageLayout';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { mockTournamentInfo } from '@/lib/mock-data';
-import { ENTRY_FEE_SOL, SCORING, ROUTES, TOURNAMENT_CONFIG } from '@/lib/constants';
+import { Skeleton } from '@/components/ui/skeleton';
+import { SCORING, ROUTES, TOURNAMENT_CONFIG } from '@/lib/constants';
+import type { TournamentInfo } from '@/types/tournament';
 
-// Helper to format time remaining
+interface TournamentResponse {
+  id: string;
+  slug: string;
+  name: string;
+  status: TournamentInfo['status'];
+  lockTime: string;
+  totalEntries: number;
+}
+
 function formatTimeRemaining(lockTime: Date): string {
   const now = new Date();
   const diff = lockTime.getTime() - now.getTime();
-
   if (diff <= 0) return 'Predictions locked';
-
   const days = Math.floor(diff / (1000 * 60 * 60 * 24));
   const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
   const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-
-  if (days > 0) {
-    return `${days}d ${hours}h ${minutes}m`;
-  } else if (hours > 0) {
-    return `${hours}h ${minutes}m`;
-  }
+  if (days > 0) return `${days}d ${hours}h ${minutes}m`;
+  if (hours > 0) return `${hours}h ${minutes}m`;
   return `${minutes}m`;
 }
 
-// Helper to format status
-function getStatusBadge(status: string) {
+function getStatusBadge(status: TournamentInfo['status']) {
   switch (status) {
     case 'upcoming':
       return <Badge variant="secondary">Upcoming</Badge>;
-    case 'active':
-      return <Badge className="bg-green-500 hover:bg-green-600">Live</Badge>;
+    case 'group_stage':
+      return <Badge className="bg-green-500 hover:bg-green-600">Group Stage</Badge>;
+    case 'knockout':
+      return <Badge className="bg-green-500 hover:bg-green-600">Knockout</Badge>;
     case 'completed':
       return <Badge variant="outline">Completed</Badge>;
     default:
@@ -44,11 +49,20 @@ function getStatusBadge(status: string) {
 }
 
 export default function Home() {
-  const { status, lockTime, prizePool, totalEntries } = mockTournamentInfo;
+  const query = useQuery<TournamentResponse>({
+    queryKey: ['tournament'],
+    queryFn: async () => {
+      const res = await fetch('/api/tournament');
+      if (!res.ok) throw new Error('Failed to fetch tournament');
+      return res.json();
+    },
+  });
+
+  const tournament = query.data;
+  const lockTime = tournament ? new Date(tournament.lockTime) : null;
 
   return (
     <PageLayout>
-      {/* Hero Section */}
       <section className="py-12 text-center md:py-20">
         <Badge variant="outline" className="mb-4">
           FIFA World Cup 2026
@@ -59,13 +73,13 @@ export default function Home() {
           <span className="text-primary">Prediction Game</span>
         </h1>
         <p className="text-muted-foreground mx-auto mb-8 max-w-2xl text-lg md:text-xl">
-          Submit your bracket predictions, earn points for correct picks, and compete for a share of
-          the prize pool. Built on Solana for transparent, trustless payouts.
+          Submit your bracket predictions, earn points for correct picks, and climb the leaderboard.
+          Free to play — all you need is a username.
         </p>
         <div className="flex flex-col items-center justify-center gap-4 sm:flex-row">
           <Button asChild size="lg" className="min-w-[200px]">
-            <Link href={ROUTES.predictions}>
-              Make Your Predictions
+            <Link href={ROUTES.register}>
+              Create an account
               <ChevronRight className="ml-2 h-4 w-4" />
             </Link>
           </Button>
@@ -75,10 +89,9 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Tournament Info Section */}
       <section className="py-12">
         <h2 className="mb-8 text-center text-2xl font-bold md:text-3xl">Tournament Overview</h2>
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           <Card>
             <CardHeader className="pb-2">
               <CardDescription className="flex items-center gap-2">
@@ -86,30 +99,14 @@ export default function Home() {
                 Status
               </CardDescription>
             </CardHeader>
-            <CardContent>{getStatusBadge(status)}</CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="pb-2">
-              <CardDescription className="flex items-center gap-2">
-                <Coins className="h-4 w-4" />
-                Entry Fee
-              </CardDescription>
-            </CardHeader>
             <CardContent>
-              <p className="text-2xl font-bold">{ENTRY_FEE_SOL} SOL</p>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="pb-2">
-              <CardDescription className="flex items-center gap-2">
-                <Trophy className="h-4 w-4" />
-                Prize Pool
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <p className="text-2xl font-bold">{prizePool.toLocaleString()} SOL</p>
+              {query.isLoading ? (
+                <Skeleton className="h-6 w-24" />
+              ) : tournament ? (
+                getStatusBadge(tournament.status)
+              ) : (
+                <Badge variant="outline">—</Badge>
+              )}
             </CardContent>
           </Card>
 
@@ -121,7 +118,13 @@ export default function Home() {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <p className="text-2xl font-bold">{totalEntries.toLocaleString()}</p>
+              {query.isLoading ? (
+                <Skeleton className="h-8 w-20" />
+              ) : (
+                <p className="text-2xl font-bold">
+                  {(tournament?.totalEntries ?? 0).toLocaleString()}
+                </p>
+              )}
             </CardContent>
           </Card>
 
@@ -133,13 +136,18 @@ export default function Home() {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <p className="text-2xl font-bold">{formatTimeRemaining(lockTime)}</p>
+              {query.isLoading ? (
+                <Skeleton className="h-8 w-32" />
+              ) : (
+                <p className="text-2xl font-bold">
+                  {lockTime ? formatTimeRemaining(lockTime) : '—'}
+                </p>
+              )}
             </CardContent>
           </Card>
         </div>
       </section>
 
-      {/* How It Works Section */}
       <section className="py-12">
         <h2 className="mb-8 text-center text-2xl font-bold md:text-3xl">How It Works</h2>
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
@@ -148,13 +156,12 @@ export default function Home() {
               1
             </div>
             <CardHeader className="pt-14">
-              <Wallet className="text-primary mb-2 h-8 w-8" />
-              <CardTitle>Connect Wallet</CardTitle>
+              <UserPlus className="text-primary mb-2 h-8 w-8" />
+              <CardTitle>Create an account</CardTitle>
             </CardHeader>
             <CardContent>
               <p className="text-muted-foreground">
-                Connect your Solana wallet (Phantom, Backpack, etc.) to get started. No KYC
-                required.
+                Sign up with a username, email, and password. Takes under a minute.
               </p>
             </CardContent>
           </Card>
@@ -169,7 +176,7 @@ export default function Home() {
             </CardHeader>
             <CardContent>
               <p className="text-muted-foreground">
-                Predict group stage standings (1st-4th) for all {TOURNAMENT_CONFIG.totalGroups}{' '}
+                Predict group stage standings (1st–4th) for all {TOURNAMENT_CONFIG.totalGroups}{' '}
                 groups and complete the knockout bracket.
               </p>
             </CardContent>
@@ -197,19 +204,17 @@ export default function Home() {
             </div>
             <CardHeader className="pt-14">
               <Trophy className="text-primary mb-2 h-8 w-8" />
-              <CardTitle>Claim Prizes</CardTitle>
+              <CardTitle>Climb the ranks</CardTitle>
             </CardHeader>
             <CardContent>
               <p className="text-muted-foreground">
-                After the tournament ends, top performers claim their share of the prize pool
-                directly on-chain.
+                Watch your rank rise on the leaderboard as the tournament unfolds.
               </p>
             </CardContent>
           </Card>
         </div>
       </section>
 
-      {/* Scoring Breakdown Section */}
       <section className="py-12">
         <h2 className="mb-8 text-center text-2xl font-bold md:text-3xl">Scoring Breakdown</h2>
         <div className="grid gap-6 md:grid-cols-2">
@@ -220,26 +225,38 @@ export default function Home() {
                 Group Stage
               </CardTitle>
               <CardDescription>
-                Predict final standings for all {TOURNAMENT_CONFIG.totalGroups} groups
+                Scored on the top two finishers in each of the {TOURNAMENT_CONFIG.totalGroups}{' '}
+                groups
               </CardDescription>
             </CardHeader>
             <CardContent>
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
-                  <span className="text-muted-foreground">Correct 1st place</span>
-                  <span className="font-semibold">+5 points</span>
+                  <span className="text-muted-foreground">Both top 2, exact order</span>
+                  <span className="font-semibold">+6 points</span>
                 </div>
                 <div className="flex items-center justify-between">
-                  <span className="text-muted-foreground">Correct 2nd place</span>
+                  <span className="text-muted-foreground">Both top 2, swapped</span>
+                  <span className="font-semibold">+4 points</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-muted-foreground">One correct, in correct slot</span>
                   <span className="font-semibold">+3 points</span>
                 </div>
                 <div className="flex items-center justify-between">
-                  <span className="text-muted-foreground">Correct 3rd place</span>
+                  <span className="text-muted-foreground">One correct, in wrong slot</span>
                   <span className="font-semibold">+2 points</span>
                 </div>
                 <div className="flex items-center justify-between">
-                  <span className="text-muted-foreground">Correct 4th place</span>
+                  <span className="text-muted-foreground">None correct</span>
                   <span className="font-semibold">+0 points</span>
+                </div>
+                <div className="bg-muted/50 rounded-md p-3 text-sm">
+                  <span className="font-semibold">Group of Death (Group I):</span>{' '}
+                  <span className="text-muted-foreground">
+                    Both top 2 in exact order pays <span className="font-semibold">+8</span> instead
+                    of +6.
+                  </span>
                 </div>
                 <div className="border-t pt-3">
                   <div className="flex items-center justify-between font-semibold">
@@ -257,33 +274,62 @@ export default function Home() {
                 <Trophy className="text-primary h-5 w-5" />
                 Knockout Stage
               </CardTitle>
-              <CardDescription>Predict winners for all knockout matches</CardDescription>
+              <CardDescription>
+                Each round, every team that advances scores you points — more if you had them in
+                the right slot.
+              </CardDescription>
             </CardHeader>
             <CardContent>
               <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <span className="text-muted-foreground">Round of 32 (16 matches)</span>
-                  <span className="font-semibold">+2 pts each</span>
+                <div className="flex items-center justify-between gap-4">
+                  <span className="text-muted-foreground">
+                    Round of 16{' '}
+                    <span className="text-muted-foreground/70 text-xs">(per team advancing)</span>
+                  </span>
+                  <span className="font-semibold whitespace-nowrap">+5 / +3 pts</span>
                 </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-muted-foreground">Round of 16 (8 matches)</span>
-                  <span className="font-semibold">+4 pts each</span>
+                <div className="flex items-center justify-between gap-4">
+                  <span className="text-muted-foreground">
+                    Quarter-finals{' '}
+                    <span className="text-muted-foreground/70 text-xs">(per team advancing)</span>
+                  </span>
+                  <span className="font-semibold whitespace-nowrap">+6 / +3 pts</span>
                 </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-muted-foreground">Quarter-finals (4 matches)</span>
-                  <span className="font-semibold">+8 pts each</span>
+                <div className="flex items-center justify-between gap-4">
+                  <span className="text-muted-foreground">
+                    Semi-finals{' '}
+                    <span className="text-muted-foreground/70 text-xs">(per team advancing)</span>
+                  </span>
+                  <span className="font-semibold whitespace-nowrap">+8 / +4 pts</span>
                 </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-muted-foreground">Semi-finals (2 matches)</span>
-                  <span className="font-semibold">+15 pts each</span>
+                <div className="flex items-center justify-between gap-4">
+                  <span className="text-muted-foreground">
+                    Final{' '}
+                    <span className="text-muted-foreground/70 text-xs">(per finalist)</span>
+                  </span>
+                  <span className="font-semibold whitespace-nowrap">+10 / +5 pts</span>
                 </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-muted-foreground">Third Place Match</span>
-                  <span className="font-semibold">+10 pts</span>
+                <div className="flex items-center justify-between gap-4">
+                  <span className="text-muted-foreground">Third Place Match Winner</span>
+                  <span className="font-semibold">+5 pts</span>
                 </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-muted-foreground">Final</span>
-                  <span className="font-semibold">+25 pts</span>
+                <div className="flex items-center justify-between gap-4">
+                  <span className="text-muted-foreground">World Cup Champion</span>
+                  <span className="font-semibold">+15 pts</span>
+                </div>
+                <div className="bg-muted/50 rounded-md p-3 text-xs">
+                  <span className="font-semibold">Correct slot vs. wrong slot:</span>{' '}
+                  <span className="text-muted-foreground">
+                    Correct slot = the team advanced from the bracket match you predicted. Wrong
+                    slot = the team advanced, but from a different match in the same round.
+                  </span>
+                </div>
+                <div className="bg-muted/50 rounded-md p-3 text-xs">
+                  <span className="font-semibold">Round of 32:</span>{' '}
+                  <span className="text-muted-foreground">
+                    Picks aren&apos;t scored on their own — they decide which teams sit in your
+                    Round-of-16 slots.
+                  </span>
                 </div>
                 <div className="border-t pt-3">
                   <div className="flex items-center justify-between font-semibold">
@@ -301,7 +347,11 @@ export default function Home() {
             <div>
               <p className="text-muted-foreground text-sm">Tiebreaker</p>
               <p className="font-medium">
-                Predict total tournament goals. Closest to actual total wins in case of tie.
+                Predict the total goals scored by the World Cup champion across all 8 of their
+                tournament matches. Closest to actual wins.
+              </p>
+              <p className="text-muted-foreground mt-1 text-xs">
+                Regulation and extra time only — penalty-shootout goals don&apos;t count.
               </p>
             </div>
             <div className="text-center sm:text-right">
@@ -312,7 +362,6 @@ export default function Home() {
         </Card>
       </section>
 
-      {/* CTA Section */}
       <section className="py-12">
         <Card className="bg-primary/5 border-primary/20">
           <CardContent className="flex flex-col items-center gap-6 py-12 text-center">
@@ -320,13 +369,13 @@ export default function Home() {
             <div>
               <h2 className="mb-2 text-2xl font-bold md:text-3xl">Ready to Compete?</h2>
               <p className="text-muted-foreground mx-auto max-w-lg">
-                Join thousands of players in the ultimate World Cup prediction challenge. Entry fee
-                is just {ENTRY_FEE_SOL} SOL.
+                Create an account and submit your bracket. The leaderboard updates as results come
+                in.
               </p>
             </div>
             <Button asChild size="lg" className="min-w-[250px]">
-              <Link href={ROUTES.predictions}>
-                Make Your Predictions
+              <Link href={ROUTES.register}>
+                Create an account
                 <ChevronRight className="ml-2 h-4 w-4" />
               </Link>
             </Button>

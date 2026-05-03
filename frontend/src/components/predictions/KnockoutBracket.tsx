@@ -7,26 +7,61 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { TeamFlag } from '@/components/shared/TeamFlag';
 import { cn } from '@/lib/utils';
-import { knockoutMatches, getTeamById } from '@/lib/mock-data';
 import type {
   GroupPrediction,
   KnockoutMatch,
   KnockoutMatchPrediction,
   KnockoutStage,
+  Team,
 } from '@/types/tournament';
 
-// Stage display configuration
+// Stage display configuration. `pointsHint` is the per-match badge label.
+// Round-of-32 picks aren't scored directly — they decide R16 slots — so the
+// hint reflects that. Other rounds score the round's advancing teams (correct
+// slot / wrong slot tiers); we surface that as a single hint per match card.
 const STAGE_CONFIG: Record<
   KnockoutStage,
-  { label: string; shortLabel: string; pointValue: number }
+  { label: string; shortLabel: string; pointsHint: string; subtitle: string }
 > = {
-  round_of_32: { label: 'Round of 32', shortLabel: 'R32', pointValue: 2 },
-  round_of_16: { label: 'Round of 16', shortLabel: 'R16', pointValue: 4 },
-  quarter_finals: { label: 'Quarter-finals', shortLabel: 'QF', pointValue: 8 },
-  semi_finals: { label: 'Semi-finals', shortLabel: 'SF', pointValue: 15 },
-  third_place: { label: 'Third Place', shortLabel: '3rd', pointValue: 10 },
-  final: { label: 'Final', shortLabel: 'Final', pointValue: 25 },
+  round_of_32: {
+    label: 'Round of 32',
+    shortLabel: 'R32',
+    pointsHint: 'Sets R16 slot',
+    subtitle: 'Picks here decide which teams sit in your Round of 16 slots — no direct points.',
+  },
+  round_of_16: {
+    label: 'Round of 16',
+    shortLabel: 'R16',
+    pointsHint: '+5 / +3',
+    subtitle: '+5 for each advancing team in the correct slot, +3 if right team but wrong slot.',
+  },
+  quarter_finals: {
+    label: 'Quarter-finals',
+    shortLabel: 'QF',
+    pointsHint: '+6 / +3',
+    subtitle: '+6 for each advancing team in the correct slot, +3 if right team but wrong slot.',
+  },
+  semi_finals: {
+    label: 'Semi-finals',
+    shortLabel: 'SF',
+    pointsHint: '+8 / +4',
+    subtitle: '+8 for each advancing team in the correct slot, +4 if right team but wrong slot.',
+  },
+  third_place: {
+    label: 'Third Place',
+    shortLabel: '3rd',
+    pointsHint: '+5',
+    subtitle: '+5 for predicting the third-place match winner correctly.',
+  },
+  final: {
+    label: 'Final',
+    shortLabel: 'Final',
+    pointsHint: '+10 / +5 finalist · +15 champion',
+    subtitle:
+      'Each finalist scores +10 (correct slot) or +5 (wrong slot). Picking the champion correctly adds +15.',
+  },
 };
 
 // Stage order for tabs
@@ -40,6 +75,8 @@ const STAGE_ORDER: KnockoutStage[] = [
 ];
 
 interface KnockoutBracketProps {
+  matches: KnockoutMatch[];
+  teams: Team[];
   groupPredictions: GroupPrediction[];
   knockoutPredictions: KnockoutMatchPrediction[];
   onPredictionChange: (matchId: string, winnerId: string | null) => void;
@@ -49,6 +86,7 @@ interface KnockoutBracketProps {
 // Helper to resolve a team source to team ID or null
 function resolveTeamSource(
   source: string,
+  matches: KnockoutMatch[],
   groupPredictions: GroupPrediction[],
   knockoutPredictions: KnockoutMatchPrediction[]
 ): string | null {
@@ -83,12 +121,21 @@ function resolveTeamSource(
   if (matchLoserMatch) {
     const matchId = `M${matchLoserMatch[1]}`;
     const matchPrediction = knockoutPredictions.find((p) => p.matchId === matchId);
-    const match = knockoutMatches.find((m) => m.id === matchId);
+    const match = matches.find((m) => m.id === matchId);
     if (!matchPrediction?.winnerId || !match) return null;
 
-    // Find the team that didn't win
-    const team1Id = resolveTeamSource(match.team1Source, groupPredictions, knockoutPredictions);
-    const team2Id = resolveTeamSource(match.team2Source, groupPredictions, knockoutPredictions);
+    const team1Id = resolveTeamSource(
+      match.team1Source,
+      matches,
+      groupPredictions,
+      knockoutPredictions
+    );
+    const team2Id = resolveTeamSource(
+      match.team2Source,
+      matches,
+      groupPredictions,
+      knockoutPredictions
+    );
 
     if (matchPrediction.winnerId === team1Id) return team2Id;
     if (matchPrediction.winnerId === team2Id) return team1Id;
@@ -98,10 +145,12 @@ function resolveTeamSource(
   return null;
 }
 
-// Get team display info
-function getTeamDisplay(teamId: string | null): { name: string; code: string } | null {
+function getTeamDisplay(
+  teamId: string | null,
+  teams: Team[]
+): { name: string; code: string } | null {
   if (!teamId) return null;
-  const team = getTeamById(teamId);
+  const team = teams.find((t) => t.id === teamId);
   if (!team) return null;
   return { name: team.name, code: team.code };
 }
@@ -111,6 +160,7 @@ function MatchCard({
   match,
   team1Id,
   team2Id,
+  teams,
   selectedWinnerId,
   onSelect,
   disabled,
@@ -118,12 +168,13 @@ function MatchCard({
   match: KnockoutMatch;
   team1Id: string | null;
   team2Id: string | null;
+  teams: Team[];
   selectedWinnerId: string | null;
   onSelect: (winnerId: string | null) => void;
   disabled?: boolean;
 }) {
-  const team1 = getTeamDisplay(team1Id);
-  const team2 = getTeamDisplay(team2Id);
+  const team1 = getTeamDisplay(team1Id, teams);
+  const team2 = getTeamDisplay(team2Id, teams);
 
   // Check if winner is still valid (team still advances to this match)
   const isWinnerValid =
@@ -151,7 +202,7 @@ function MatchCard({
         <div className="flex items-center justify-between">
           <span className="text-muted-foreground font-mono text-xs">{match.id}</span>
           <Badge variant="outline" className="text-xs">
-            +{match.pointValue} pts
+            {STAGE_CONFIG[match.stage].pointsHint}
           </Badge>
         </div>
       </CardHeader>
@@ -165,6 +216,7 @@ function MatchCard({
         >
           {team1 ? (
             <span className="flex w-full items-center gap-2">
+              <TeamFlag code={team1.code} />
               <span className="font-mono text-xs">{team1.code}</span>
               <span className="flex-1 truncate text-left text-sm">{team1.name}</span>
               {effectiveWinnerId === team1Id && <Trophy className="h-4 w-4 text-yellow-500" />}
@@ -186,6 +238,7 @@ function MatchCard({
         >
           {team2 ? (
             <span className="flex w-full items-center gap-2">
+              <TeamFlag code={team2.code} />
               <span className="font-mono text-xs">{team2.code}</span>
               <span className="flex-1 truncate text-left text-sm">{team2.name}</span>
               {effectiveWinnerId === team2Id && <Trophy className="h-4 w-4 text-yellow-500" />}
@@ -203,6 +256,8 @@ function MatchCard({
 function StageSection({
   stage,
   matches,
+  allMatches,
+  teams,
   groupPredictions,
   knockoutPredictions,
   onPredictionChange,
@@ -210,6 +265,8 @@ function StageSection({
 }: {
   stage: KnockoutStage;
   matches: KnockoutMatch[];
+  allMatches: KnockoutMatch[];
+  teams: Team[];
   groupPredictions: GroupPrediction[];
   knockoutPredictions: KnockoutMatchPrediction[];
   onPredictionChange: (matchId: string, winnerId: string | null) => void;
@@ -224,12 +281,11 @@ function StageSection({
   return (
     <div className="space-y-4">
       {/* Stage header */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-4">
         <div>
           <h4 className="font-semibold">{config.label}</h4>
           <p className="text-muted-foreground text-sm">
-            {matches.length} {matches.length === 1 ? 'match' : 'matches'} • +{config.pointValue} pts
-            each
+            {matches.length} {matches.length === 1 ? 'match' : 'matches'} · {config.subtitle}
           </p>
         </div>
         {completedCount === matches.length ? (
@@ -263,11 +319,13 @@ function StageSection({
         {matches.map((match) => {
           const team1Id = resolveTeamSource(
             match.team1Source,
+            allMatches,
             groupPredictions,
             knockoutPredictions
           );
           const team2Id = resolveTeamSource(
             match.team2Source,
+            allMatches,
             groupPredictions,
             knockoutPredictions
           );
@@ -280,6 +338,7 @@ function StageSection({
               match={match}
               team1Id={team1Id}
               team2Id={team2Id}
+              teams={teams}
               selectedWinnerId={selectedWinnerId}
               onSelect={(winnerId) => onPredictionChange(match.id, winnerId)}
               disabled={disabled}
@@ -292,12 +351,13 @@ function StageSection({
 }
 
 export function KnockoutBracket({
+  matches,
+  teams,
   groupPredictions,
   knockoutPredictions,
   onPredictionChange,
   disabled = false,
 }: KnockoutBracketProps) {
-  // Group matches by stage
   const matchesByStage = React.useMemo(() => {
     const grouped: Record<KnockoutStage, KnockoutMatch[]> = {
       round_of_32: [],
@@ -307,14 +367,13 @@ export function KnockoutBracket({
       third_place: [],
       final: [],
     };
-    knockoutMatches.forEach((match) => {
+    matches.forEach((match) => {
       grouped[match.stage].push(match);
     });
     return grouped;
-  }, []);
+  }, [matches]);
 
-  // Calculate completion stats
-  const totalMatches = knockoutMatches.length;
+  const totalMatches = matches.length;
   const completedMatches = knockoutPredictions.filter((p) => p.winnerId !== null).length;
 
   return (
@@ -361,6 +420,8 @@ export function KnockoutBracket({
             <StageSection
               stage={stage}
               matches={matchesByStage[stage]}
+              allMatches={matches}
+              teams={teams}
               groupPredictions={groupPredictions}
               knockoutPredictions={knockoutPredictions}
               onPredictionChange={onPredictionChange}

@@ -17,6 +17,14 @@
 /.next/
 /out/
 
+# OpenNext build output
+/.open-next/
+
+# Claude Code local skills/state
+/.agents/
+/.claude/
+/skills-lock.json
+
 # production
 /build
 

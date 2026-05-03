@@ -15,18 +15,11 @@ import type { LeaderboardEntry } from '@/types/tournament';
 
 export interface LeaderboardTableProps {
   entries: LeaderboardEntry[];
-  currentUserWallet?: string | null;
+  currentUsername?: string | null;
   highlightedRank?: number | null;
   className?: string;
 }
 
-/** Truncate wallet address to show first and last characters */
-function truncateWallet(wallet: string): string {
-  if (wallet.length <= 12) return wallet;
-  return `${wallet.slice(0, 4)}...${wallet.slice(-4)}`;
-}
-
-/** Get rank badge styling for top 3 */
 function getRankBadge(rank: number): { color: string; label: string } | null {
   switch (rank) {
     case 1:
@@ -40,7 +33,6 @@ function getRankBadge(rank: number): { color: string; label: string } | null {
   }
 }
 
-/** Get change indicator component */
 function ChangeIndicator({ change }: { change: number }) {
   if (change > 0) {
     return (
@@ -68,7 +60,7 @@ function ChangeIndicator({ change }: { change: number }) {
 
 export function LeaderboardTable({
   entries,
-  currentUserWallet,
+  currentUsername,
   highlightedRank,
   className,
 }: LeaderboardTableProps) {
@@ -77,7 +69,7 @@ export function LeaderboardTable({
       <TableHeader>
         <TableRow>
           <TableHead className="w-20">Rank</TableHead>
-          <TableHead>Wallet</TableHead>
+          <TableHead>Player</TableHead>
           <TableHead className="text-right">Points</TableHead>
           <TableHead className="w-24 text-right">Change</TableHead>
         </TableRow>
@@ -85,14 +77,14 @@ export function LeaderboardTable({
       <TableBody>
         {entries.map((entry, index) => {
           const isCurrentUser =
-            currentUserWallet && entry.wallet.toLowerCase() === currentUserWallet.toLowerCase();
+            currentUsername && entry.username.toLowerCase() === currentUsername.toLowerCase();
           const isHighlighted = highlightedRank && entry.rank === highlightedRank;
           const rankBadge = getRankBadge(entry.rank);
           const isEvenRow = index % 2 === 0;
 
           return (
             <TableRow
-              key={entry.wallet}
+              key={entry.username}
               id={`rank-${entry.rank}`}
               className={cn(
                 isEvenRow && 'bg-muted/30',
@@ -112,10 +104,9 @@ export function LeaderboardTable({
               </TableCell>
               <TableCell>
                 <span
-                  className={cn('font-mono text-sm', isCurrentUser && 'text-primary font-semibold')}
-                  title={entry.wallet}
+                  className={cn('text-sm', isCurrentUser && 'text-primary font-semibold')}
                 >
-                  {truncateWallet(entry.wallet)}
+                  {entry.username}
                   {isCurrentUser && (
                     <span className="text-muted-foreground ml-2 text-xs">(You)</span>
                   )}

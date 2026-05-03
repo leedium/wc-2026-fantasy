@@ -1,7 +1,7 @@
 import { render, screen } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
 import { GroupStageForm } from '../GroupStageForm';
 import type { GroupPrediction } from '@/types/tournament';
+import { fixtureGroups } from '@/test-utils/fixtures';
 
 // Create empty predictions for all 12 groups
 const createEmptyPredictions = (): GroupPrediction[] => {
@@ -23,18 +23,18 @@ const createPartialPredictions = (): GroupPrediction[] => {
   predictions[0] = {
     groupId: 'A',
     positions: {
-      first: 'usa',
-      second: 'mex',
-      third: 'can',
-      fourth: 'jam',
+      first: 'mex',
+      second: 'kor',
+      third: 'rsa',
+      fourth: 'cze',
     },
   };
   // Partially fill Group B
   predictions[1] = {
     groupId: 'B',
     positions: {
-      first: 'arg',
-      second: 'col',
+      first: 'can',
+      second: 'sui',
       third: null,
       fourth: null,
     },
@@ -45,18 +45,18 @@ const createPartialPredictions = (): GroupPrediction[] => {
 // Create fully completed predictions
 const createCompletePredictions = (): GroupPrediction[] => {
   return [
-    { groupId: 'A', positions: { first: 'usa', second: 'mex', third: 'can', fourth: 'jam' } },
-    { groupId: 'B', positions: { first: 'arg', second: 'col', third: 'par', fourth: 'ecu' } },
-    { groupId: 'C', positions: { first: 'bra', second: 'uru', third: 'ven', fourth: 'per' } },
-    { groupId: 'D', positions: { first: 'eng', second: 'fra', third: 'ned', fourth: 'wal' } },
-    { groupId: 'E', positions: { first: 'ger', second: 'esp', third: 'por', fourth: 'sui' } },
-    { groupId: 'F', positions: { first: 'ita', second: 'bel', third: 'cro', fourth: 'aut' } },
-    { groupId: 'G', positions: { first: 'jpn', second: 'kor', third: 'aus', fourth: 'sau' } },
-    { groupId: 'H', positions: { first: 'irn', second: 'qat', third: 'uae', fourth: 'uzb' } },
-    { groupId: 'I', positions: { first: 'sen', second: 'mar', third: 'nig', fourth: 'cam' } },
-    { groupId: 'J', positions: { first: 'egy', second: 'alg', third: 'gha', fourth: 'tun' } },
-    { groupId: 'K', positions: { first: 'pol', second: 'den', third: 'swe', fourth: 'cze' } },
-    { groupId: 'L', positions: { first: 'ser', second: 'ukr', third: 'sco', fourth: 'nor' } },
+    { groupId: 'A', positions: { first: 'mex', second: 'kor', third: 'rsa', fourth: 'cze' } },
+    { groupId: 'B', positions: { first: 'can', second: 'sui', third: 'qat', fourth: 'bih' } },
+    { groupId: 'C', positions: { first: 'bra', second: 'mar', third: 'sco', fourth: 'hai' } },
+    { groupId: 'D', positions: { first: 'usa', second: 'par', third: 'aus', fourth: 'tur' } },
+    { groupId: 'E', positions: { first: 'ger', second: 'ecu', third: 'civ', fourth: 'cuw' } },
+    { groupId: 'F', positions: { first: 'ned', second: 'jpn', third: 'tun', fourth: 'swe' } },
+    { groupId: 'G', positions: { first: 'bel', second: 'irn', third: 'egy', fourth: 'nzl' } },
+    { groupId: 'H', positions: { first: 'esp', second: 'uru', third: 'sau', fourth: 'cpv' } },
+    { groupId: 'I', positions: { first: 'fra', second: 'sen', third: 'nor', fourth: 'irq' } },
+    { groupId: 'J', positions: { first: 'arg', second: 'aut', third: 'alg', fourth: 'jor' } },
+    { groupId: 'K', positions: { first: 'por', second: 'col', third: 'uzb', fourth: 'cod' } },
+    { groupId: 'L', positions: { first: 'eng', second: 'cro', third: 'pan', fourth: 'gha' } },
   ];
 };
 
@@ -65,7 +65,11 @@ describe('GroupStageForm', () => {
     it('should render without crashing', () => {
       const mockOnChange = jest.fn();
       render(
-        <GroupStageForm predictions={createEmptyPredictions()} onPredictionChange={mockOnChange} />
+        <GroupStageForm
+          groups={fixtureGroups}
+          predictions={createEmptyPredictions()}
+          onPredictionChange={mockOnChange}
+        />
       );
 
       expect(screen.getByText('Group Stage Predictions')).toBeInTheDocument();
@@ -74,7 +78,11 @@ describe('GroupStageForm', () => {
     it('should render all 12 groups', () => {
       const mockOnChange = jest.fn();
       render(
-        <GroupStageForm predictions={createEmptyPredictions()} onPredictionChange={mockOnChange} />
+        <GroupStageForm
+          groups={fixtureGroups}
+          predictions={createEmptyPredictions()}
+          onPredictionChange={mockOnChange}
+        />
       );
 
       // Check for all group headers
@@ -95,7 +103,11 @@ describe('GroupStageForm', () => {
     it('should render position labels', () => {
       const mockOnChange = jest.fn();
       render(
-        <GroupStageForm predictions={createEmptyPredictions()} onPredictionChange={mockOnChange} />
+        <GroupStageForm
+          groups={fixtureGroups}
+          predictions={createEmptyPredictions()}
+          onPredictionChange={mockOnChange}
+        />
       );
 
       // Each group has 4 position labels
@@ -113,7 +125,11 @@ describe('GroupStageForm', () => {
     it('should render helper text', () => {
       const mockOnChange = jest.fn();
       render(
-        <GroupStageForm predictions={createEmptyPredictions()} onPredictionChange={mockOnChange} />
+        <GroupStageForm
+          groups={fixtureGroups}
+          predictions={createEmptyPredictions()}
+          onPredictionChange={mockOnChange}
+        />
       );
 
       expect(screen.getByText(/Predict the final standings for each group/i)).toBeInTheDocument();
@@ -124,7 +140,11 @@ describe('GroupStageForm', () => {
     it('should show 0/12 groups complete when empty', () => {
       const mockOnChange = jest.fn();
       render(
-        <GroupStageForm predictions={createEmptyPredictions()} onPredictionChange={mockOnChange} />
+        <GroupStageForm
+          groups={fixtureGroups}
+          predictions={createEmptyPredictions()}
+          onPredictionChange={mockOnChange}
+        />
       );
 
       expect(screen.getByText('0 / 12 groups complete')).toBeInTheDocument();
@@ -134,6 +154,7 @@ describe('GroupStageForm', () => {
       const mockOnChange = jest.fn();
       render(
         <GroupStageForm
+          groups={fixtureGroups}
           predictions={createPartialPredictions()}
           onPredictionChange={mockOnChange}
         />
@@ -147,6 +168,7 @@ describe('GroupStageForm', () => {
       const mockOnChange = jest.fn();
       render(
         <GroupStageForm
+          groups={fixtureGroups}
           predictions={createCompletePredictions()}
           onPredictionChange={mockOnChange}
         />
@@ -159,6 +181,7 @@ describe('GroupStageForm', () => {
       const mockOnChange = jest.fn();
       render(
         <GroupStageForm
+          groups={fixtureGroups}
           predictions={createPartialPredictions()}
           onPredictionChange={mockOnChange}
         />
@@ -172,6 +195,7 @@ describe('GroupStageForm', () => {
       const mockOnChange = jest.fn();
       render(
         <GroupStageForm
+          groups={fixtureGroups}
           predictions={createPartialPredictions()}
           onPredictionChange={mockOnChange}
         />
@@ -190,7 +214,11 @@ describe('GroupStageForm', () => {
     it('should render select triggers for each position', () => {
       const mockOnChange = jest.fn();
       render(
-        <GroupStageForm predictions={createEmptyPredictions()} onPredictionChange={mockOnChange} />
+        <GroupStageForm
+          groups={fixtureGroups}
+          predictions={createEmptyPredictions()}
+          onPredictionChange={mockOnChange}
+        />
       );
 
       // 12 groups × 4 positions = 48 select triggers
@@ -201,7 +229,11 @@ describe('GroupStageForm', () => {
     it('should show placeholder text when no selection', () => {
       const mockOnChange = jest.fn();
       render(
-        <GroupStageForm predictions={createEmptyPredictions()} onPredictionChange={mockOnChange} />
+        <GroupStageForm
+          groups={fixtureGroups}
+          predictions={createEmptyPredictions()}
+          onPredictionChange={mockOnChange}
+        />
       );
 
       const placeholders = screen.getAllByText('Select team');
@@ -214,6 +246,7 @@ describe('GroupStageForm', () => {
       const mockOnChange = jest.fn();
       render(
         <GroupStageForm
+          groups={fixtureGroups}
           predictions={createEmptyPredictions()}
           onPredictionChange={mockOnChange}
           disabled={true}
@@ -230,6 +263,7 @@ describe('GroupStageForm', () => {
       const mockOnChange = jest.fn();
       render(
         <GroupStageForm
+          groups={fixtureGroups}
           predictions={createEmptyPredictions()}
           onPredictionChange={mockOnChange}
           disabled={false}
@@ -248,7 +282,11 @@ describe('GroupStageForm', () => {
       const mockOnChange = jest.fn();
 
       render(
-        <GroupStageForm predictions={createEmptyPredictions()} onPredictionChange={mockOnChange} />
+        <GroupStageForm
+          groups={fixtureGroups}
+          predictions={createEmptyPredictions()}
+          onPredictionChange={mockOnChange}
+        />
       );
 
       // Verify select triggers are rendered and can receive interactions
@@ -260,12 +298,18 @@ describe('GroupStageForm', () => {
     it('should show selected team in the trigger', () => {
       const mockOnChange = jest.fn();
       const predictions = createEmptyPredictions();
-      predictions[0].positions.first = 'usa';
+      predictions[0].positions.first = 'mex';
 
-      render(<GroupStageForm predictions={predictions} onPredictionChange={mockOnChange} />);
+      render(
+        <GroupStageForm
+          groups={fixtureGroups}
+          predictions={predictions}
+          onPredictionChange={mockOnChange}
+        />
+      );
 
       // The selected team should be visible in the trigger
-      expect(screen.getByText('United States')).toBeInTheDocument();
+      expect(screen.getByText('Mexico')).toBeInTheDocument();
     });
   });
 });

@@ -1,49 +1,50 @@
 /**
- * Environment configuration with runtime validation
+ * Environment configuration
  */
 
-export type SolanaNetwork = 'devnet' | 'testnet' | 'mainnet-beta';
-
 interface EnvConfig {
-  solanaNetwork: SolanaNetwork;
-  solanaRpcUrl: string;
-  apiUrl: string;
+  supabaseUrl: string;
+  supabaseAnonKey: string;
+  appUrl: string;
 }
 
-function validateNetwork(network: string | undefined): SolanaNetwork {
-  if (network !== 'devnet' && network !== 'testnet' && network !== 'mainnet-beta') {
-    throw new Error(
-      `Invalid NEXT_PUBLIC_SOLANA_NETWORK: "${network}". Must be "devnet", "testnet", or "mainnet-beta".`
-    );
-  }
-  return network;
-}
-
-function validateUrl(url: string | undefined, name: string): string {
-  if (!url) {
+function required(name: string, value: string | undefined, fallback?: string): string {
+  if (!value || value === 'undefined') {
+    if (fallback !== undefined) return fallback;
     throw new Error(`Missing required environment variable: ${name}`);
   }
+  return value;
+}
+
+function validateUrl(value: string, name: string): string {
   try {
-    new URL(url);
+    new URL(value);
   } catch {
-    throw new Error(`Invalid URL for ${name}: "${url}"`);
+    throw new Error(`Invalid URL for ${name}: "${value}"`);
   }
-  return url;
+  return value;
 }
 
 function createEnvConfig(): EnvConfig {
-  const solanaNetwork = validateNetwork(process.env.NEXT_PUBLIC_SOLANA_NETWORK);
-  const solanaRpcUrl = validateUrl(
-    process.env.NEXT_PUBLIC_SOLANA_RPC_URL,
-    'NEXT_PUBLIC_SOLANA_RPC_URL'
+  const supabaseUrl = validateUrl(
+    required(
+      'NEXT_PUBLIC_SUPABASE_URL',
+      process.env.NEXT_PUBLIC_SUPABASE_URL,
+      'http://127.0.0.1:54321'
+    ),
+    'NEXT_PUBLIC_SUPABASE_URL'
   );
-  const apiUrl = validateUrl(process.env.NEXT_PUBLIC_API_URL, 'NEXT_PUBLIC_API_URL');
+  const supabaseAnonKey = required(
+    'NEXT_PUBLIC_SUPABASE_ANON_KEY',
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+    'anon-key-placeholder'
+  );
+  const appUrl = validateUrl(
+    required('NEXT_PUBLIC_APP_URL', process.env.NEXT_PUBLIC_APP_URL, 'http://localhost:3000'),
+    'NEXT_PUBLIC_APP_URL'
+  );
 
-  return {
-    solanaNetwork,
-    solanaRpcUrl,
-    apiUrl,
-  };
+  return { supabaseUrl, supabaseAnonKey, appUrl };
 }
 
 export const env = createEnvConfig();

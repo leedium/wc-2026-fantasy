@@ -1,170 +1,386 @@
-import { render, screen, waitFor } from '@testing-library/react';
+import { act, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { PredictionsPageContent } from '../PredictionsPageContent';
-import { useWallet, setWalletConnected, setWalletDisconnected } from '@solana/wallet-adapter-react';
+import * as React from 'react';
 
-// Reset mocks before each test
-beforeEach(() => {
-  jest.clearAllMocks();
-  setWalletDisconnected();
+import { fixtureGroups, fixtureKnockoutMatches, fixtureTeams } from '@/test-utils/fixtures';
+import type {
+  GroupPrediction,
+  KnockoutMatchPrediction,
+  Team,
+} from '@/types/tournament';
+
+const mockUseQuery = jest.fn();
+const mockInvalidate = jest.fn();
+const toastSuccess = jest.fn();
+const toastError = jest.fn();
+const toastInfo = jest.fn();
+
+jest.mock('@tanstack/react-query', () => {
+  const actual = jest.requireActual('@tanstack/react-query');
+  return {
+    ...actual,
+    useQuery: (opts: { queryKey: ReadonlyArray<unknown> }) => mockUseQuery(opts),
+    useQueryClient: () => ({ invalidateQueries: mockInvalidate }),
+  };
 });
 
-describe('PredictionsPageContent', () => {
-  describe('rendering', () => {
-    it('should render without crashing', () => {
-      render(<PredictionsPageContent />);
+jest.mock('@/providers/AuthProvider', () => ({
+  useAuthContext: () => ({
+    user: { id: 'user-1' },
+    profile: null,
+    loading: false,
+    signOut: jest.fn(),
+    refreshProfile: jest.fn(),
+  }),
+}));
 
-      expect(screen.getByText('Make Your Predictions')).toBeInTheDocument();
-    });
+jest.mock('@/components/layout/PageLayout', () => ({
+  PageLayout: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+}));
 
-    it('should render page description', () => {
-      render(<PredictionsPageContent />);
+jest.mock('sonner', () => ({
+  toast: {
+    success: (...args: unknown[]) => toastSuccess(...args),
+    error: (...args: unknown[]) => toastError(...args),
+    info: (...args: unknown[]) => toastInfo(...args),
+  },
+}));
 
-      expect(
-        screen.getByText(/Submit your bracket predictions for the World Cup 2026/i)
-      ).toBeInTheDocument();
-    });
+interface GroupStageFormProps {
+  predictions: GroupPrediction[];
+  onPredictionChange: (
+    groupId: string,
+    position: 'first' | 'second' | 'third' | 'fourth',
+    teamId: string | null
+  ) => void;
+}
+jest.mock('@/components/predictions/GroupStageForm', () => ({
+  GroupStageForm: ({ predictions, onPredictionChange }: GroupStageFormProps) => (
+    <div data-testid="group-stage-form">
+      <span data-testid="groups-filled">
+        {predictions.reduce(
+          (sum, p) => sum + Object.values(p.positions).filter((v) => v !== null).length,
+          0
+        )}
+      </span>
+      <button
+        type="button"
+        data-testid="fill-all-groups"
+        onClick={() => {
+          // Fire 48 callbacks (12 groups x 4 positions) using fixture team IDs.
+          const positions: Array<'first' | 'second' | 'third' | 'fourth'> = [
+            'first',
+            'second',
+            'third',
+            'fourth',
+          ];
+          predictions.forEach((p) => {
+            positions.forEach((pos, i) => {
+              onPredictionChange(p.groupId, pos, `${p.groupId.toLowerCase()}-team-${i}`);
+            });
+          });
+        }}
+      />
+      <button
+        type="button"
+        data-testid="fill-one-group-position"
+        onClick={() =>
+          onPredictionChange(predictions[0].groupId, 'first', 'mex')
+        }
+      />
+    </div>
+  ),
+}));
 
-    it('should render tournament status card', () => {
-      render(<PredictionsPageContent />);
+interface KnockoutBracketProps {
+  knockoutPredictions: KnockoutMatchPrediction[];
+  onPredictionChange: (matchId: string, winnerId: string | null) => void;
+}
+jest.mock('@/components/predictions/KnockoutBracket', () => ({
+  KnockoutBracket: ({ knockoutPredictions, onPredictionChange }: KnockoutBracketProps) => (
+    <div data-testid="knockout-bracket">
+      <button
+        type="button"
+        data-testid="fill-all-knockout"
+        onClick={() => {
+          knockoutPredictions.forEach((m) => onPredictionChange(m.matchId, 'winner'));
+        }}
+      />
+    </div>
+  ),
+}));
 
-      expect(screen.getByText('Lock Time')).toBeInTheDocument();
-      expect(screen.getByText('Entry Fee')).toBeInTheDocument();
-      expect(screen.getByText('0.1 SOL')).toBeInTheDocument();
-    });
+interface TiebreakerInputProps {
+  value: number | null;
+  onChange: (value: number | null) => void;
+}
+jest.mock('@/components/predictions/TiebreakerInput', () => ({
+  TiebreakerInput: ({ value, onChange }: TiebreakerInputProps) => (
+    <div data-testid="tiebreaker-input">
+      <span data-testid="tiebreaker-value">{value ?? 'null'}</span>
+      <button
+        type="button"
+        data-testid="set-tiebreaker"
+        onClick={() => onChange(18)}
+      />
+    </div>
+  ),
+}));
 
-    it('should render prediction progress section', () => {
-      render(<PredictionsPageContent />);
+import { PredictionsPageContent } from '../PredictionsPageContent';
+import { DRAFT_DEBOUNCE_MS, DRAFT_VERSION } from '@/hooks/useDraftPersistence';
 
-      expect(screen.getByText('Prediction Progress')).toBeInTheDocument();
-      // These texts appear multiple times (in tabs and progress), so use getAllBy
-      expect(screen.getAllByText('Group Stage').length).toBeGreaterThanOrEqual(1);
-      expect(screen.getAllByText(/Knockout/i).length).toBeGreaterThanOrEqual(1);
-      expect(screen.getAllByText(/Tiebreaker/i).length).toBeGreaterThanOrEqual(1);
-    });
+const TOURNAMENT_ID = 'tournament-1';
+const DRAFT_KEY = `wc2026:draft:user-1:${TOURNAMENT_ID}`;
 
-    it('should render tabs for predictions', () => {
-      render(<PredictionsPageContent />);
+interface QueryConfig {
+  tournamentLockTime?: string;
+  storedSubmittedAt?: string | null;
+  storedGroups?: Array<{
+    groupId: string;
+    first: string | null;
+    second: string | null;
+    third: string | null;
+    fourth: string | null;
+  }>;
+  storedKnockout?: Array<{ matchId: string; winner: string | null }>;
+  storedTotalGoals?: number | null;
+}
 
-      // Check for tab triggers
-      const tabs = screen.getAllByRole('tab');
-      expect(tabs).toHaveLength(3);
-    });
+function configureQueries({
+  tournamentLockTime = new Date(Date.now() + 60 * 60 * 1000).toISOString(),
+  storedSubmittedAt = null,
+  storedGroups = [],
+  storedKnockout = [],
+  storedTotalGoals = null,
+}: QueryConfig = {}) {
+  mockUseQuery.mockImplementation(({ queryKey }: { queryKey: ReadonlyArray<unknown> }) => {
+    const key = queryKey[0];
+    switch (key) {
+      case 'tournament':
+        return {
+          data: {
+            id: TOURNAMENT_ID,
+            slug: 'wc-2026',
+            name: 'World Cup 2026',
+            status: 'upcoming',
+            lockTime: tournamentLockTime,
+            totalEntries: 0,
+          },
+          isLoading: false,
+        };
+      case 'groups':
+        return { data: fixtureGroups, isLoading: false };
+      case 'teams':
+        return { data: fixtureTeams as Team[], isLoading: false };
+      case 'knockout-matches':
+        return { data: fixtureKnockoutMatches, isLoading: false };
+      case 'predictions':
+        return {
+          data: {
+            tournamentId: TOURNAMENT_ID,
+            totalGoals: storedTotalGoals,
+            submittedAt: storedSubmittedAt,
+            groups: storedGroups,
+            knockout: storedKnockout,
+          },
+          isLoading: false,
+        };
+      default:
+        return { data: undefined, isLoading: false };
+    }
+  });
+}
 
-    it('should render submit section', () => {
-      render(<PredictionsPageContent />);
+beforeEach(() => {
+  window.localStorage.clear();
+  mockUseQuery.mockReset();
+  mockInvalidate.mockReset();
+  toastSuccess.mockReset();
+  toastError.mockReset();
+  toastInfo.mockReset();
+  global.fetch = jest.fn();
+});
 
-      expect(screen.getByText('Ready to submit?')).toBeInTheDocument();
-      expect(screen.getByRole('button', { name: /Submit Predictions/i })).toBeInTheDocument();
-    });
+afterEach(() => {
+  jest.useRealTimers();
+});
+
+describe('PredictionsPageContent — stepper navigation', () => {
+  it('disables Continue until the current step is complete', async () => {
+    configureQueries();
+    const user = userEvent.setup();
+    render(<PredictionsPageContent />);
+
+    const continueBtn = await screen.findByRole('button', { name: /Continue to Knockout/ });
+    expect(continueBtn).toBeDisabled();
+
+    await user.click(screen.getByTestId('fill-all-groups'));
+    expect(screen.getByRole('button', { name: /Continue to Knockout/ })).toBeEnabled();
   });
 
-  describe('wallet connection', () => {
-    it('should show connect wallet message when disconnected', () => {
-      setWalletDisconnected();
-      render(<PredictionsPageContent />);
+  it('advances to the next step when Continue is clicked', async () => {
+    configureQueries();
+    const user = userEvent.setup();
+    render(<PredictionsPageContent />);
 
-      expect(screen.getByText('Connect your wallet to submit predictions')).toBeInTheDocument();
-    });
+    await user.click(await screen.findByTestId('fill-all-groups'));
+    await user.click(screen.getByRole('button', { name: /Continue to Knockout/ }));
 
-    it('should disable submit button when wallet is disconnected', () => {
-      setWalletDisconnected();
-      render(<PredictionsPageContent />);
-
-      const submitButton = screen.getByRole('button', { name: /Submit Predictions/i });
-      expect(submitButton).toBeDisabled();
-    });
-
-    it('should not show connect message when wallet is connected', () => {
-      setWalletConnected();
-      render(<PredictionsPageContent />);
-
-      // Should show incomplete predictions message instead
-      expect(
-        screen.queryByText('Connect your wallet to submit predictions')
-      ).not.toBeInTheDocument();
-    });
+    expect(screen.getByRole('tab', { name: /Knockout/ })).toHaveAttribute(
+      'aria-selected',
+      'true'
+    );
   });
 
-  describe('prediction progress', () => {
-    it('should show 0/12 groups complete initially', () => {
-      render(<PredictionsPageContent />);
+  it('renders all stepper triggers as disabled when the tournament is locked', async () => {
+    configureQueries({ tournamentLockTime: new Date(Date.now() - 1000).toISOString() });
+    render(<PredictionsPageContent />);
 
-      expect(screen.getByText('0 / 12 complete')).toBeInTheDocument();
+    await screen.findByText(/Predictions Locked/);
+    const tabs = screen.getAllByRole('tab');
+    tabs.forEach((tab) => expect(tab).toBeDisabled());
+  });
+});
+
+describe('PredictionsPageContent — autosave', () => {
+  it('writes a draft to localStorage after a debounced change', async () => {
+    configureQueries();
+    jest.useFakeTimers({ doNotFake: ['queueMicrotask'] });
+    const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
+    render(<PredictionsPageContent />);
+
+    await user.click(await screen.findByTestId('fill-one-group-position'));
+    expect(window.localStorage.getItem(DRAFT_KEY)).toBeNull();
+
+    act(() => {
+      jest.advanceTimersByTime(DRAFT_DEBOUNCE_MS);
     });
 
-    it('should show 0/32 knockout matches initially', () => {
-      render(<PredictionsPageContent />);
-
-      expect(screen.getByText('0 / 32 matches')).toBeInTheDocument();
-    });
-
-    it('should show "Not set" for tiebreaker initially', () => {
-      render(<PredictionsPageContent />);
-
-      expect(screen.getByText('Not set')).toBeInTheDocument();
-    });
+    const raw = window.localStorage.getItem(DRAFT_KEY);
+    expect(raw).not.toBeNull();
+    const parsed = JSON.parse(raw!);
+    expect(parsed.v).toBe(DRAFT_VERSION);
+    expect(parsed.data.groupPredictions[0].positions.first).toBe('mex');
   });
 
-  describe('tab navigation', () => {
-    it('should show group stage content by default', () => {
-      render(<PredictionsPageContent />);
+  it('hydrates from a localStorage draft for a fresh user', async () => {
+    window.localStorage.setItem(
+      DRAFT_KEY,
+      JSON.stringify({
+        v: DRAFT_VERSION,
+        savedAt: new Date().toISOString(),
+        data: {
+          groupPredictions: fixtureGroups.map((g, i) => ({
+            groupId: g.id,
+            positions: {
+              first: i === 0 ? 'mex' : null,
+              second: null,
+              third: null,
+              fourth: null,
+            },
+          })),
+          knockoutPredictions: fixtureKnockoutMatches.map((m) => ({
+            matchId: m.id,
+            winnerId: null,
+          })),
+          totalGoals: 14,
+        },
+      })
+    );
+    configureQueries();
 
-      expect(screen.getByText('Group Stage Predictions')).toBeInTheDocument();
-    });
+    render(<PredictionsPageContent />);
 
-    it('should switch to knockout tab when clicked', async () => {
-      const user = userEvent.setup();
-      render(<PredictionsPageContent />);
-
-      const knockoutTab = screen.getByRole('tab', { name: /Knockout/i });
-      await user.click(knockoutTab);
-
-      // The knockout bracket component should be visible (it has a heading)
-      expect(screen.getAllByText('Knockout Bracket').length).toBeGreaterThanOrEqual(1);
-    });
-
-    it('should switch to tiebreaker tab when clicked', async () => {
-      const user = userEvent.setup();
-      render(<PredictionsPageContent />);
-
-      const tiebreakerTab = screen.getByRole('tab', { name: /Tiebreaker/i });
-      await user.click(tiebreakerTab);
-
-      expect(screen.getByText('Tiebreaker: Total Goals')).toBeInTheDocument();
-    });
+    // Draft has 1 group slot + 1 tiebreaker filled (total 2). Server would have 0.
+    await waitFor(() => expect(screen.getByTestId('groups-filled')).toHaveTextContent('1'));
+    // Progress bar reflects the combined draft state (groups + tiebreaker).
+    expect(Number(screen.getByRole('progressbar').getAttribute('aria-valuenow'))).toBeGreaterThan(
+      0
+    );
+    expect(toastInfo).toHaveBeenCalled();
   });
 
-  describe('submit button state', () => {
-    it('should show incomplete message when predictions are not complete', () => {
-      setWalletConnected();
-      render(<PredictionsPageContent />);
-
-      expect(screen.getByText('Complete all predictions to submit')).toBeInTheDocument();
+  it('ignores localStorage draft when the server has stored picks', async () => {
+    window.localStorage.setItem(
+      DRAFT_KEY,
+      JSON.stringify({
+        v: DRAFT_VERSION,
+        savedAt: new Date().toISOString(),
+        data: {
+          groupPredictions: fixtureGroups.map((g) => ({
+            groupId: g.id,
+            positions: { first: 'mex', second: 'kor', third: null, fourth: null },
+          })),
+          knockoutPredictions: [],
+          totalGoals: 14,
+        },
+      })
+    );
+    configureQueries({
+      storedSubmittedAt: new Date().toISOString(),
+      storedTotalGoals: 7,
+      // Server has only one group with one position filled — distinct count from draft.
+      storedGroups: [
+        { groupId: 'A', first: 'kor', second: null, third: null, fourth: null },
+      ],
     });
 
-    it('should disable submit when predictions are incomplete', () => {
-      setWalletConnected();
-      render(<PredictionsPageContent />);
+    render(<PredictionsPageContent />);
 
-      const submitButton = screen.getByRole('button', { name: /Submit Predictions/i });
-      expect(submitButton).toBeDisabled();
-    });
+    // Server hydration → exactly 1 filled slot (Group A first). Draft would have been 24.
+    await waitFor(() =>
+      expect(screen.getByTestId('groups-filled')).toHaveTextContent('1')
+    );
+    expect(toastInfo).not.toHaveBeenCalled();
   });
 
-  describe('tournament status', () => {
-    it('should show "Accepting Predictions" badge for upcoming tournament', () => {
-      render(<PredictionsPageContent />);
+  it('clears localStorage drafts when the tournament is locked', async () => {
+    window.localStorage.setItem(
+      DRAFT_KEY,
+      JSON.stringify({
+        v: DRAFT_VERSION,
+        savedAt: new Date().toISOString(),
+        data: {
+          groupPredictions: [],
+          knockoutPredictions: [],
+          totalGoals: 11,
+        },
+      })
+    );
+    configureQueries({ tournamentLockTime: new Date(Date.now() - 1000).toISOString() });
 
-      expect(screen.getByText('Accepting Predictions')).toBeInTheDocument();
+    render(<PredictionsPageContent />);
+
+    await screen.findByText(/Predictions Locked/);
+    expect(window.localStorage.getItem(DRAFT_KEY)).toBeNull();
+  });
+
+  it('clears the draft after a successful submit', async () => {
+    configureQueries();
+    (global.fetch as jest.Mock).mockResolvedValue({
+      ok: true,
+      json: async () => ({ predictionId: 'pred-1' }),
     });
+    jest.useFakeTimers({ doNotFake: ['queueMicrotask'] });
+    const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
 
-    it('should display time remaining', () => {
-      render(<PredictionsPageContent />);
+    render(<PredictionsPageContent />);
 
-      // Should show some time remaining (days/hours/minutes format)
-      const lockTimeElement = screen.getByText(/\d+[dhm]/);
-      expect(lockTimeElement).toBeInTheDocument();
+    await user.click(await screen.findByTestId('fill-all-groups'));
+    await user.click(screen.getByRole('button', { name: /Continue to Knockout/ }));
+    await user.click(screen.getByTestId('fill-all-knockout'));
+    await user.click(screen.getByRole('button', { name: /Continue to Tiebreaker/ }));
+    await user.click(screen.getByTestId('set-tiebreaker'));
+
+    act(() => {
+      jest.advanceTimersByTime(DRAFT_DEBOUNCE_MS);
     });
+    expect(window.localStorage.getItem(DRAFT_KEY)).not.toBeNull();
+
+    await user.click(screen.getByRole('button', { name: /Submit Predictions/ }));
+
+    await waitFor(() => expect(toastSuccess).toHaveBeenCalled());
+    expect(window.localStorage.getItem(DRAFT_KEY)).toBeNull();
   });
 });

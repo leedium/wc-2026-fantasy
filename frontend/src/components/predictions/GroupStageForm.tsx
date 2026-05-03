@@ -12,8 +12,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { TeamFlag } from '@/components/shared/TeamFlag';
 import { cn } from '@/lib/utils';
-import { mockGroups } from '@/lib/mock-data';
 import type { Group, GroupPrediction, Team } from '@/types/tournament';
 
 // Position labels for display
@@ -27,6 +27,7 @@ const POSITION_LABELS = {
 type PositionKey = keyof typeof POSITION_LABELS;
 
 interface GroupStageFormProps {
+  groups: Group[];
   predictions: GroupPrediction[];
   onPredictionChange: (groupId: string, position: PositionKey, teamId: string | null) => void;
   disabled?: boolean;
@@ -100,6 +101,7 @@ function GroupCard({
                   {availableTeams.map((team) => (
                     <SelectItem key={team.id} value={team.id}>
                       <span className="flex items-center gap-2">
+                        <TeamFlag code={team.code} />
                         <span className="text-muted-foreground font-mono text-xs">{team.code}</span>
                         <span>{team.name}</span>
                       </span>
@@ -116,6 +118,7 @@ function GroupCard({
 }
 
 export function GroupStageForm({
+  groups,
   predictions,
   onPredictionChange,
   disabled = false,
@@ -138,7 +141,7 @@ export function GroupStageForm({
 
       {/* Groups Grid */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-        {mockGroups.map((group) => {
+        {groups.map((group) => {
           const prediction = predictions.find((p) => p.groupId === group.id);
           if (!prediction) return null;
 
@@ -160,6 +163,11 @@ export function GroupStageForm({
       <p className="text-muted-foreground text-sm">
         Predict the final standings for each group. Select which team will finish 1st, 2nd, 3rd, and
         4th. Each team can only be selected once per group.
+      </p>
+      <p className="text-muted-foreground text-xs">
+        Scoring uses the top two finishers only — 3rd and 4th picks aren&apos;t scored, but 3rd
+        picks for groups A–H still seed your Round of 32 bracket. Group I (Group of Death) pays a
+        +8 bonus when both top-two finishers are predicted in exact order.
       </p>
     </div>
   );

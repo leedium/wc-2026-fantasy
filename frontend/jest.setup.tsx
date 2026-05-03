@@ -70,20 +70,22 @@ jest.mock('next/image', () => {
   return MockImage;
 });
 
-// Mock matchMedia
-Object.defineProperty(window, 'matchMedia', {
-  writable: true,
-  value: jest.fn().mockImplementation((query: string) => ({
-    matches: false,
-    media: query,
-    onchange: null,
-    addListener: jest.fn(),
-    removeListener: jest.fn(),
-    addEventListener: jest.fn(),
-    removeEventListener: jest.fn(),
-    dispatchEvent: jest.fn(),
-  })),
-});
+// Mock matchMedia (jsdom only)
+if (typeof window !== 'undefined') {
+  Object.defineProperty(window, 'matchMedia', {
+    writable: true,
+    value: jest.fn().mockImplementation((query: string) => ({
+      matches: false,
+      media: query,
+      onchange: null,
+      addListener: jest.fn(),
+      removeListener: jest.fn(),
+      addEventListener: jest.fn(),
+      removeEventListener: jest.fn(),
+      dispatchEvent: jest.fn(),
+    })),
+  });
+}
 
 // Mock ResizeObserver
 global.ResizeObserver = class ResizeObserver {
@@ -109,18 +111,21 @@ global.IntersectionObserver = class IntersectionObserver {
   takeRecords = jest.fn().mockReturnValue([]);
 };
 
-// Mock scrollTo
-window.scrollTo = jest.fn();
-
-// Mock pointer capture methods (used by Radix UI)
-if (!Element.prototype.hasPointerCapture) {
-  Element.prototype.hasPointerCapture = jest.fn().mockReturnValue(false);
-}
-if (!Element.prototype.setPointerCapture) {
-  Element.prototype.setPointerCapture = jest.fn();
-}
-if (!Element.prototype.releasePointerCapture) {
-  Element.prototype.releasePointerCapture = jest.fn();
+// Mock scrollTo + pointer capture (jsdom only)
+if (typeof window !== 'undefined') {
+  window.scrollTo = jest.fn();
+  if (!Element.prototype.hasPointerCapture) {
+    Element.prototype.hasPointerCapture = jest.fn().mockReturnValue(false);
+  }
+  if (!Element.prototype.setPointerCapture) {
+    Element.prototype.setPointerCapture = jest.fn();
+  }
+  if (!Element.prototype.releasePointerCapture) {
+    Element.prototype.releasePointerCapture = jest.fn();
+  }
+  if (!Element.prototype.scrollIntoView) {
+    Element.prototype.scrollIntoView = jest.fn();
+  }
 }
 
 // Mock crypto.getRandomValues (used by some libraries)
@@ -137,8 +142,9 @@ Object.defineProperty(global, 'crypto', {
 });
 
 // Set test environment variables
-process.env.NEXT_PUBLIC_SOLANA_NETWORK = 'devnet';
-process.env.NEXT_PUBLIC_SOLANA_RPC_URL = 'https://api.devnet.solana.com';
+process.env.NEXT_PUBLIC_SUPABASE_URL = 'http://127.0.0.1:54321';
+process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY = 'test-anon-key';
+process.env.NEXT_PUBLIC_APP_URL = 'http://localhost:3000';
 
 // Export mock functions for test access
 export { mockPush, mockReplace, mockBack, mockForward, mockRefresh, mockPrefetch };
