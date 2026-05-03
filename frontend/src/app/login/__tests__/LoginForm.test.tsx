@@ -32,6 +32,12 @@ describe('LoginForm', () => {
     });
   });
 
+  it('renders a forgot-password link', () => {
+    render(<LoginForm redirectTo="/predictions" />);
+    const link = screen.getByRole('link', { name: /Forgot password/i });
+    expect(link).toHaveAttribute('href', '/forgot-password');
+  });
+
   it('surfaces supabase errors', async () => {
     signInMock.mockResolvedValue({ error: { message: 'Invalid login credentials' } });
     const user = userEvent.setup();

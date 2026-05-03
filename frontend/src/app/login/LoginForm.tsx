@@ -69,6 +69,14 @@ export function LoginForm({ redirectTo }: LoginFormProps) {
           onChange={(e) => setPassword(e.target.value)}
           disabled={isSubmitting}
         />
+        <div className="flex justify-end">
+          <Link
+            href={ROUTES.forgotPassword}
+            className="text-primary text-xs hover:underline"
+          >
+            Forgot password?
+          </Link>
+        </div>
       </div>
       {error && (
         <p role="alert" className="text-destructive text-sm">

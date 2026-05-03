@@ -24,6 +24,8 @@ export const ROUTES = {
   leaderboard: '/leaderboard',
   login: '/login',
   register: '/register',
+  forgotPassword: '/forgot-password',
+  resetPassword: '/reset-password',
   admin: '/admin',
 } as const;
 

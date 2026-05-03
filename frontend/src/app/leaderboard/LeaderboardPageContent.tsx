@@ -134,14 +134,14 @@ export function LeaderboardPageContent() {
       <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="mb-2 text-3xl font-bold">Leaderboard</h1>
-          <p className="text-muted-foreground flex items-center gap-2">
+          <div className="text-muted-foreground flex items-center gap-2">
             <Users className="h-4 w-4" />
             {isLoading ? (
               <Skeleton className="h-4 w-32" />
             ) : (
               <span>{total.toLocaleString()} participants</span>
             )}
-          </p>
+          </div>
         </div>
         {user && !hasRankedEntry && !isLoading && !meQuery.isLoading && (
           <Card className="border-dashed">
