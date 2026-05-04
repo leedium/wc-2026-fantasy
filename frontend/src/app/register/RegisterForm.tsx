@@ -8,8 +8,17 @@ import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { FieldError } from '@/components/ui/field-error';
 import { createSupabaseBrowserClient } from '@/lib/supabase/client';
-import { ROUTES, USERNAME_REGEX } from '@/lib/constants';
+import {
+  ROUTES,
+  USERNAME_REGEX,
+  EMAIL_REGEX,
+  PASSWORD_MIN_LENGTH,
+} from '@/lib/constants';
+import { cn } from '@/lib/utils';
+
+type FieldName = 'username' | 'email' | 'password' | 'confirmPassword';
 
 export function RegisterForm() {
   const router = useRouter();
@@ -17,30 +26,82 @@ export function RegisterForm() {
   const [email, setEmail] = React.useState('');
   const [password, setPassword] = React.useState('');
   const [confirmPassword, setConfirmPassword] = React.useState('');
+  const [touched, setTouched] = React.useState<Record<FieldName, boolean>>({
+    username: false,
+    email: false,
+    password: false,
+    confirmPassword: false,
+  });
   const [isSubmitting, setIsSubmitting] = React.useState(false);
-  const [error, setError] = React.useState<string | null>(null);
+  const [serverError, setServerError] = React.useState<string | null>(null);
+  const [serverFieldError, setServerFieldError] = React.useState<{
+    field: FieldName;
+    message: string;
+  } | null>(null);
 
-  const validate = (): string | null => {
-    const trimmedUsername = username.trim();
-    if (!USERNAME_REGEX.test(trimmedUsername)) {
-      return 'Username must be 3–24 characters, letters, numbers, or underscores.';
-    }
-    if (password.length < 8) {
-      return 'Password must be at least 8 characters.';
-    }
-    if (password !== confirmPassword) {
-      return 'Passwords do not match.';
-    }
-    return null;
+  const usernameRef = React.useRef<HTMLInputElement>(null);
+  const emailRef = React.useRef<HTMLInputElement>(null);
+  const passwordRef = React.useRef<HTMLInputElement>(null);
+  const confirmPasswordRef = React.useRef<HTMLInputElement>(null);
+
+  const refsByField: Record<FieldName, React.RefObject<HTMLInputElement | null>> = {
+    username: usernameRef,
+    email: emailRef,
+    password: passwordRef,
+    confirmPassword: confirmPasswordRef,
+  };
+
+  const errors: Record<FieldName, string | null> = {
+    username: !username.trim()
+      ? 'Username is required.'
+      : !USERNAME_REGEX.test(username.trim())
+        ? 'Username must be 3–24 characters, letters, numbers, or underscores.'
+        : null,
+    email: !email.trim()
+      ? 'Email is required.'
+      : !EMAIL_REGEX.test(email.trim())
+        ? 'Enter a valid email address.'
+        : null,
+    password: !password
+      ? 'Password is required.'
+      : password.length < PASSWORD_MIN_LENGTH
+        ? `Password must be at least ${PASSWORD_MIN_LENGTH} characters.`
+        : null,
+    confirmPassword: !confirmPassword
+      ? 'Please confirm your password.'
+      : password !== confirmPassword
+        ? 'Passwords do not match.'
+        : null,
+  };
+
+  const showError = (field: FieldName): string | null => {
+    if (serverFieldError?.field === field) return serverFieldError.message;
+    return touched[field] ? errors[field] : null;
+  };
+
+  const markTouched = (field: FieldName) => {
+    setTouched((prev) => (prev[field] ? prev : { ...prev, [field]: true }));
+    if (serverFieldError?.field === field) setServerFieldError(null);
+  };
+
+  const handleChange = (field: FieldName, value: string) => {
+    if (serverFieldError?.field === field) setServerFieldError(null);
+    if (field === 'username') setUsername(value);
+    if (field === 'email') setEmail(value);
+    if (field === 'password') setPassword(value);
+    if (field === 'confirmPassword') setConfirmPassword(value);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError(null);
+    setServerError(null);
+    setServerFieldError(null);
+    setTouched({ username: true, email: true, password: true, confirmPassword: true });
 
-    const validationError = validate();
-    if (validationError) {
-      setError(validationError);
+    const order: FieldName[] = ['username', 'email', 'password', 'confirmPassword'];
+    const firstInvalid = order.find((f) => errors[f]);
+    if (firstInvalid) {
+      refsByField[firstInvalid].current?.focus();
       return;
     }
 
@@ -57,15 +118,30 @@ export function RegisterForm() {
 
     if (signUpError) {
       const raw = signUpError.message;
-      let message = raw;
       if (raw.includes('username taken') || raw.includes('profiles_username_key')) {
-        message = 'That username is already taken.';
+        setServerFieldError({ field: 'username', message: 'That username is already taken.' });
+        usernameRef.current?.focus();
       } else if (raw.includes('username invalid format')) {
-        message = 'Username must be 3–24 characters, letters, numbers, or underscores.';
+        setServerFieldError({
+          field: 'username',
+          message: 'Username must be 3–24 characters, letters, numbers, or underscores.',
+        });
+        usernameRef.current?.focus();
       } else if (raw.includes('username is required')) {
-        message = 'Username is required.';
+        setServerFieldError({ field: 'username', message: 'Username is required.' });
+        usernameRef.current?.focus();
+      } else if (
+        raw.toLowerCase().includes('already registered') ||
+        raw.toLowerCase().includes('already in use')
+      ) {
+        setServerFieldError({
+          field: 'email',
+          message: 'An account with this email already exists.',
+        });
+        emailRef.current?.focus();
+      } else {
+        setServerError(raw);
       }
-      setError(message);
       setIsSubmitting(false);
       return;
     }
@@ -81,63 +157,98 @@ export function RegisterForm() {
     router.refresh();
   };
 
+  const fieldClass = (field: FieldName) =>
+    cn(showError(field) && 'border-destructive focus-visible:ring-destructive');
+
   return (
     <form onSubmit={handleSubmit} className="space-y-4" noValidate>
       <div className="space-y-2">
         <Label htmlFor="username">Username</Label>
         <Input
           id="username"
+          ref={usernameRef}
           type="text"
           autoComplete="username"
           required
           value={username}
-          onChange={(e) => setUsername(e.target.value)}
+          onChange={(e) => handleChange('username', e.target.value)}
+          onBlur={() => markTouched('username')}
           disabled={isSubmitting}
-          aria-describedby="username-help"
+          aria-invalid={showError('username') ? true : undefined}
+          aria-describedby={
+            showError('username') ? 'username-error' : 'username-help'
+          }
+          className={fieldClass('username')}
         />
-        <p id="username-help" className="text-muted-foreground text-xs">
-          3–24 characters. Letters, numbers, and underscores only.
-        </p>
+        {!showError('username') && (
+          <p id="username-help" className="text-muted-foreground text-xs">
+            3–24 characters. Letters, numbers, and underscores only.
+          </p>
+        )}
+        <FieldError id="username-error" message={showError('username') || undefined} />
       </div>
       <div className="space-y-2">
         <Label htmlFor="email">Email</Label>
         <Input
           id="email"
+          ref={emailRef}
           type="email"
           autoComplete="email"
           required
           value={email}
-          onChange={(e) => setEmail(e.target.value)}
+          onChange={(e) => handleChange('email', e.target.value)}
+          onBlur={() => markTouched('email')}
           disabled={isSubmitting}
+          aria-invalid={showError('email') ? true : undefined}
+          aria-describedby={showError('email') ? 'email-error' : undefined}
+          className={fieldClass('email')}
         />
+        <FieldError id="email-error" message={showError('email') || undefined} />
       </div>
       <div className="space-y-2">
         <Label htmlFor="password">Password</Label>
         <Input
           id="password"
+          ref={passwordRef}
           type="password"
           autoComplete="new-password"
           required
           value={password}
-          onChange={(e) => setPassword(e.target.value)}
+          onChange={(e) => handleChange('password', e.target.value)}
+          onBlur={() => markTouched('password')}
           disabled={isSubmitting}
+          aria-invalid={showError('password') ? true : undefined}
+          aria-describedby={showError('password') ? 'password-error' : undefined}
+          className={fieldClass('password')}
         />
+        <FieldError id="password-error" message={showError('password') || undefined} />
       </div>
       <div className="space-y-2">
         <Label htmlFor="confirmPassword">Confirm password</Label>
         <Input
           id="confirmPassword"
+          ref={confirmPasswordRef}
           type="password"
           autoComplete="new-password"
           required
           value={confirmPassword}
-          onChange={(e) => setConfirmPassword(e.target.value)}
+          onChange={(e) => handleChange('confirmPassword', e.target.value)}
+          onBlur={() => markTouched('confirmPassword')}
           disabled={isSubmitting}
+          aria-invalid={showError('confirmPassword') ? true : undefined}
+          aria-describedby={
+            showError('confirmPassword') ? 'confirmPassword-error' : undefined
+          }
+          className={fieldClass('confirmPassword')}
+        />
+        <FieldError
+          id="confirmPassword-error"
+          message={showError('confirmPassword') || undefined}
         />
       </div>
-      {error && (
+      {serverError && (
         <p role="alert" className="text-destructive text-sm">
-          {error}
+          {serverError}
         </p>
       )}
       <Button type="submit" className="w-full" disabled={isSubmitting}>
@@ -145,7 +256,14 @@ export function RegisterForm() {
       </Button>
       <p className="text-muted-foreground text-center text-sm">
         Already have an account?{' '}
-        <Link href={ROUTES.login} className="text-primary hover:underline">
+        <Link
+          href={ROUTES.login}
+          className={cn(
+            'text-primary hover:underline',
+            isSubmitting && 'pointer-events-none opacity-50'
+          )}
+          tabIndex={isSubmitting ? -1 : undefined}
+        >
           Sign in
         </Link>
       </p>

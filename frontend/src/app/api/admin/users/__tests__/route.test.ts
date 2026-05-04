@@ -20,12 +20,24 @@ function req(qs = '') {
   return new NextRequest(`http://localhost:3000/api/admin/users${qs}`);
 }
 
-function mockAdminProfile(isAdmin: boolean) {
-  supabaseMock.from.mockImplementation(() => ({
-    select: () => ({
-      eq: () => ({ maybeSingle: async () => ({ data: { is_admin: isAdmin } }) }),
-    }),
-  }));
+function mockAdminProfile(
+  isAdmin: boolean,
+  tournament: { id: string; lock_time: string } | null = null
+) {
+  supabaseMock.from.mockImplementation((table: string) => {
+    if (table === 'tournaments') {
+      return {
+        select: () => ({
+          eq: () => ({ maybeSingle: async () => ({ data: tournament, error: null }) }),
+        }),
+      };
+    }
+    return {
+      select: () => ({
+        eq: () => ({ maybeSingle: async () => ({ data: { is_admin: isAdmin } }) }),
+      }),
+    };
+  });
 }
 
 describe('GET /api/admin/users', () => {
@@ -50,7 +62,7 @@ describe('GET /api/admin/users', () => {
 
   it('shapes admin_list_users into paginated response', async () => {
     supabaseMock.auth.getUser.mockResolvedValue({ data: { user: { id: 'u1' } } });
-    mockAdminProfile(true);
+    mockAdminProfile(true, { id: 't1', lock_time: '2026-06-01T00:00:00Z' });
     supabaseMock.rpc.mockResolvedValue({
       data: [
         {
@@ -59,6 +71,8 @@ describe('GET /api/admin/users', () => {
           is_admin: false,
           has_prediction: true,
           submitted_at: '2026-04-30T00:00:00Z',
+          is_paid: true,
+          paid_at: '2026-04-29T00:00:00Z',
           total_count: 2,
         },
         {
@@ -67,6 +81,8 @@ describe('GET /api/admin/users', () => {
           is_admin: true,
           has_prediction: false,
           submitted_at: null,
+          is_paid: false,
+          paid_at: null,
           total_count: 2,
         },
       ],
@@ -77,6 +93,12 @@ describe('GET /api/admin/users', () => {
     const body = await res.json();
     expect(body.total).toBe(2);
     expect(body.users).toHaveLength(2);
-    expect(body.users[1]).toMatchObject({ username: 'bob', isAdmin: true, hasPrediction: false });
+    expect(body.users[0]).toMatchObject({
+      username: 'alice',
+      isPaid: true,
+      paidAt: '2026-04-29T00:00:00Z',
+    });
+    expect(body.users[1]).toMatchObject({ username: 'bob', isAdmin: true, isPaid: false });
+    expect(body.tournament).toEqual({ id: 't1', lockTime: '2026-06-01T00:00:00Z' });
   });
 });

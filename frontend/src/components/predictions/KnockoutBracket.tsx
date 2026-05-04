@@ -386,6 +386,53 @@ export function KnockoutBracket({
         </Badge>
       </div>
 
+      {/* How is this scored? — collapsible, opens by default. */}
+      <details
+        className="group bg-muted/40 rounded-md border px-4 py-3 open:pb-4"
+        open
+      >
+        <summary className="cursor-pointer list-none text-sm font-medium select-none [&::-webkit-details-marker]:hidden">
+          <span className="inline-flex items-center gap-1.5">
+            <span className="text-muted-foreground transition-transform group-open:rotate-90">▶</span>
+            How is this scored?
+          </span>
+        </summary>
+        <div className="text-muted-foreground mt-3 space-y-2 text-sm">
+          <p>
+            Click a team to pick the winner of each match. Winners automatically advance to the next
+            round. Complete your group predictions first to see teams in Round of 32.
+          </p>
+          <p>
+            <strong>Round of 32 picks aren&apos;t scored directly</strong> — they decide which
+            teams sit in your Round of 16 slots. From R16 onward, each advancing team scores in the
+            higher tier if you picked the right winner of the deciding match, the lower tier if you
+            picked them to win some other match in the same stage, otherwise 0.
+          </p>
+          <p>
+            <strong>Per advancing team:</strong> R16 +5/+3 · QF +6/+3 · SF +8/+4 · Final +10/+5
+          </p>
+          <p>
+            <strong>Bonuses:</strong> +15 for the World Cup champion · +5 for the third-place
+            match winner.
+          </p>
+        </div>
+      </details>
+
+      {/* Persistent scoring summary — visible across all stage tabs. */}
+      <div className="text-muted-foreground bg-muted/20 flex flex-wrap items-center gap-x-3 gap-y-1 rounded-md border px-3 py-2 font-mono text-xs">
+        <span>R16 +5/+3</span>
+        <span>·</span>
+        <span>QF +6/+3</span>
+        <span>·</span>
+        <span>SF +8/+4</span>
+        <span>·</span>
+        <span>Final +10/+5</span>
+        <span>·</span>
+        <span>Champion +15</span>
+        <span>·</span>
+        <span>3rd-place +5</span>
+      </div>
+
       {/* Tabs for stages (responsive) */}
       <Tabs defaultValue="round_of_32" className="w-full">
         <TabsList className="mb-4 flex h-auto w-full flex-wrap justify-start gap-1">
@@ -430,12 +477,6 @@ export function KnockoutBracket({
           </TabsContent>
         ))}
       </Tabs>
-
-      {/* Helper Text */}
-      <p className="text-muted-foreground text-sm">
-        Click on a team to select them as the winner of that match. Winners automatically advance to
-        the next round. You must complete group predictions first to see teams in Round of 32.
-      </p>
     </div>
   );
 }

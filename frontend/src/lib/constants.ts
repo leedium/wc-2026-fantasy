@@ -43,3 +43,7 @@ export const STORAGE_KEYS = {
 } as const;
 
 export const USERNAME_REGEX = /^[a-zA-Z0-9_]{3,24}$/;
+
+export const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+export const PASSWORD_MIN_LENGTH = 8;
