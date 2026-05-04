@@ -139,6 +139,38 @@ export function GroupStageForm({
         </Badge>
       </div>
 
+      {/* How is this scored? — collapsible, opens by default the first time. */}
+      <details
+        className="group bg-muted/40 rounded-md border px-4 py-3 open:pb-4"
+        open
+      >
+        <summary className="cursor-pointer list-none text-sm font-medium select-none [&::-webkit-details-marker]:hidden">
+          <span className="inline-flex items-center gap-1.5">
+            <span className="text-muted-foreground transition-transform group-open:rotate-90">▶</span>
+            How is this scored?
+          </span>
+        </summary>
+        <div className="text-muted-foreground mt-3 space-y-2 text-sm">
+          <p>
+            Predict the final standings for each group: who finishes 1st, 2nd, 3rd, and 4th. Each
+            team can only be selected once per group.
+          </p>
+          <p>
+            <strong>Scoring uses only the top two finishers.</strong> 3rd and 4th picks aren&apos;t
+            scored, but your 3rd-place picks for groups A–H seed your Round of 32 bracket.
+          </p>
+          <p>
+            <strong>Per group:</strong> +6 for both top-two correct in exact order · +4 if both
+            correct but swapped · +3 for one correct in the right slot · +2 for one correct in the
+            wrong slot · 0 otherwise.
+          </p>
+          <p>
+            <strong>Group I (&ldquo;Group of Death&rdquo;)</strong> pays a +8 bonus instead of +6
+            when both top-two finishers are predicted in exact order.
+          </p>
+        </div>
+      </details>
+
       {/* Groups Grid */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
         {groups.map((group) => {
@@ -158,17 +190,6 @@ export function GroupStageForm({
           );
         })}
       </div>
-
-      {/* Helper Text */}
-      <p className="text-muted-foreground text-sm">
-        Predict the final standings for each group. Select which team will finish 1st, 2nd, 3rd, and
-        4th. Each team can only be selected once per group.
-      </p>
-      <p className="text-muted-foreground text-xs">
-        Scoring uses the top two finishers only — 3rd and 4th picks aren&apos;t scored, but 3rd
-        picks for groups A–H still seed your Round of 32 bracket. Group I (Group of Death) pays a
-        +8 bonus when both top-two finishers are predicted in exact order.
-      </p>
     </div>
   );
 }

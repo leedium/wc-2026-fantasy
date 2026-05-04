@@ -69,13 +69,13 @@ export function AdminDashboard() {
             ) : tournament.data ? (
               <div className="space-y-1">
                 <p className="font-semibold">{tournament.data.name}</p>
-                <p className="text-muted-foreground text-sm">
+                <div className="text-muted-foreground text-sm">
                   Status: <Badge variant="outline">{tournament.data.status}</Badge>
-                </p>
-                <p className="text-muted-foreground text-sm">
+                </div>
+                <div className="text-muted-foreground text-sm">
                   Lock: {lockTime?.toLocaleString()}{' '}
                   {locked ? <Badge variant="outline">locked</Badge> : null}
-                </p>
+                </div>
               </div>
             ) : (
               <p className="text-muted-foreground text-sm">No active tournament</p>

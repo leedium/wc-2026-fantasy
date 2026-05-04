@@ -7,28 +7,54 @@ import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { ROUTES } from '@/lib/constants';
+import { FieldError } from '@/components/ui/field-error';
+import { ROUTES, PASSWORD_MIN_LENGTH } from '@/lib/constants';
+import { cn } from '@/lib/utils';
+
+type FieldName = 'password' | 'confirmPassword';
 
 export function ResetPasswordForm() {
   const router = useRouter();
   const [password, setPassword] = React.useState('');
   const [confirmPassword, setConfirmPassword] = React.useState('');
+  const [touched, setTouched] = React.useState<Record<FieldName, boolean>>({
+    password: false,
+    confirmPassword: false,
+  });
   const [isSubmitting, setIsSubmitting] = React.useState(false);
-  const [error, setError] = React.useState<string | null>(null);
+  const [serverError, setServerError] = React.useState<string | null>(null);
+  const passwordRef = React.useRef<HTMLInputElement>(null);
+  const confirmRef = React.useRef<HTMLInputElement>(null);
 
-  const validate = (): string | null => {
-    if (password.length < 8) return 'Password must be at least 8 characters.';
-    if (password !== confirmPassword) return 'Passwords do not match.';
-    return null;
+  const errors: Record<FieldName, string | null> = {
+    password: !password
+      ? 'Password is required.'
+      : password.length < PASSWORD_MIN_LENGTH
+        ? `Password must be at least ${PASSWORD_MIN_LENGTH} characters.`
+        : null,
+    confirmPassword: !confirmPassword
+      ? 'Please confirm your password.'
+      : password !== confirmPassword
+        ? 'Passwords do not match.'
+        : null,
   };
+
+  const showError = (field: FieldName) => touched[field] && errors[field];
+
+  const markTouched = (field: FieldName) =>
+    setTouched((prev) => (prev[field] ? prev : { ...prev, [field]: true }));
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError(null);
+    setServerError(null);
+    setTouched({ password: true, confirmPassword: true });
 
-    const validationError = validate();
-    if (validationError) {
-      setError(validationError);
+    if (errors.password) {
+      passwordRef.current?.focus();
+      return;
+    }
+    if (errors.confirmPassword) {
+      confirmRef.current?.focus();
       return;
     }
 
@@ -41,12 +67,12 @@ export function ResetPasswordForm() {
       });
       if (!res.ok) {
         const body = (await res.json().catch(() => ({}))) as { error?: string };
-        setError(body.error ?? 'Could not update password. Please try again.');
+        setServerError(body.error ?? 'Could not update password. Please try again.');
         setIsSubmitting(false);
         return;
       }
     } catch {
-      setError('Network error. Please try again.');
+      setServerError('Network error. Please try again.');
       setIsSubmitting(false);
       return;
     }
@@ -62,29 +88,50 @@ export function ResetPasswordForm() {
         <Label htmlFor="password">New password</Label>
         <Input
           id="password"
+          ref={passwordRef}
           type="password"
           autoComplete="new-password"
           required
           value={password}
           onChange={(e) => setPassword(e.target.value)}
+          onBlur={() => markTouched('password')}
           disabled={isSubmitting}
+          aria-invalid={showError('password') ? true : undefined}
+          aria-describedby={showError('password') ? 'password-error' : undefined}
+          className={cn(
+            showError('password') && 'border-destructive focus-visible:ring-destructive'
+          )}
         />
+        <FieldError id="password-error" message={showError('password') || undefined} />
       </div>
       <div className="space-y-2">
         <Label htmlFor="confirmPassword">Confirm new password</Label>
         <Input
           id="confirmPassword"
+          ref={confirmRef}
           type="password"
           autoComplete="new-password"
           required
           value={confirmPassword}
           onChange={(e) => setConfirmPassword(e.target.value)}
+          onBlur={() => markTouched('confirmPassword')}
           disabled={isSubmitting}
+          aria-invalid={showError('confirmPassword') ? true : undefined}
+          aria-describedby={
+            showError('confirmPassword') ? 'confirmPassword-error' : undefined
+          }
+          className={cn(
+            showError('confirmPassword') && 'border-destructive focus-visible:ring-destructive'
+          )}
+        />
+        <FieldError
+          id="confirmPassword-error"
+          message={showError('confirmPassword') || undefined}
         />
       </div>
-      {error && (
+      {serverError && (
         <p role="alert" className="text-destructive text-sm">
-          {error}
+          {serverError}
         </p>
       )}
       <Button type="submit" className="w-full" disabled={isSubmitting}>

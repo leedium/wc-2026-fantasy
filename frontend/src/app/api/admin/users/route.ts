@@ -10,20 +10,31 @@ export async function GET(request: NextRequest) {
   const page = Math.max(1, parseInt(searchParams.get('page') ?? '1', 10));
   const pageSize = Math.min(100, Math.max(1, parseInt(searchParams.get('pageSize') ?? '25', 10)));
 
-  const { data, error } = await ctx.supabase.rpc('admin_list_users', {
-    p_search: search,
-    p_page: page,
-    p_page_size: pageSize,
-  });
+  const [usersResult, tournamentResult] = await Promise.all([
+    ctx.supabase.rpc('admin_list_users', {
+      p_search: search,
+      p_page: page,
+      p_page_size: pageSize,
+    }),
+    ctx.supabase
+      .from('tournaments')
+      .select('id, lock_time')
+      .eq('is_active', true)
+      .maybeSingle(),
+  ]);
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  if (usersResult.error) {
+    return NextResponse.json({ error: usersResult.error.message }, { status: 500 });
+  }
 
-  const rows = (data ?? []) as Array<{
+  const rows = (usersResult.data ?? []) as Array<{
     id: string;
     username: string;
     is_admin: boolean;
     has_prediction: boolean;
     submitted_at: string | null;
+    is_paid: boolean;
+    paid_at: string | null;
     total_count: number;
   }>;
 
@@ -34,9 +45,14 @@ export async function GET(request: NextRequest) {
       isAdmin: r.is_admin,
       hasPrediction: r.has_prediction,
       submittedAt: r.submitted_at,
+      isPaid: r.is_paid,
+      paidAt: r.paid_at,
     })),
     total: Number(rows[0]?.total_count ?? 0),
     page,
     pageSize,
+    tournament: tournamentResult.data
+      ? { id: tournamentResult.data.id as string, lockTime: tournamentResult.data.lock_time as string }
+      : null,
   });
 }

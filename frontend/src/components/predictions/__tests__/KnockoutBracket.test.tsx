@@ -71,7 +71,7 @@ describe('KnockoutBracket', () => {
 
     it('should show helper text', () => {
       renderBracket();
-      expect(screen.getByText(/Click on a team to select them as the winner/i)).toBeInTheDocument();
+      expect(screen.getByText(/Click a team to pick the winner/i)).toBeInTheDocument();
     });
   });
 

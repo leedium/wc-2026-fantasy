@@ -27,6 +27,8 @@ interface AdminUser {
   isAdmin: boolean;
   hasPrediction: boolean;
   submittedAt: string | null;
+  isPaid: boolean;
+  paidAt: string | null;
 }
 
 interface UsersResponse {
@@ -34,6 +36,7 @@ interface UsersResponse {
   total: number;
   page: number;
   pageSize: number;
+  tournament: { id: string; lockTime: string } | null;
 }
 
 const PAGE_SIZE = 25;
@@ -80,6 +83,35 @@ export function AdminUsersList() {
     }
   };
 
+  const tournament = query.data?.tournament ?? null;
+
+  const togglePaid = async (user: AdminUser) => {
+    if (!tournament) {
+      toast.error('No active tournament');
+      return;
+    }
+    try {
+      const res = await fetch(`/api/admin/users/${user.id}/payment`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tournamentId: tournament.id, paid: !user.isPaid }),
+      });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body.error ?? 'Failed');
+      }
+      toast.success(`${user.username} marked ${!user.isPaid ? 'paid' : 'unpaid'}`);
+      await queryClient.invalidateQueries({ queryKey: ['admin-users'] });
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Failed');
+    }
+  };
+
+  const isLatePayment = (user: AdminUser) => {
+    if (!user.isPaid || !user.paidAt || !tournament) return false;
+    return new Date(user.paidAt) > new Date(tournament.lockTime);
+  };
+
   return (
     <PageLayout>
       <h1 className="mb-2 text-3xl font-bold">Admin</h1>
@@ -110,6 +142,7 @@ export function AdminUsersList() {
                   <TableHead>Username</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Submitted</TableHead>
+                  <TableHead>Paid</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
@@ -123,9 +156,30 @@ export function AdminUsersList() {
                     <TableCell className="text-muted-foreground text-sm">
                       {u.hasPrediction ? (u.submittedAt ?? 'yes') : '—'}
                     </TableCell>
+                    <TableCell className="text-sm">
+                      {u.isPaid ? (
+                        isLatePayment(u) ? (
+                          <Badge variant="destructive" title="Paid after lock — not eligible">
+                            paid (late)
+                          </Badge>
+                        ) : (
+                          <Badge>paid</Badge>
+                        )
+                      ) : (
+                        <Badge variant="outline">unpaid</Badge>
+                      )}
+                    </TableCell>
                     <TableCell className="space-x-2 text-right">
                       <Button variant="outline" size="sm" asChild>
                         <Link href={`/admin/users/${u.id}`}>View bracket</Link>
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => togglePaid(u)}
+                        disabled={!tournament}
+                      >
+                        {u.isPaid ? 'Mark unpaid' : 'Mark paid'}
                       </Button>
                       <Button variant="outline" size="sm" onClick={() => toggleAdmin(u)}>
                         {u.isAdmin ? 'Demote' : 'Promote'}
@@ -135,7 +189,7 @@ export function AdminUsersList() {
                 ))}
                 {(query.data?.users ?? []).length === 0 && (
                   <TableRow>
-                    <TableCell colSpan={4} className="text-muted-foreground py-8 text-center">
+                    <TableCell colSpan={5} className="text-muted-foreground py-8 text-center">
                       No users found
                     </TableCell>
                   </TableRow>

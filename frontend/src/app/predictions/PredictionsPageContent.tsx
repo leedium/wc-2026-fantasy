@@ -96,6 +96,60 @@ function isFreshServerState(stored: StoredPredictions): boolean {
   );
 }
 
+function PaymentStatusBanner({
+  payment,
+  lockTime,
+  isLocked,
+}: {
+  payment: { paid: boolean; paidAt: string | null } | null;
+  lockTime: Date | null;
+  isLocked: boolean;
+}) {
+  if (!payment || !lockTime) return null;
+
+  const eligible =
+    payment.paid && payment.paidAt && new Date(payment.paidAt) <= lockTime;
+
+  let tone: 'success' | 'warning' | 'danger';
+  let title: string;
+  let body: string;
+
+  if (eligible) {
+    tone = 'success';
+    title = 'Payment received';
+    body = 'Your entry is eligible for the leaderboard.';
+  } else if (payment.paid && !eligible) {
+    tone = 'danger';
+    title = 'Payment recorded after lock time';
+    body =
+      'Your payment was recorded after the deadline, so your entry is not on the leaderboard. Contact the admin if this is wrong.';
+  } else if (isLocked) {
+    tone = 'danger';
+    title = 'Payment not recorded by lock time';
+    body =
+      'Your entry will not be counted on the leaderboard. Contact the admin if you paid in time.';
+  } else {
+    tone = 'warning';
+    title = 'Payment not yet recorded';
+    body = `Your entry will not count unless your payment is recorded by ${lockTime.toLocaleString()}. Pay the admin in cash, then they will mark you as paid.`;
+  }
+
+  const toneClasses: Record<typeof tone, string> = {
+    success: 'border-green-500/40 bg-green-500/10 text-green-900 dark:text-green-200',
+    warning: 'border-amber-500/40 bg-amber-500/10 text-amber-900 dark:text-amber-200',
+    danger: 'border-red-500/40 bg-red-500/10 text-red-900 dark:text-red-200',
+  };
+
+  return (
+    <Card className={`mb-6 ${toneClasses[tone]}`}>
+      <CardContent className="py-4">
+        <p className="font-semibold">{title}</p>
+        <p className="text-sm">{body}</p>
+      </CardContent>
+    </Card>
+  );
+}
+
 export function PredictionsPageContent() {
   const queryClient = useQueryClient();
   const { user } = useAuthContext();
@@ -130,6 +184,14 @@ export function PredictionsPageContent() {
   const predictionsQuery = useQuery<StoredPredictions>({
     queryKey: ['predictions'],
     queryFn: () => fetchJSON('/api/predictions'),
+  });
+
+  const tournamentId = tournamentQuery.data?.id;
+  const paymentQuery = useQuery<{ paid: boolean; paidAt: string | null }>({
+    queryKey: ['payment', tournamentId],
+    queryFn: () =>
+      fetchJSON(`/api/payment?tournamentId=${encodeURIComponent(tournamentId!)}`),
+    enabled: !!tournamentId,
   });
 
   const [groupPredictions, setGroupPredictions] = React.useState<GroupPrediction[]>([]);
@@ -449,6 +511,13 @@ export function PredictionsPageContent() {
           </div>
         </CardContent>
       </Card>
+
+      <PaymentStatusBanner
+        payment={paymentQuery.data ?? null}
+        lockTime={lockTime}
+        isLocked={isLocked}
+      />
+
 
       <div className="mb-8">
         <div className="mb-2 flex items-center justify-between text-sm">

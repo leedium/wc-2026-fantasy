@@ -142,3 +142,17 @@ Admin-controlled v1: an admin (`profiles.is_admin = true`) submits final group s
 ## Git Commits
 
 - Do not include "Co-Authored-By" lines in commit messages.
+
+
+## SQL Statements
+
+``````
+-- Bypass the trigger just for this statement
+ set session_replication_role = 'replica';
+
+ -- Option A: by username
+ update public.profiles
+ set is_admin = true
+ where id = (select id from auth.users where email = 'email@me.com');
+
+set session_replication_role = 'origin';

@@ -11,6 +11,8 @@ import { KnockoutBracket } from '@/components/predictions/KnockoutBracket';
 import { TiebreakerInput } from '@/components/predictions/TiebreakerInput';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Skeleton } from '@/components/ui/skeleton';
 import type {
@@ -19,6 +21,7 @@ import type {
   KnockoutMatch,
   KnockoutMatchPrediction,
   Team,
+  TournamentInfo,
 } from '@/types/tournament';
 
 type PositionKey = 'first' | 'second' | 'third' | 'fourth';
@@ -41,6 +44,12 @@ async function fetchJSON<T>(url: string): Promise<T> {
   const res = await fetch(url);
   if (!res.ok) throw new Error((await res.json())?.error ?? res.statusText);
   return res.json();
+}
+
+function toLocalDatetimeInput(iso: string): string {
+  const d = new Date(iso);
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
 
 function buildEmptyGroups(groups: Group[]): GroupPrediction[] {
@@ -72,6 +81,56 @@ export function AdminUserBracket({ userId }: { userId: string }) {
     queryKey: ['admin-user-predictions', userId],
     queryFn: () => fetchJSON(`/api/admin/users/${userId}/predictions`),
   });
+  const tournamentQuery = useQuery<TournamentInfo>({
+    queryKey: ['tournament'],
+    queryFn: () => fetchJSON('/api/tournament'),
+  });
+  const paymentQuery = useQuery<{ paid: boolean; paidAt: string | null }>({
+    queryKey: ['admin-user-payment', userId, tournamentQuery.data?.id],
+    queryFn: () =>
+      fetchJSON(
+        `/api/admin/users/${userId}/payment?tournamentId=${encodeURIComponent(tournamentQuery.data!.id)}`
+      ),
+    enabled: !!tournamentQuery.data?.id,
+  });
+
+  const [paymentSaving, setPaymentSaving] = React.useState(false);
+  const [paidAtInput, setPaidAtInput] = React.useState<string>('');
+
+  React.useEffect(() => {
+    if (paymentQuery.data?.paidAt) {
+      setPaidAtInput(toLocalDatetimeInput(paymentQuery.data.paidAt));
+    } else {
+      setPaidAtInput('');
+    }
+  }, [paymentQuery.data?.paidAt]);
+
+  const submitPayment = async (paid: boolean, paidAt: string | null) => {
+    if (!tournamentQuery.data?.id) {
+      toast.error('No active tournament');
+      return;
+    }
+    setPaymentSaving(true);
+    try {
+      const res = await fetch(`/api/admin/users/${userId}/payment`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tournamentId: tournamentQuery.data.id, paid, paidAt }),
+      });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body.error ?? 'Failed');
+      }
+      toast.success(`Marked ${paid ? 'paid' : 'unpaid'}`);
+      await queryClient.invalidateQueries({
+        queryKey: ['admin-user-payment', userId, tournamentQuery.data.id],
+      });
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Failed');
+    } finally {
+      setPaymentSaving(false);
+    }
+  };
 
   const [editing, setEditing] = React.useState(false);
   const [groupPreds, setGroupPreds] = React.useState<GroupPrediction[]>([]);
@@ -176,6 +235,76 @@ export function AdminUserBracket({ userId }: { userId: string }) {
     <PageLayout>
       <h1 className="mb-2 text-3xl font-bold">Admin</h1>
       <AdminNav />
+
+      <Card className="mb-6">
+        <CardHeader>
+          <CardTitle>Payment</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          {(() => {
+            const paid = paymentQuery.data?.paid ?? false;
+            const paidAt = paymentQuery.data?.paidAt ?? null;
+            const lockTime = tournamentQuery.data?.lockTime
+              ? new Date(tournamentQuery.data.lockTime)
+              : null;
+            const isLate = paid && paidAt && lockTime ? new Date(paidAt) > lockTime : false;
+            return (
+              <div className="flex flex-wrap items-center gap-2 text-sm">
+                {paid ? (
+                  isLate ? (
+                    <Badge variant="destructive">paid (after lock — not eligible)</Badge>
+                  ) : (
+                    <Badge>paid — eligible</Badge>
+                  )
+                ) : (
+                  <Badge variant="outline">unpaid</Badge>
+                )}
+                {paidAt && (
+                  <span className="text-muted-foreground">
+                    at {new Date(paidAt).toLocaleString()}
+                  </span>
+                )}
+                {lockTime && (
+                  <span className="text-muted-foreground">
+                    · lock: {lockTime.toLocaleString()}
+                  </span>
+                )}
+              </div>
+            );
+          })()}
+
+          <div className="flex flex-wrap items-end gap-2">
+            <div className="space-y-1">
+              <label className="text-muted-foreground text-xs" htmlFor="paid-at">
+                Paid at (optional — defaults to now)
+              </label>
+              <Input
+                id="paid-at"
+                type="datetime-local"
+                value={paidAtInput}
+                onChange={(e) => setPaidAtInput(e.target.value)}
+                className="w-64"
+                disabled={paymentSaving || !tournamentQuery.data}
+              />
+            </div>
+            <Button
+              onClick={() =>
+                submitPayment(true, paidAtInput ? new Date(paidAtInput).toISOString() : null)
+              }
+              disabled={paymentSaving || !tournamentQuery.data}
+            >
+              Mark paid
+            </Button>
+            <Button
+              variant="outline"
+              onClick={() => submitPayment(false, null)}
+              disabled={paymentSaving || !tournamentQuery.data || !paymentQuery.data?.paid}
+            >
+              Mark unpaid
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
 
       <Card className="mb-6">
         <CardHeader className="flex flex-row items-center justify-between">
