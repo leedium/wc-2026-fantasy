@@ -32,6 +32,7 @@ export async function GET(request: NextRequest) {
     id: string;
     username: string;
     is_admin: boolean;
+    is_super_admin: boolean;
     has_prediction: boolean;
     submitted_at: string | null;
     is_paid: boolean;
@@ -44,6 +45,7 @@ export async function GET(request: NextRequest) {
       id: r.id,
       username: r.username,
       isAdmin: r.is_admin,
+      isSuperAdmin: r.is_super_admin,
       hasPrediction: r.has_prediction,
       submittedAt: r.submitted_at,
       isPaid: r.is_paid,

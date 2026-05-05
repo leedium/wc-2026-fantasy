@@ -55,6 +55,21 @@ describe('PATCH /api/admin/users/[id]/admin', () => {
     expect(res.status).toBe(400);
   });
 
+  it('returns 400 with rpc error when demoting super admin', async () => {
+    supabaseMock.auth.getUser.mockResolvedValue({ data: { user: { id: 'u1' } } });
+    mockAdminProfile(true);
+    supabaseMock.rpc.mockResolvedValue({
+      data: null,
+      error: { message: 'cannot demote super admin' },
+    });
+    const res = await PATCH(patchReq({ isAdmin: false }), {
+      params: Promise.resolve({ id: 'u2' }),
+    });
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.error).toContain('super admin');
+  });
+
   it('returns 400 with rpc error when demoting last admin', async () => {
     supabaseMock.auth.getUser.mockResolvedValue({ data: { user: { id: 'u1' } } });
     mockAdminProfile(true);

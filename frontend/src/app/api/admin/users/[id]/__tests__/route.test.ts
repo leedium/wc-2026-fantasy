@@ -146,6 +146,19 @@ describe('DELETE /api/admin/users/[id]', () => {
     expect(res.status).toBe(400);
   });
 
+  it('returns 400 when target is super admin', async () => {
+    supabaseMock.auth.getUser.mockResolvedValue({ data: { user: { id: 'u1' } } });
+    mockAdminProfile(true);
+    supabaseMock.rpc.mockResolvedValue({
+      data: null,
+      error: { message: 'cannot delete super admin' },
+    });
+    const res = await DELETE(deleteReq(), { params: Promise.resolve({ id: 'u2' }) });
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.error).toBe('cannot delete super admin');
+  });
+
   it('returns 400 when target is admin', async () => {
     supabaseMock.auth.getUser.mockResolvedValue({ data: { user: { id: 'u1' } } });
     mockAdminProfile(true);
