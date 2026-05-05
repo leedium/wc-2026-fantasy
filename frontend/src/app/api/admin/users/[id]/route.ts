@@ -1,5 +1,8 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { requireAdmin, isAdminGateError } from '@/lib/auth/requireAdmin';
+import { safeMessage } from '@/lib/api/errors';
+
+const MAX_DISPLAY_NAME_LENGTH = 50;
 
 export async function PATCH(
   request: NextRequest,
@@ -21,6 +24,16 @@ export async function PATCH(
     );
   }
 
+  if (
+    typeof body.displayName === 'string' &&
+    body.displayName.length > MAX_DISPLAY_NAME_LENGTH
+  ) {
+    return NextResponse.json(
+      { error: `displayName must be ${MAX_DISPLAY_NAME_LENGTH} characters or fewer` },
+      { status: 400 }
+    );
+  }
+
   const { error } = await ctx.supabase.rpc('admin_update_profile', {
     p_user_id: id,
     p_username: body.username ?? null,
@@ -28,14 +41,14 @@ export async function PATCH(
   });
 
   if (error) {
-    const msg = error.message || '';
-    if (msg.includes('forbidden')) {
+    const msg = safeMessage(error);
+    if (error.message?.includes('forbidden')) {
       return NextResponse.json({ error: msg }, { status: 403 });
     }
-    if (msg.includes('user not found')) {
+    if (error.message?.includes('user not found')) {
       return NextResponse.json({ error: msg }, { status: 404 });
     }
-    if (msg.includes('username taken')) {
+    if (error.message?.includes('username taken')) {
       return NextResponse.json({ error: msg }, { status: 409 });
     }
     return NextResponse.json({ error: msg }, { status: 400 });
@@ -56,19 +69,13 @@ export async function DELETE(
   const { error } = await ctx.supabase.rpc('admin_delete_user', { p_user_id: id });
 
   if (error) {
-    const msg = error.message || '';
-    if (msg.includes('forbidden')) {
+    const msg = safeMessage(error);
+    const raw = error.message ?? '';
+    if (raw.includes('forbidden')) {
       return NextResponse.json({ error: msg }, { status: 403 });
     }
-    if (msg.includes('user not found')) {
+    if (raw.includes('user not found')) {
       return NextResponse.json({ error: msg }, { status: 404 });
-    }
-    if (
-      msg.includes('cannot delete self') ||
-      msg.includes('cannot delete admin') ||
-      msg.includes('cannot delete super admin')
-    ) {
-      return NextResponse.json({ error: msg }, { status: 400 });
     }
     return NextResponse.json({ error: msg }, { status: 400 });
   }

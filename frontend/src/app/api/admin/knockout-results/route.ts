@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { requireAdmin, isAdminGateError } from '@/lib/auth/requireAdmin';
+import { safeMessage } from '@/lib/api/errors';
 
 interface Body {
   tournamentId?: string;
@@ -24,7 +25,7 @@ export async function GET(request: NextRequest) {
     .select('match_id, winner_team_id, loser_team_id, total_goals, submitted_at')
     .eq('tournament_id', tournamentId);
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  if (error) return NextResponse.json({ error: safeMessage(error) }, { status: 500 });
   return NextResponse.json(data ?? []);
 }
 
@@ -48,6 +49,6 @@ export async function POST(request: NextRequest) {
     p_total_goals: body.totalGoals ?? null,
   });
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 400 });
+  if (error) return NextResponse.json({ error: safeMessage(error) }, { status: 400 });
   return NextResponse.json({ ok: true });
 }

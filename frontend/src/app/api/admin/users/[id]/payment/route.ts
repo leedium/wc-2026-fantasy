@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { requireAdmin, isAdminGateError } from '@/lib/auth/requireAdmin';
+import { safeMessage } from '@/lib/api/errors';
 
 export async function GET(
   request: NextRequest,
@@ -21,7 +22,7 @@ export async function GET(
     .eq('tournament_id', tournamentId)
     .maybeSingle();
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 400 });
+  if (error) return NextResponse.json({ error: safeMessage(error) }, { status: 400 });
 
   return NextResponse.json({
     paid: !!data,
@@ -68,7 +69,7 @@ export async function PATCH(
   });
 
   if (error) {
-    return NextResponse.json({ error: error.message }, { status: 400 });
+    return NextResponse.json({ error: safeMessage(error) }, { status: 400 });
   }
 
   return NextResponse.json({ paid: body.paid, paidAt: body.paid ? paidAt : null });
