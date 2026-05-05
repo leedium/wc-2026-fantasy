@@ -65,15 +65,41 @@ describe('POST /api/admin/users/[id]/password-reset', () => {
     expect(res.status).toBe(403);
   });
 
-  it('returns 404 when target user has no email / does not exist', async () => {
+  it('returns 500 when admin lookup errors', async () => {
     supabaseMock.auth.getUser.mockResolvedValue({ data: { user: { id: 'u1' } } });
     mockAdminProfile(true);
     adminMock.auth.admin.getUserById.mockResolvedValue({
       data: { user: null },
-      error: { message: 'not found' },
+      error: { message: 'service role required' },
+    });
+    const res = await POST(postReq(), { params: Promise.resolve({ id: 'gone' }) });
+    expect(res.status).toBe(500);
+    const body = await res.json();
+    expect(body.error).toContain('service role required');
+  });
+
+  it('returns 404 when target user does not exist', async () => {
+    supabaseMock.auth.getUser.mockResolvedValue({ data: { user: { id: 'u1' } } });
+    mockAdminProfile(true);
+    adminMock.auth.admin.getUserById.mockResolvedValue({
+      data: { user: null },
+      error: null,
     });
     const res = await POST(postReq(), { params: Promise.resolve({ id: 'gone' }) });
     expect(res.status).toBe(404);
+  });
+
+  it('returns 400 when target user has no email', async () => {
+    supabaseMock.auth.getUser.mockResolvedValue({ data: { user: { id: 'u1' } } });
+    mockAdminProfile(true);
+    adminMock.auth.admin.getUserById.mockResolvedValue({
+      data: { user: { id: 'u2', email: null } },
+      error: null,
+    });
+    const res = await POST(postReq(), { params: Promise.resolve({ id: 'u2' }) });
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.error).toContain('no email');
   });
 
   it('triggers reset email and returns 200', async () => {
