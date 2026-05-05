@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { requireAdmin, isAdminGateError } from '@/lib/auth/requireAdmin';
+import { safeMessage } from '@/lib/api/errors';
 
 export async function PATCH(
   request: NextRequest,
@@ -20,8 +21,8 @@ export async function PATCH(
   });
 
   if (error) {
-    const status = error.message.includes('cannot demote') ? 400 : 400;
-    return NextResponse.json({ error: error.message }, { status });
+    const status = error.message?.includes('forbidden') ? 403 : 400;
+    return NextResponse.json({ error: safeMessage(error) }, { status });
   }
 
   return NextResponse.json({ ok: true });

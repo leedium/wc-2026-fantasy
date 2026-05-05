@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { getServerSupabase } from '@/lib/supabase/server';
+import { safeMessage } from '@/lib/api/errors';
 
 interface SubmitPayload {
   tournamentId?: string;
@@ -115,8 +116,8 @@ export async function POST(request: NextRequest) {
 
   const { data, error } = await supabase.rpc('submit_predictions', { payload });
   if (error) {
-    const status = error.message.includes('locked') ? 403 : 400;
-    return NextResponse.json({ error: error.message }, { status });
+    const status = error.message?.includes('locked') ? 403 : 400;
+    return NextResponse.json({ error: safeMessage(error) }, { status });
   }
 
   return NextResponse.json({ predictionId: data });

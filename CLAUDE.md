@@ -139,6 +139,21 @@ Admin-controlled v1: an admin (`profiles.is_admin = true`) submits final group s
 - **Never import `lib/supabase/admin.ts` from a client component** — service-role key would leak.
 - **Cloudflare Workers runtime**: `npm run preview` builds with OpenNext and runs locally on the Worker runtime. If you add a Node-only dep, expect to need `compatibility_flags = ["nodejs_compat"]` in `wrangler.toml` (already set) or to find an edge-friendly alternative.
 
+## Production rate limits (Cloudflare WAF)
+
+App-level rate limiting isn't implemented (Cloudflare Workers' multi-instance model makes in-memory counters unreliable). Configure these rules in **Cloudflare Dashboard → Security → WAF → Rate limiting rules** before launch:
+
+| Path | Threshold | Window | Action |
+|------|-----------|--------|--------|
+| `/api/auth/forgot-password` | 5 requests | 1 minute | Block |
+| `/api/auth/reset-password` | 5 requests | 1 minute | Block |
+| `/login`, `/register` (POST) | 10 requests | 1 minute | Challenge |
+| `/api/admin/users/*/password-reset` | 10 requests | 5 minutes | Block |
+| `/api/admin/*` | 100 requests | 1 minute | Block |
+| Site-wide | 600 requests | 1 minute | Challenge |
+
+All by client IP. The first three protect against email enumeration / mailbox flooding; the admin rules cap blast radius if an admin account is compromised; the site-wide rule absorbs basic scraping.
+
 ## Git Commits
 
 - Do not include "Co-Authored-By" lines in commit messages.
