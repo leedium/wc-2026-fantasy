@@ -63,7 +63,11 @@ export async function DELETE(
     if (msg.includes('user not found')) {
       return NextResponse.json({ error: msg }, { status: 404 });
     }
-    if (msg.includes('cannot delete self') || msg.includes('cannot delete admin')) {
+    if (
+      msg.includes('cannot delete self') ||
+      msg.includes('cannot delete admin') ||
+      msg.includes('cannot delete super admin')
+    ) {
       return NextResponse.json({ error: msg }, { status: 400 });
     }
     return NextResponse.json({ error: msg }, { status: 400 });

@@ -37,6 +37,7 @@ interface AdminUser {
   id: string;
   username: string;
   isAdmin: boolean;
+  isSuperAdmin: boolean;
   hasPrediction: boolean;
   submittedAt: string | null;
   isPaid: boolean;
@@ -174,7 +175,13 @@ export function AdminUsersList() {
                   <TableRow key={u.id}>
                     <TableCell className="font-medium">{u.username}</TableCell>
                     <TableCell>
-                      {u.isAdmin ? <Badge>admin</Badge> : <Badge variant="outline">user</Badge>}
+                      {u.isSuperAdmin ? (
+                        <Badge title="Cannot be demoted or deleted">super admin</Badge>
+                      ) : u.isAdmin ? (
+                        <Badge>admin</Badge>
+                      ) : (
+                        <Badge variant="outline">user</Badge>
+                      )}
                     </TableCell>
                     <TableCell className="text-muted-foreground text-sm">
                       {u.hasPrediction ? (u.submittedAt ?? 'yes') : '—'}
@@ -204,7 +211,13 @@ export function AdminUsersList() {
                       >
                         {u.isPaid ? 'Mark unpaid' : 'Mark paid'}
                       </Button>
-                      <Button variant="outline" size="sm" onClick={() => toggleAdmin(u)}>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => toggleAdmin(u)}
+                        disabled={u.isSuperAdmin}
+                        title={u.isSuperAdmin ? 'Super admin cannot be demoted' : undefined}
+                      >
                         {u.isAdmin ? 'Demote' : 'Promote'}
                       </Button>
                       <Button variant="outline" size="sm" onClick={() => setEditTarget(u)}>
@@ -220,13 +233,15 @@ export function AdminUsersList() {
                       <Button
                         variant="destructive"
                         size="sm"
-                        disabled={u.isAdmin || isSelf(u)}
+                        disabled={u.isSuperAdmin || u.isAdmin || isSelf(u)}
                         title={
-                          u.isAdmin
-                            ? 'Demote first'
-                            : isSelf(u)
-                              ? 'Cannot delete yourself'
-                              : undefined
+                          u.isSuperAdmin
+                            ? 'Super admin cannot be deleted'
+                            : u.isAdmin
+                              ? 'Demote first'
+                              : isSelf(u)
+                                ? 'Cannot delete yourself'
+                                : undefined
                         }
                         onClick={() => setDeleteTarget(u)}
                       >
