@@ -13,8 +13,20 @@ export async function POST(
 
   const admin = createAdminSupabaseClient();
   const { data, error } = await admin.auth.admin.getUserById(id);
-  if (error || !data?.user?.email) {
+  if (error) {
+    return NextResponse.json(
+      { error: `lookup failed: ${error.message}` },
+      { status: 500 }
+    );
+  }
+  if (!data?.user) {
     return NextResponse.json({ error: 'user not found' }, { status: 404 });
+  }
+  if (!data.user.email) {
+    return NextResponse.json(
+      { error: 'user has no email on file' },
+      { status: 400 }
+    );
   }
 
   const origin = new URL(request.url).origin;

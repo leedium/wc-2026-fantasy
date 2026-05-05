@@ -28,7 +28,15 @@ enable_signup = true
 [auth.email]
 enable_signup = true
 double_confirm_changes = true
-enable_confirmations = false
+enable_confirmations = true
+
+# Override the default recovery email so the link points at the Next.js
+# callback (which calls verifyOtp) instead of GoTrue's /verify route.
+# Local CLI builds the default link as host://verify (no /auth/v1 prefix),
+# which Kong can't route — so we route through the app instead.
+[auth.email.template.recovery]
+subject = "Reset your password"
+content_path = "./supabase/templates/recovery.html"
 
 [inbucket]
 enabled = true
