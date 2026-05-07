@@ -19,7 +19,16 @@ export function AuthMenu() {
   const handleSignOut = async () => {
     setIsSigningOut(true);
     try {
-      await signOut();
+      // If GoTrue's lock wedges, fall back to a hard reload to /login so the
+      // button never gets stuck in 'Signing out…' (see supabase/auth-js#762).
+      const timeout = new Promise<'timeout'>((resolve) =>
+        setTimeout(() => resolve('timeout'), 5000)
+      );
+      const result = await Promise.race([signOut().then(() => 'ok' as const), timeout]);
+      if (result === 'timeout') {
+        window.location.href = ROUTES.login;
+        return;
+      }
       toast.success('Signed out');
       router.push(ROUTES.home);
       router.refresh();
