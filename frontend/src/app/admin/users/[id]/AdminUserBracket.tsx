@@ -7,7 +7,11 @@ import { toast } from 'sonner';
 import { PageLayout } from '@/components/layout/PageLayout';
 import { AdminNav } from '@/components/admin/AdminNav';
 import { GroupStageForm } from '@/components/predictions/GroupStageForm';
-import { KnockoutBracket } from '@/components/predictions/KnockoutBracket';
+import {
+  KnockoutBracket,
+  STAGE_CONFIG,
+  STAGE_ORDER,
+} from '@/components/predictions/KnockoutBracket';
 import { TiebreakerInput } from '@/components/predictions/TiebreakerInput';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -138,6 +142,9 @@ export function AdminUserBracket({ userId }: { userId: string }) {
   const [totalGoals, setTotalGoals] = React.useState<number | null>(null);
   const [hydrated, setHydrated] = React.useState(false);
   const [saving, setSaving] = React.useState(false);
+  const [knockoutStage, setKnockoutStage] = React.useState<
+    (typeof STAGE_ORDER)[number]
+  >('round_of_32');
 
   React.useEffect(() => {
     if (!groupsQuery.data || !matchesQuery.data || !predQuery.data || hydrated) return;
@@ -348,14 +355,25 @@ export function AdminUserBracket({ userId }: { userId: string }) {
           />
         </TabsContent>
         <TabsContent value="knockout">
-          <KnockoutBracket
-            matches={matchesQuery.data}
-            teams={teamsQuery.data}
-            groupPredictions={groupPreds}
-            knockoutPredictions={knockoutPreds}
-            onPredictionChange={handleKnockoutChange}
-            disabled={!editing}
-          />
+          <Tabs value={knockoutStage} onValueChange={(v) => setKnockoutStage(v as typeof knockoutStage)}>
+            <TabsList className="mb-4 flex h-auto w-full flex-wrap justify-start gap-1">
+              {STAGE_ORDER.map((s) => (
+                <TabsTrigger key={s} value={s} className="flex-shrink-0">
+                  <span className="hidden sm:inline">{STAGE_CONFIG[s].label}</span>
+                  <span className="sm:hidden">{STAGE_CONFIG[s].shortLabel}</span>
+                </TabsTrigger>
+              ))}
+            </TabsList>
+            <KnockoutBracket
+              matches={matchesQuery.data}
+              teams={teamsQuery.data}
+              groupPredictions={groupPreds}
+              knockoutPredictions={knockoutPreds}
+              onPredictionChange={handleKnockoutChange}
+              disabled={!editing}
+              stage={knockoutStage}
+            />
+          </Tabs>
         </TabsContent>
         <TabsContent value="tiebreaker">
           <TiebreakerInput value={totalGoals} onChange={setTotalGoals} disabled={!editing} />

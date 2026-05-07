@@ -46,6 +46,7 @@ function renderBracket(
     groupPredictions: createEmptyGroupPredictions(),
     knockoutPredictions: createEmptyKnockoutPredictions(),
     onPredictionChange: jest.fn(),
+    stage: 'round_of_32',
     ...overrides,
   };
   render(<KnockoutBracket {...props} />);
@@ -59,14 +60,19 @@ describe('KnockoutBracket', () => {
       expect(screen.getByText('Knockout Bracket')).toBeInTheDocument();
     });
 
-    it('should render stage tabs', () => {
+    it('renders only the matches for the active stage', () => {
+      renderBracket({ stage: 'quarter_finals', groupPredictions: createCompleteGroupPredictions() });
+      // QF has 4 match cards (M25-M28); R32 has 16 (M1-M16). Only QF should render.
+      expect(screen.getByText('M25')).toBeInTheDocument();
+      expect(screen.queryByText('M1')).not.toBeInTheDocument();
+      expect(screen.queryByText('M17')).not.toBeInTheDocument();
+    });
+
+    it('shows the stage subtitle for the active stage', () => {
       renderBracket();
-      expect(screen.getAllByText(/Round of 32/i).length).toBeGreaterThanOrEqual(1);
-      expect(screen.getAllByText(/Round of 16/i).length).toBeGreaterThanOrEqual(1);
-      expect(screen.getAllByText(/Quarter-finals/i).length).toBeGreaterThanOrEqual(1);
-      expect(screen.getAllByText(/Semi-finals/i).length).toBeGreaterThanOrEqual(1);
-      expect(screen.getAllByText(/Final/i).length).toBeGreaterThanOrEqual(1);
-      expect(screen.getAllByText(/Third Place/i).length).toBeGreaterThanOrEqual(1);
+      expect(
+        screen.getByText(/Picks here decide which teams sit in your Round of 16 slots/i)
+      ).toBeInTheDocument();
     });
 
     it('should show helper text', () => {
@@ -99,25 +105,9 @@ describe('KnockoutBracket', () => {
 
     it('should show team names when group predictions are complete', () => {
       renderBracket({ groupPredictions: createCompleteGroupPredictions() });
+      // Group A first place advances to M1; Group D first place advances to M2.
+      expect(screen.getByText('Mexico')).toBeInTheDocument();
       expect(screen.getByText('United States')).toBeInTheDocument();
-      expect(screen.getByText('Colombia')).toBeInTheDocument();
-    });
-  });
-
-  describe('stage navigation', () => {
-    it('should switch between stages when tabs are clicked', async () => {
-      const user = userEvent.setup();
-      renderBracket({ groupPredictions: createCompleteGroupPredictions() });
-      const qfTab = screen.getByRole('tab', { name: /Quarter-finals/i });
-      await user.click(qfTab);
-      expect(qfTab).toHaveAttribute('data-state', 'active');
-    });
-
-    it('should explain R32 picks set R16 slots', () => {
-      renderBracket({ groupPredictions: createCompleteGroupPredictions() });
-      expect(
-        screen.getByText(/Picks here decide which teams sit in your Round of 16 slots/i)
-      ).toBeInTheDocument();
     });
   });
 

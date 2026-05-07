@@ -6,7 +6,6 @@ import { CheckCircle2, Circle, Trophy } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { TeamFlag } from '@/components/shared/TeamFlag';
 import { cn } from '@/lib/utils';
 import type {
@@ -21,7 +20,7 @@ import type {
 // Round-of-32 picks aren't scored directly — they decide R16 slots — so the
 // hint reflects that. Other rounds score the round's advancing teams (correct
 // slot / wrong slot tiers); we surface that as a single hint per match card.
-const STAGE_CONFIG: Record<
+export const STAGE_CONFIG: Record<
   KnockoutStage,
   { label: string; shortLabel: string; pointsHint: string; subtitle: string }
 > = {
@@ -64,8 +63,9 @@ const STAGE_CONFIG: Record<
   },
 };
 
-// Stage order for tabs
-const STAGE_ORDER: KnockoutStage[] = [
+// Stage order. Used by the parent stepper; the bracket itself now renders one
+// stage at a time controlled by the `stage` prop.
+export const STAGE_ORDER: KnockoutStage[] = [
   'round_of_32',
   'round_of_16',
   'quarter_finals',
@@ -81,6 +81,7 @@ interface KnockoutBracketProps {
   knockoutPredictions: KnockoutMatchPrediction[];
   onPredictionChange: (matchId: string, winnerId: string | null) => void;
   disabled?: boolean;
+  stage: KnockoutStage;
 }
 
 // Helper to resolve a team source to team ID or null
@@ -357,21 +358,12 @@ export function KnockoutBracket({
   knockoutPredictions,
   onPredictionChange,
   disabled = false,
+  stage,
 }: KnockoutBracketProps) {
-  const matchesByStage = React.useMemo(() => {
-    const grouped: Record<KnockoutStage, KnockoutMatch[]> = {
-      round_of_32: [],
-      round_of_16: [],
-      quarter_finals: [],
-      semi_finals: [],
-      third_place: [],
-      final: [],
-    };
-    matches.forEach((match) => {
-      grouped[match.stage].push(match);
-    });
-    return grouped;
-  }, [matches]);
+  const stageMatches = React.useMemo(
+    () => matches.filter((m) => m.stage === stage),
+    [matches, stage]
+  );
 
   const totalMatches = matches.length;
   const completedMatches = knockoutPredictions.filter((p) => p.winnerId !== null).length;
@@ -418,7 +410,7 @@ export function KnockoutBracket({
         </div>
       </details>
 
-      {/* Persistent scoring summary — visible across all stage tabs. */}
+      {/* Persistent scoring summary. */}
       <div className="text-muted-foreground bg-muted/20 flex flex-wrap items-center gap-x-3 gap-y-1 rounded-md border px-3 py-2 font-mono text-xs">
         <span>R16 +5/+3</span>
         <span>·</span>
@@ -433,50 +425,16 @@ export function KnockoutBracket({
         <span>3rd-place +5</span>
       </div>
 
-      {/* Tabs for stages (responsive) */}
-      <Tabs defaultValue="round_of_32" className="w-full">
-        <TabsList className="mb-4 flex h-auto w-full flex-wrap justify-start gap-1">
-          {STAGE_ORDER.map((stage) => {
-            const config = STAGE_CONFIG[stage];
-            const matches = matchesByStage[stage];
-            const completedCount = matches.filter((match) => {
-              const prediction = knockoutPredictions.find((p) => p.matchId === match.id);
-              return prediction?.winnerId !== null && prediction?.winnerId !== undefined;
-            }).length;
-            const isComplete = completedCount === matches.length;
-
-            return (
-              <TabsTrigger
-                key={stage}
-                value={stage}
-                className={cn(
-                  'flex-shrink-0',
-                  isComplete && 'data-[state=active]:bg-green-600 data-[state=active]:text-white'
-                )}
-              >
-                <span className="hidden sm:inline">{config.label}</span>
-                <span className="sm:hidden">{config.shortLabel}</span>
-                {isComplete && <CheckCircle2 className="ml-1 h-3 w-3" />}
-              </TabsTrigger>
-            );
-          })}
-        </TabsList>
-
-        {STAGE_ORDER.map((stage) => (
-          <TabsContent key={stage} value={stage}>
-            <StageSection
-              stage={stage}
-              matches={matchesByStage[stage]}
-              allMatches={matches}
-              teams={teams}
-              groupPredictions={groupPredictions}
-              knockoutPredictions={knockoutPredictions}
-              onPredictionChange={onPredictionChange}
-              disabled={disabled}
-            />
-          </TabsContent>
-        ))}
-      </Tabs>
+      <StageSection
+        stage={stage}
+        matches={stageMatches}
+        allMatches={matches}
+        teams={teams}
+        groupPredictions={groupPredictions}
+        knockoutPredictions={knockoutPredictions}
+        onPredictionChange={onPredictionChange}
+        disabled={disabled}
+      />
     </div>
   );
 }
