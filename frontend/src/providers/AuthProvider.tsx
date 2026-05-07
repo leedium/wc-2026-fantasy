@@ -52,13 +52,17 @@ export function AuthProvider({ children, initialUser, initialProfile }: AuthProv
   );
 
   React.useEffect(() => {
-    const { data: subscription } = supabase.auth.onAuthStateChange(async (_event, session) => {
+    // Never await Supabase calls inside this callback — auth-js holds an internal
+    // navigator.locks lock for the duration of the listener, and re-entering it
+    // can wedge a later signOut() (see supabase/auth-js#762).
+    const { data: subscription } = supabase.auth.onAuthStateChange((event, session) => {
       setUser(session?.user ?? null);
-      if (session?.user) {
-        await loadProfile(session.user.id);
-      } else {
+      if (!session?.user) {
         setProfile(null);
+        return;
       }
+      if (event === 'INITIAL_SESSION') return;
+      void loadProfile(session.user.id);
     });
     return () => subscription.subscription.unsubscribe();
   }, [supabase, loadProfile]);
