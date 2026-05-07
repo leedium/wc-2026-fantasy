@@ -212,32 +212,61 @@ describe('PredictionsPageContent — stepper navigation', () => {
     const user = userEvent.setup();
     render(<PredictionsPageContent />);
 
-    const continueBtn = await screen.findByRole('button', { name: /Continue to Knockout/ });
+    const continueBtn = await screen.findByRole('button', { name: /Continue to Round of 32/ });
     expect(continueBtn).toBeDisabled();
 
     await user.click(screen.getByTestId('fill-all-groups'));
-    expect(screen.getByRole('button', { name: /Continue to Knockout/ })).toBeEnabled();
+    expect(screen.getByRole('button', { name: /Continue to Round of 32/ })).toBeEnabled();
   });
 
-  it('advances to the next step when Continue is clicked', async () => {
+  it('advances to Round of 32 when Continue is clicked from groups', async () => {
     configureQueries();
     const user = userEvent.setup();
     render(<PredictionsPageContent />);
 
     await user.click(await screen.findByTestId('fill-all-groups'));
-    await user.click(screen.getByRole('button', { name: /Continue to Knockout/ }));
+    await user.click(screen.getByRole('button', { name: /Continue to Round of 32/ }));
 
+    // Top "Knockout" chip is now current; sub row appears with R32 selected.
     expect(screen.getByRole('tab', { name: /Knockout/ })).toHaveAttribute(
       'aria-selected',
       'true'
     );
+    expect(screen.getByTestId('prediction-substepper')).toBeInTheDocument();
+    expect(screen.getByRole('tab', { name: /R32/ })).toHaveAttribute('aria-selected', 'true');
   });
 
-  it('renders all stepper triggers as disabled when the tournament is locked', async () => {
+  it('walks through all 8 steps with Continue and reaches the tiebreaker', async () => {
+    configureQueries();
+    const user = userEvent.setup();
+    render(<PredictionsPageContent />);
+
+    await user.click(await screen.findByTestId('fill-all-groups'));
+    await user.click(screen.getByRole('button', { name: /Continue to Round of 32/ }));
+    // Filling all knockout matches at once satisfies every knockout sub-step.
+    await user.click(screen.getByTestId('fill-all-knockout'));
+
+    const stages = ['Round of 16', 'Quarter-finals', 'Semi-finals', 'Final', 'Third Place'];
+    for (const next of stages) {
+      const btn = await screen.findByRole('button', {
+        name: new RegExp(`Continue to ${next}`, 'i'),
+      });
+      await user.click(btn);
+    }
+    await user.click(
+      await screen.findByRole('button', { name: /Continue to Tiebreaker/ })
+    );
+    expect(screen.getByTestId('tiebreaker-input')).toBeInTheDocument();
+    // Final step shows "Review & submit" instead of "Continue to ...".
+    expect(screen.getByRole('button', { name: /Review & submit/ })).toBeInTheDocument();
+  });
+
+  it('renders all top stepper triggers as disabled when the tournament is locked', async () => {
     configureQueries({ tournamentLockTime: new Date(Date.now() - 1000).toISOString() });
     render(<PredictionsPageContent />);
 
     await screen.findByText(/Predictions Locked/);
+    // Only the top row is rendered when not on a knockout step; assert all top tabs are disabled.
     const tabs = screen.getAllByRole('tab');
     tabs.forEach((tab) => expect(tab).toBeDisabled());
   });
@@ -368,9 +397,23 @@ describe('PredictionsPageContent — autosave', () => {
     render(<PredictionsPageContent />);
 
     await user.click(await screen.findByTestId('fill-all-groups'));
-    await user.click(screen.getByRole('button', { name: /Continue to Knockout/ }));
+    await user.click(screen.getByRole('button', { name: /Continue to Round of 32/ }));
     await user.click(screen.getByTestId('fill-all-knockout'));
-    await user.click(screen.getByRole('button', { name: /Continue to Tiebreaker/ }));
+    // Walk through R16 → QF → SF → Final → 3rd → Tiebreaker via Continue.
+    for (const next of [
+      'Round of 16',
+      'Quarter-finals',
+      'Semi-finals',
+      'Final',
+      'Third Place',
+      'Tiebreaker',
+    ]) {
+      await user.click(
+        await screen.findByRole('button', {
+          name: new RegExp(`Continue to ${next}`, 'i'),
+        })
+      );
+    }
     await user.click(screen.getByTestId('set-tiebreaker'));
 
     act(() => {

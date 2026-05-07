@@ -14,7 +14,6 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
-import { Tabs, TabsContent } from '@/components/ui/tabs';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useAuthContext } from '@/providers/AuthProvider';
 import { useDraftPersistence } from '@/hooks/useDraftPersistence';
@@ -23,19 +22,81 @@ import type {
   GroupPrediction,
   KnockoutMatch,
   KnockoutMatchPrediction,
+  KnockoutStage,
   Team,
   TournamentInfo,
 } from '@/types/tournament';
 
 type PositionKey = 'first' | 'second' | 'third' | 'fourth';
-type StepValue = 'groups' | 'knockout' | 'tiebreaker';
 
-const STEP_ORDER: StepValue[] = ['groups', 'knockout', 'tiebreaker'];
-const STEP_LABELS: Record<StepValue, string> = {
+type Step =
+  | 'groups'
+  | 'round_of_32'
+  | 'round_of_16'
+  | 'quarter_finals'
+  | 'semi_finals'
+  | 'final'
+  | 'third_place'
+  | 'tiebreaker';
+
+type TopStep = 'groups' | 'knockout' | 'tiebreaker';
+
+const STEP_ORDER: Step[] = [
+  'groups',
+  'round_of_32',
+  'round_of_16',
+  'quarter_finals',
+  'semi_finals',
+  'final',
+  'third_place',
+  'tiebreaker',
+];
+
+const STEP_LABELS: Record<Step, string> = {
+  groups: 'Group Stage',
+  round_of_32: 'Round of 32',
+  round_of_16: 'Round of 16',
+  quarter_finals: 'Quarter-finals',
+  semi_finals: 'Semi-finals',
+  final: 'Final',
+  third_place: 'Third Place',
+  tiebreaker: 'Tiebreaker',
+};
+
+const KNOCKOUT_STAGE_LIST: KnockoutStage[] = [
+  'round_of_32',
+  'round_of_16',
+  'quarter_finals',
+  'semi_finals',
+  'final',
+  'third_place',
+];
+
+const SUB_STEP_LABELS: Record<KnockoutStage, string> = {
+  round_of_32: 'R32',
+  round_of_16: 'R16',
+  quarter_finals: 'QF',
+  semi_finals: 'SF',
+  final: 'Final',
+  third_place: '3rd',
+};
+
+const TOP_STEPS: TopStep[] = ['groups', 'knockout', 'tiebreaker'];
+const TOP_STEP_LABELS: Record<TopStep, string> = {
   groups: 'Group Stage',
   knockout: 'Knockout',
   tiebreaker: 'Tiebreaker',
 };
+
+function isKnockoutStage(step: Step): step is KnockoutStage {
+  return (KNOCKOUT_STAGE_LIST as Step[]).includes(step);
+}
+
+function topOf(step: Step): TopStep {
+  if (step === 'groups') return 'groups';
+  if (step === 'tiebreaker') return 'tiebreaker';
+  return 'knockout';
+}
 
 interface StoredPredictions {
   tournamentId: string;
@@ -201,7 +262,7 @@ export function PredictionsPageContent() {
   const [totalGoals, setTotalGoals] = React.useState<number | null>(null);
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [hydrated, setHydrated] = React.useState(false);
-  const [currentStep, setCurrentStep] = React.useState<StepValue>('groups');
+  const [currentStep, setCurrentStep] = React.useState<Step>('groups');
   const tabsContentRef = React.useRef<HTMLDivElement | null>(null);
   const userInteractedRef = React.useRef(false);
 
@@ -319,22 +380,77 @@ export function PredictionsPageContent() {
   const isTiebreakerComplete = totalGoals !== null;
   const isPredictionsComplete = isGroupsComplete && isBracketComplete && isTiebreakerComplete;
 
-  const stepStatus: Record<StepValue, boolean> = {
+  const matchesByStage = React.useMemo(() => {
+    const grouped: Record<KnockoutStage, KnockoutMatch[]> = {
+      round_of_32: [],
+      round_of_16: [],
+      quarter_finals: [],
+      semi_finals: [],
+      third_place: [],
+      final: [],
+    };
+    (matches ?? []).forEach((m) => {
+      grouped[m.stage].push(m);
+    });
+    return grouped;
+  }, [matches]);
+
+  const stageCompletion: Record<KnockoutStage, boolean> = React.useMemo(() => {
+    const out = {} as Record<KnockoutStage, boolean>;
+    for (const s of KNOCKOUT_STAGE_LIST) {
+      const stageMatches = matchesByStage[s];
+      if (stageMatches.length === 0) {
+        out[s] = false;
+        continue;
+      }
+      out[s] = stageMatches.every((m) =>
+        knockoutPredictions.some((p) => p.matchId === m.id && p.winnerId !== null)
+      );
+    }
+    return out;
+  }, [matchesByStage, knockoutPredictions]);
+
+  const stepStatus: Record<Step, boolean> = {
     groups: isGroupsComplete,
-    knockout: isBracketComplete,
+    round_of_32: stageCompletion.round_of_32,
+    round_of_16: stageCompletion.round_of_16,
+    quarter_finals: stageCompletion.quarter_finals,
+    semi_finals: stageCompletion.semi_finals,
+    final: stageCompletion.final,
+    third_place: stageCompletion.third_place,
     tiebreaker: isTiebreakerComplete,
   };
 
-  const steps: StepperStep[] = STEP_ORDER.map((value) => {
-    const status: StepperStep['status'] = isLocked
-      ? 'locked'
-      : stepStatus[value]
-        ? 'done'
-        : value === currentStep
-          ? 'current'
-          : 'upcoming';
-    return { value, label: STEP_LABELS[value], status };
+  const stepperStatus = (value: Step): StepperStep['status'] => {
+    if (isLocked) return 'locked';
+    if (stepStatus[value]) return 'done';
+    if (value === currentStep) return 'current';
+    return 'upcoming';
+  };
+
+  const topValue: TopStep = topOf(currentStep);
+
+  const topSteps: StepperStep[] = TOP_STEPS.map((value) => {
+    let status: StepperStep['status'];
+    if (isLocked) {
+      status = 'locked';
+    } else if (value === topValue) {
+      status = 'current';
+    } else if (value === 'groups') {
+      status = isGroupsComplete ? 'done' : 'upcoming';
+    } else if (value === 'knockout') {
+      status = isBracketComplete ? 'done' : 'upcoming';
+    } else {
+      status = isTiebreakerComplete ? 'done' : 'upcoming';
+    }
+    return { value, label: TOP_STEP_LABELS[value], status };
   });
+
+  const subSteps: StepperStep[] = KNOCKOUT_STAGE_LIST.map((value) => ({
+    value,
+    label: SUB_STEP_LABELS[value],
+    status: stepperStatus(value),
+  }));
 
   const persistDraft = React.useCallback(
     (next: Partial<DraftData>) => {
@@ -379,10 +495,24 @@ export function PredictionsPageContent() {
     persistDraft({ totalGoals: value });
   };
 
-  const handleStepChange = (value: string) => {
-    if (!STEP_ORDER.includes(value as StepValue)) return;
-    setCurrentStep(value as StepValue);
+  const goToStep = (value: Step) => {
+    setCurrentStep(value);
     userInteractedRef.current = true;
+  };
+
+  const handleTopChange = (value: string) => {
+    if (!TOP_STEPS.includes(value as TopStep)) return;
+    if (value === 'groups') return goToStep('groups');
+    if (value === 'tiebreaker') return goToStep('tiebreaker');
+    // Knockout: jump to the first incomplete knockout stage, or R32 if all empty.
+    const target =
+      KNOCKOUT_STAGE_LIST.find((s) => !stageCompletion[s]) ?? 'round_of_32';
+    goToStep(target);
+  };
+
+  const handleSubChange = (value: string) => {
+    if (!KNOCKOUT_STAGE_LIST.includes(value as KnockoutStage)) return;
+    goToStep(value as Step);
   };
 
   React.useEffect(() => {
@@ -394,16 +524,14 @@ export function PredictionsPageContent() {
   const goToNextStep = () => {
     const idx = STEP_ORDER.indexOf(currentStep);
     if (idx >= 0 && idx < STEP_ORDER.length - 1) {
-      setCurrentStep(STEP_ORDER[idx + 1]);
-      userInteractedRef.current = true;
+      goToStep(STEP_ORDER[idx + 1]);
     }
   };
 
   const goToPreviousStep = () => {
     const idx = STEP_ORDER.indexOf(currentStep);
     if (idx > 0) {
-      setCurrentStep(STEP_ORDER[idx - 1]);
-      userInteractedRef.current = true;
+      goToStep(STEP_ORDER[idx - 1]);
     }
   };
 
@@ -529,20 +657,27 @@ export function PredictionsPageContent() {
         <Progress value={overallPercent} aria-label="Overall predictions progress" />
       </div>
 
-      <Tabs value={currentStep} onValueChange={handleStepChange} className="mb-8">
-        <PredictionStepper steps={steps} />
+      <div className="mb-8">
+        <PredictionStepper
+          topSteps={topSteps}
+          topValue={topValue}
+          onTopChange={handleTopChange}
+          subSteps={topValue === 'knockout' ? subSteps : undefined}
+          subValue={topValue === 'knockout' && isKnockoutStage(currentStep) ? currentStep : undefined}
+          onSubChange={topValue === 'knockout' ? handleSubChange : undefined}
+        />
 
         <div ref={tabsContentRef}>
-          <TabsContent value="groups">
+          {currentStep === 'groups' && (
             <GroupStageForm
               groups={groups}
               predictions={groupPredictions}
               onPredictionChange={handleGroupPredictionChange}
               disabled={isLocked}
             />
-          </TabsContent>
+          )}
 
-          <TabsContent value="knockout">
+          {isKnockoutStage(currentStep) && (
             <KnockoutBracket
               matches={matches}
               teams={teams}
@@ -550,16 +685,17 @@ export function PredictionsPageContent() {
               knockoutPredictions={knockoutPredictions}
               onPredictionChange={handleKnockoutPredictionChange}
               disabled={isLocked}
+              stage={currentStep}
             />
-          </TabsContent>
+          )}
 
-          <TabsContent value="tiebreaker">
+          {currentStep === 'tiebreaker' && (
             <TiebreakerInput
               value={totalGoals}
               onChange={handleTotalGoalsChange}
               disabled={isLocked}
             />
-          </TabsContent>
+          )}
         </div>
 
         <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -595,7 +731,7 @@ export function PredictionsPageContent() {
             </Button>
           )}
         </div>
-      </Tabs>
+      </div>
 
       <Card id="submit-predictions-card" className="border-primary/20 bg-primary/5">
         <CardContent className="flex flex-col items-center gap-4 py-6 sm:flex-row sm:justify-between">
