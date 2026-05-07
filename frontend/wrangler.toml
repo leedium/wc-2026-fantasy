@@ -7,6 +7,10 @@ compatibility_flags = ["nodejs_compat"]
 directory = ".open-next/assets"
 binding = "ASSETS"
 
+[secrets]
+required = ["SUPABASE_SERVICE_ROLE_KEY"]
+
+
 # Environment variables are set via the Cloudflare dashboard or `wrangler secret put`.
 # NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_ANON_KEY, NEXT_PUBLIC_APP_URL,
 # and SUPABASE_SERVICE_ROLE_KEY must be configured for the deployed worker.
