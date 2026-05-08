@@ -47,20 +47,26 @@ export async function GET(
     .eq('tournament_id', tournament.id)
     .order('submitted_at', { ascending: true });
 
+  type Payment = { paid_at: string | null; marked_by: string | null };
   type Pred = {
     id: string;
     prediction_name: string;
     total_goals: number | null;
     submitted_at: string | null;
-    tournament_payments:
-      | Array<{ paid_at: string | null; marked_by: string | null }>
-      | null;
+    // PostgREST returns an object (not array) when the embed resolves through
+    // a unique FK — `tournament_payments.prediction_id` is unique, so it's 1:1.
+    tournament_payments: Payment | Payment[] | null;
+  };
+
+  const unwrapPayment = (v: Pred['tournament_payments']): Payment | null => {
+    if (!v) return null;
+    return Array.isArray(v) ? (v[0] ?? null) : v;
   };
 
   return NextResponse.json({
     tournament: { id: tournament.id, lockTime: tournament.lock_time },
     predictions: ((predictions ?? []) as Pred[]).map((p) => {
-      const payment = p.tournament_payments?.[0] ?? null;
+      const payment = unwrapPayment(p.tournament_payments);
       return {
         id: p.id,
         name: p.prediction_name,

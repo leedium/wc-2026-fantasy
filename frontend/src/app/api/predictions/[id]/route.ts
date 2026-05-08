@@ -50,11 +50,17 @@ export async function GET(_request: NextRequest, context: RouteContext) {
       .eq('prediction_id', id),
   ]);
 
+  type Payment = { paid_at: string | null };
   type Pred = typeof prediction & {
-    tournament_payments: Array<{ paid_at: string | null }> | null;
+    tournament_payments: Payment | Payment[] | null;
   };
   const p = prediction as Pred;
-  const payment = p.tournament_payments?.[0] ?? null;
+  const rawPayment = p.tournament_payments;
+  const payment: Payment | null = !rawPayment
+    ? null
+    : Array.isArray(rawPayment)
+      ? (rawPayment[0] ?? null)
+      : rawPayment;
 
   return NextResponse.json({
     id: p.id,

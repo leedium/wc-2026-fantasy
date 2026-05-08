@@ -90,19 +90,25 @@ export async function GET() {
     knockoutByPrediction.set(k.prediction_id, list);
   }
 
+  type Payment = { paid_at: string | null };
   type PredictionRow = {
     id: string;
     prediction_name: string;
     total_goals: number | null;
     submitted_at: string | null;
-    tournament_payments: Array<{ paid_at: string | null }> | null;
+    tournament_payments: Payment | Payment[] | null;
   };
 
   return NextResponse.json({
     tournament: { id: tournament.id, lockTime: tournament.lock_time },
     cap: PREDICTION_CAP,
     predictions: ((predictions ?? []) as PredictionRow[]).map((p) => {
-      const payment = p.tournament_payments?.[0] ?? null;
+      const raw = p.tournament_payments;
+      const payment: Payment | null = !raw
+        ? null
+        : Array.isArray(raw)
+          ? (raw[0] ?? null)
+          : raw;
       return {
         id: p.id,
         name: p.prediction_name,
