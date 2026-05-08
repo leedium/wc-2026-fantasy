@@ -53,6 +53,25 @@ function GroupCard({
   // Check if group is complete (all 4 positions filled)
   const isComplete = selectedTeamIds.size === 4;
 
+  // When 1, 2, 3 are all picked, the 4th is forced to the one leftover team —
+  // the user can't pick it (or anything else) for that slot.
+  const { first, second, third } = prediction.positions;
+  const top3AllFilled = !!(first && second && third);
+  const top3Ids = new Set<string>([first, second, third].filter((v): v is string => !!v));
+  const autoFillFourth = top3AllFilled
+    ? (group.teams.find((t) => !top3Ids.has(t.id)) ?? null)
+    : null;
+
+  React.useEffect(() => {
+    if (disabled) return;
+    if (autoFillFourth && prediction.positions.fourth !== autoFillFourth.id) {
+      onPositionChange('fourth', autoFillFourth.id);
+    }
+    // We deliberately don't auto-clear `fourth` when top-3 is incomplete —
+    // the user may have started by picking the 4th first; the existing
+    // `getAvailableTeams` logic keeps that consistent.
+  }, [autoFillFourth, disabled, prediction.positions.fourth, onPositionChange]);
+
   // Get available teams for a position (not selected in other positions)
   const getAvailableTeams = (position: PositionKey): Team[] => {
     const currentSelection = prediction.positions[position];
@@ -83,6 +102,7 @@ function GroupCard({
         {(Object.keys(POSITION_LABELS) as PositionKey[]).map((position) => {
           const availableTeams = getAvailableTeams(position);
           const selectedValue = prediction.positions[position];
+          const isAutoFilled = position === 'fourth' && autoFillFourth !== null;
 
           return (
             <div key={position} className="flex items-center gap-3">
@@ -92,9 +112,12 @@ function GroupCard({
               <Select
                 value={selectedValue ?? ''}
                 onValueChange={(value) => onPositionChange(position, value || null)}
-                disabled={disabled}
+                disabled={disabled || isAutoFilled}
               >
-                <SelectTrigger className="flex-1">
+                <SelectTrigger
+                  className="flex-1"
+                  title={isAutoFilled ? 'Auto-filled from your top 3 picks' : undefined}
+                >
                   <SelectValue placeholder="Select team" />
                 </SelectTrigger>
                 <SelectContent>
