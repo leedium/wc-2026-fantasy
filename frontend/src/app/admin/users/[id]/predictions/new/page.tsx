@@ -16,7 +16,7 @@ export default async function AdminNewPredictionPage({
     <PredictionsPageContent
       mode="create"
       apiBasePath={`/api/admin/users/${id}/predictions`}
-      redirectAfterCreate={() => `/admin/users/${id}`}
+      redirectAfterSave={`/admin/users/${id}`}
     />
   );
 }

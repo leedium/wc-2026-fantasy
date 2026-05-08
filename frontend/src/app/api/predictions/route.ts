@@ -7,6 +7,7 @@ interface SubmitPayload {
   tournamentId?: string;
   predictionName?: string;
   totalGoals?: number | null;
+  submit?: boolean;
   groups?: Array<{
     groupId: string;
     first: string | null;
@@ -153,6 +154,7 @@ export async function POST(request: NextRequest) {
     tournament_id: body.tournamentId,
     prediction_name: name,
     total_goals: body.totalGoals,
+    submit: body.submit !== false,
     groups: body.groups.map((g) => ({
       group_id: g.groupId,
       first: g.first,

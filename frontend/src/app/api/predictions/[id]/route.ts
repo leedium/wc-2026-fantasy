@@ -6,6 +6,7 @@ import { PREDICTION_NAME_MAX, PREDICTION_NAME_REGEX } from '@/lib/constants';
 interface UpdatePayload {
   predictionName?: string;
   totalGoals?: number | null;
+  submit?: boolean;
   groups?: Array<{
     groupId: string;
     first: string | null;
@@ -111,6 +112,7 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
     prediction_id: id,
     prediction_name: name ?? null,
     total_goals: body.totalGoals,
+    submit: body.submit !== false,
     groups: body.groups.map((g) => ({
       group_id: g.groupId,
       first: g.first,

@@ -73,6 +73,7 @@ export default async function AdminEditPredictionPage({
       predictionId={predictionId}
       initial={initial}
       apiBasePath={`/api/admin/users/${id}/predictions`}
+      redirectAfterSave={`/admin/users/${id}`}
     />
   );
 }

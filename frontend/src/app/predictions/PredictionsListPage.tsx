@@ -3,7 +3,7 @@
 import * as React from 'react';
 import Link from 'next/link';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { CheckCircle2, Clock, Plus, Trash2 } from 'lucide-react';
+import { CheckCircle2, Clock, FileEdit, Plus, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 
 import { PageLayout } from '@/components/layout/PageLayout';
@@ -148,8 +148,17 @@ export function PredictionsListPage() {
             <Card key={p.id}>
               <CardContent className="flex flex-col gap-4 py-4 sm:flex-row sm:items-center sm:justify-between">
                 <div className="flex-1">
-                  <div className="flex items-center gap-2">
+                  <div className="flex flex-wrap items-center gap-2">
                     <h2 className="text-lg font-semibold">{p.name}</h2>
+                    {p.submittedAt ? (
+                      <Badge variant="secondary" className="gap-1">
+                        <CheckCircle2 className="h-3 w-3" /> Submitted
+                      </Badge>
+                    ) : (
+                      <Badge variant="outline" className="gap-1">
+                        <FileEdit className="h-3 w-3" /> Draft
+                      </Badge>
+                    )}
                     {p.isPaid ? (
                       <Badge variant="default" className="gap-1">
                         <CheckCircle2 className="h-3 w-3" /> Paid
@@ -162,8 +171,8 @@ export function PredictionsListPage() {
                   </div>
                   <div className="text-muted-foreground mt-1 text-sm">
                     {p.submittedAt
-                      ? `Last saved ${formatTime(p.submittedAt)}`
-                      : 'Not yet submitted'}
+                      ? `Submitted ${formatTime(p.submittedAt)}`
+                      : 'Saved as draft — submit to qualify for the leaderboard'}
                   </div>
                 </div>
                 <div className="flex items-center gap-2">

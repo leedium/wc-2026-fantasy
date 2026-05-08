@@ -2,7 +2,7 @@ import { NextResponse, type NextRequest } from 'next/server';
 import { createServerClient, type CookieOptions } from '@supabase/ssr';
 import { env } from '@/config/env';
 
-const PROTECTED_PREFIXES = ['/predictions', '/admin'];
+const PROTECTED_PREFIXES = ['/predictions', '/admin', '/account'];
 
 // Using the deprecated middleware.ts name (not Next 16's proxy.ts) because
 // @opennextjs/cloudflare doesn't yet support proxy. Track:

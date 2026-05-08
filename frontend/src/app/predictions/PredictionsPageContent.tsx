@@ -138,8 +138,8 @@ interface PredictionsPageContentProps {
   initial?: InitialPrediction;
   /** Override the API base for create/edit. Defaults to /api/predictions. */
   apiBasePath?: string;
-  /** Where to navigate after a successful create. Defaults to /predictions/{id}. */
-  redirectAfterCreate?: (predictionId: string) => string;
+  /** Where to navigate after a successful save. Defaults to /predictions. */
+  redirectAfterSave?: string;
 }
 
 async function fetchJSON<T>(url: string): Promise<T> {
@@ -235,7 +235,7 @@ export function PredictionsPageContent({
   predictionId,
   initial,
   apiBasePath = '/api/predictions',
-  redirectAfterCreate,
+  redirectAfterSave,
 }: PredictionsPageContentProps) {
   const router = useRouter();
   const queryClient = useQueryClient();
@@ -277,6 +277,7 @@ export function PredictionsPageContent({
   );
   const [totalGoals, setTotalGoals] = React.useState<number | null>(initial?.totalGoals ?? null);
   const [isSubmitting, setIsSubmitting] = React.useState(false);
+  const [isSavingProgress, setIsSavingProgress] = React.useState(false);
   const [hydrated, setHydrated] = React.useState(false);
   const [currentStep, setCurrentStep] = React.useState<Step>('groups');
   const tabsContentRef = React.useRef<HTMLDivElement | null>(null);
@@ -595,24 +596,26 @@ export function PredictionsPageContent({
     });
   };
 
-  const handleSubmit = async () => {
+  const persist = async ({ markSubmitted }: { markSubmitted: boolean }) => {
     if (!tournament) return;
     setPredictionNameTouched(true);
     if (nameError) {
       nameRef.current?.focus();
       return;
     }
-    if (!isPredictionsComplete) {
+    if (markSubmitted && !isPredictionsComplete) {
       toast.error('Please complete all predictions before submitting');
       return;
     }
 
-    setIsSubmitting(true);
+    if (markSubmitted) setIsSubmitting(true);
+    else setIsSavingProgress(true);
     try {
       const body = {
         tournamentId: tournament.id,
         predictionName: trimmedName,
         totalGoals,
+        submit: markSubmitted,
         groups: groupPredictions.map((g) => ({
           groupId: g.groupId,
           first: g.positions.first,
@@ -640,7 +643,7 @@ export function PredictionsPageContent({
 
       if (!res.ok) {
         const errBody = await res.json().catch(() => ({}));
-        const msg = String(errBody.error ?? 'Failed to submit predictions');
+        const msg = String(errBody.error ?? 'Failed to save');
         if (msg.includes('name taken')) {
           setServerNameError('That prediction name is already in use.');
           nameRef.current?.focus();
@@ -656,25 +659,32 @@ export function PredictionsPageContent({
       const newId = data.predictionId ?? predictionId;
 
       clearDraft();
+      if (mode === 'create' && user?.id && tournament.id) {
+        clearDraftForPrediction(user.id, tournament.id, NEW_PREDICTION_SENTINEL);
+      }
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ['predictions'] }),
         queryClient.invalidateQueries({ queryKey: ['prediction', newId] }),
       ]);
-      toast.success('Predictions saved');
+      toast.success(markSubmitted ? 'Prediction submitted' : 'Progress saved');
 
-      if (mode === 'create' && newId && user?.id && tournament.id) {
-        clearDraftForPrediction(user.id, tournament.id, NEW_PREDICTION_SENTINEL);
-        const target = redirectAfterCreate
-          ? redirectAfterCreate(newId)
-          : `${ROUTES.predictions}/${newId}`;
-        router.replace(target);
+      if (markSubmitted) {
+        router.push(redirectAfterSave ?? ROUTES.predictions);
+      } else if (mode === 'create' && newId) {
+        // Stay on the wizard but transition to edit-mode URL so subsequent
+        // saves update the same draft instead of creating new ones.
+        router.replace(`${ROUTES.predictions}/${encodeURIComponent(newId)}`);
       }
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Failed to submit predictions');
+      toast.error(err instanceof Error ? err.message : 'Failed to save');
     } finally {
       setIsSubmitting(false);
+      setIsSavingProgress(false);
     }
   };
+
+  const handleSubmit = () => persist({ markSubmitted: true });
+  const handleSaveProgress = () => persist({ markSubmitted: false });
 
   if (isLoading || !tournament || !groups || !teams || !matches) {
     return (
@@ -855,29 +865,40 @@ export function PredictionsPageContent({
       </div>
 
       <Card id="submit-predictions-card" className="border-primary/20 bg-primary/5">
-        <CardContent className="flex flex-col items-center gap-4 py-6 sm:flex-row sm:justify-between">
+        <CardContent className="flex flex-col gap-4 py-6 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <p className="font-semibold">Ready to submit?</p>
             <p className="text-muted-foreground text-sm">
-              {!isReadyToSubmit
-                ? 'Complete all predictions and add a name to submit'
-                : 'Save your bracket to the leaderboard'}
+              {isPredictionsComplete
+                ? 'Submit puts this bracket on the leaderboard once an admin marks it paid.'
+                : 'Save progress to keep working — or complete every pick to submit.'}
             </p>
           </div>
-          <Button
-            size="lg"
-            onClick={handleSubmit}
-            disabled={!isReadyToSubmit || isLocked || isSubmitting}
-            className="min-w-[180px]"
-          >
-            {isSubmitting
-              ? 'Submitting...'
-              : isLocked
-                ? 'Predictions Locked'
-                : mode === 'edit'
-                  ? 'Save Changes'
-                  : 'Submit Prediction'}
-          </Button>
+          <div className="flex flex-col gap-2 sm:flex-row">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={handleSaveProgress}
+              disabled={isLocked || isSubmitting || isSavingProgress || !!nameError}
+              className="min-w-[160px]"
+            >
+              {isSavingProgress ? 'Saving…' : 'Save progress'}
+            </Button>
+            <Button
+              size="lg"
+              onClick={handleSubmit}
+              disabled={!isReadyToSubmit || isLocked || isSubmitting || isSavingProgress}
+              className="min-w-[180px]"
+            >
+              {isSubmitting
+                ? 'Submitting...'
+                : isLocked
+                  ? 'Predictions Locked'
+                  : mode === 'edit'
+                    ? 'Save Changes'
+                    : 'Submit Prediction'}
+            </Button>
+          </div>
         </CardContent>
       </Card>
     </PageLayout>

@@ -27,6 +27,7 @@ export const ROUTES = {
   forgotPassword: '/forgot-password',
   resetPassword: '/reset-password',
   admin: '/admin',
+  account: '/account',
 } as const;
 
 export const API_ENDPOINTS = {
