@@ -1,8 +1,11 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { requireAdmin, isAdminGateError } from '@/lib/auth/requireAdmin';
+import { safeMessage } from '@/lib/api/errors';
+import { PREDICTION_NAME_MAX, PREDICTION_NAME_REGEX } from '@/lib/constants';
 
 interface SubmitPayload {
   tournamentId?: string;
+  predictionName?: string;
   totalGoals?: number | null;
   groups?: Array<{
     groupId: string;
@@ -34,49 +37,39 @@ export async function GET(
     return NextResponse.json({ error: 'No active tournament' }, { status: 404 });
   }
 
-  const { data: prediction } = await supabase
+  const { data: predictions } = await supabase
     .from('predictions')
-    .select('id, total_goals, submitted_at')
+    .select(
+      'id, prediction_name, total_goals, submitted_at, tournament_payments(paid_at, marked_by)'
+    )
     .eq('user_id', userId)
     .eq('tournament_id', tournament.id)
-    .maybeSingle();
+    .order('submitted_at', { ascending: true });
 
-  if (!prediction) {
-    return NextResponse.json({
-      tournamentId: tournament.id,
-      totalGoals: null,
-      groups: [],
-      knockout: [],
-      submittedAt: null,
-    });
-  }
-
-  const [groupsRes, knockoutRes] = await Promise.all([
-    supabase
-      .from('group_predictions')
-      .select('group_id, first_team_id, second_team_id, third_team_id, fourth_team_id')
-      .eq('prediction_id', prediction.id),
-    supabase
-      .from('knockout_predictions')
-      .select('match_id, winner_team_id')
-      .eq('prediction_id', prediction.id),
-  ]);
+  type Pred = {
+    id: string;
+    prediction_name: string;
+    total_goals: number | null;
+    submitted_at: string | null;
+    tournament_payments:
+      | Array<{ paid_at: string | null; marked_by: string | null }>
+      | null;
+  };
 
   return NextResponse.json({
-    tournamentId: tournament.id,
-    totalGoals: prediction.total_goals,
-    submittedAt: prediction.submitted_at,
-    groups: (groupsRes.data ?? []).map((g) => ({
-      groupId: g.group_id,
-      first: g.first_team_id,
-      second: g.second_team_id,
-      third: g.third_team_id,
-      fourth: g.fourth_team_id,
-    })),
-    knockout: (knockoutRes.data ?? []).map((k) => ({
-      matchId: k.match_id,
-      winner: k.winner_team_id,
-    })),
+    tournament: { id: tournament.id, lockTime: tournament.lock_time },
+    predictions: ((predictions ?? []) as Pred[]).map((p) => {
+      const payment = p.tournament_payments?.[0] ?? null;
+      return {
+        id: p.id,
+        name: p.prediction_name,
+        totalGoals: p.total_goals,
+        submittedAt: p.submitted_at,
+        isPaid: payment != null,
+        paidAt: payment?.paid_at ?? null,
+        markedBy: payment?.marked_by ?? null,
+      };
+    }),
   });
 }
 
@@ -93,8 +86,15 @@ export async function POST(
   if (!body.tournamentId) {
     return NextResponse.json({ error: 'tournamentId is required' }, { status: 400 });
   }
-  if (body.totalGoals != null && (body.totalGoals < 100 || body.totalGoals > 300)) {
-    return NextResponse.json({ error: 'totalGoals must be 100-300' }, { status: 400 });
+  const name = body.predictionName?.trim();
+  if (!name) {
+    return NextResponse.json({ error: 'predictionName is required' }, { status: 400 });
+  }
+  if (name.length > PREDICTION_NAME_MAX || !PREDICTION_NAME_REGEX.test(name)) {
+    return NextResponse.json({ error: 'predictionName format invalid' }, { status: 400 });
+  }
+  if (body.totalGoals != null && (body.totalGoals < 0 || body.totalGoals > 50)) {
+    return NextResponse.json({ error: 'totalGoals must be 0-50' }, { status: 400 });
   }
   if (!Array.isArray(body.groups) || !Array.isArray(body.knockout)) {
     return NextResponse.json({ error: 'Invalid payload' }, { status: 400 });
@@ -102,6 +102,7 @@ export async function POST(
 
   const payload = {
     tournament_id: body.tournamentId,
+    prediction_name: name,
     total_goals: body.totalGoals,
     groups: body.groups.map((g) => ({
       group_id: g.groupId,
@@ -120,7 +121,11 @@ export async function POST(
     p_user_id: userId,
     payload,
   });
-  if (error) return NextResponse.json({ error: error.message }, { status: 400 });
-
+  if (error) {
+    const msg = error.message ?? '';
+    let status = 400;
+    if (msg.includes('limit reached') || msg.includes('name taken')) status = 409;
+    return NextResponse.json({ error: safeMessage(error) }, { status });
+  }
   return NextResponse.json({ predictionId: data });
 }

@@ -28,6 +28,8 @@ export async function GET(request: NextRequest) {
 
   const rows = (data ?? []) as Array<{
     rank: number;
+    prediction_id: string;
+    prediction_name: string;
     username: string;
     points: number;
     group_points: number;
@@ -39,6 +41,8 @@ export async function GET(request: NextRequest) {
   return NextResponse.json({
     entries: rows.map((row) => ({
       rank: row.rank,
+      predictionId: row.prediction_id,
+      predictionName: row.prediction_name,
       username: row.username,
       points: row.points,
       change: 0,

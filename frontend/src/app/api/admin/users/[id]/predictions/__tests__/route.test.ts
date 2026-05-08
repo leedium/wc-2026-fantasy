@@ -54,7 +54,13 @@ describe('admin user predictions', () => {
     }));
     supabaseMock.rpc.mockResolvedValue({ data: 'pred-id', error: null });
     const res = await POST(
-      postReq({ tournamentId: 't1', totalGoals: 170, groups: [], knockout: [] }),
+      postReq({
+        tournamentId: 't1',
+        predictionName: 'Main',
+        totalGoals: 25,
+        groups: [],
+        knockout: [],
+      }),
       { params: Promise.resolve({ id: 'u2' }) }
     );
     expect(res.status).toBe(200);

@@ -3,17 +3,45 @@ import { LeaderboardTable } from '../LeaderboardTable';
 import type { LeaderboardEntry } from '@/types/tournament';
 
 const entries: LeaderboardEntry[] = [
-  { rank: 1, username: 'alice', points: 200, change: 2, groupPoints: 90, knockoutPoints: 110 },
-  { rank: 2, username: 'bob', points: 180, change: 0, groupPoints: 80, knockoutPoints: 100 },
-  { rank: 3, username: 'carol', points: 170, change: -1, groupPoints: 75, knockoutPoints: 95 },
+  {
+    rank: 1,
+    predictionId: 'p1',
+    predictionName: 'Main',
+    username: 'alice',
+    points: 200,
+    change: 2,
+    groupPoints: 90,
+    knockoutPoints: 110,
+  },
+  {
+    rank: 2,
+    predictionId: 'p2',
+    predictionName: 'Bracket A',
+    username: 'bob',
+    points: 180,
+    change: 0,
+    groupPoints: 80,
+    knockoutPoints: 100,
+  },
+  {
+    rank: 3,
+    predictionId: 'p3',
+    predictionName: 'Hedge',
+    username: 'carol',
+    points: 170,
+    change: -1,
+    groupPoints: 75,
+    knockoutPoints: 95,
+  },
 ];
 
 describe('LeaderboardTable', () => {
-  it('renders usernames', () => {
+  it('renders prediction names and usernames', () => {
     render(<LeaderboardTable entries={entries} />);
+    expect(screen.getByText('Main')).toBeInTheDocument();
     expect(screen.getByText('alice')).toBeInTheDocument();
+    expect(screen.getByText('Bracket A')).toBeInTheDocument();
     expect(screen.getByText('bob')).toBeInTheDocument();
-    expect(screen.getByText('carol')).toBeInTheDocument();
   });
 
   it('marks the current user row', () => {

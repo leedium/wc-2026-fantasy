@@ -13,7 +13,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useAuth } from '@/hooks/useAuth';
 import { ROUTES } from '@/lib/constants';
-import type { LeaderboardEntry } from '@/types/tournament';
+import type { LeaderboardEntry, LeaderboardRankMatch } from '@/types/tournament';
 
 function LeaderboardSkeleton() {
   return (
@@ -73,7 +73,7 @@ export function LeaderboardPageContent() {
     );
   }, [entries, currentUsername]);
 
-  const meQuery = useQuery<{ rank: number | null; page: number | null; points: number | null }>({
+  const meQuery = useQuery<{ matches: LeaderboardRankMatch[] }>({
     queryKey: ['leaderboard-me'],
     queryFn: async () => {
       const res = await fetch(`/api/leaderboard/me?pageSize=${DEFAULT_ITEMS_PER_PAGE}`);
@@ -83,9 +83,15 @@ export function LeaderboardPageContent() {
     enabled: !!user,
   });
 
+  const bestMatch = React.useMemo(() => {
+    const matches = meQuery.data?.matches ?? [];
+    if (!matches.length) return null;
+    return matches.reduce((best, m) => (m.rank < best.rank ? m : best), matches[0]);
+  }, [meQuery.data]);
+
   const handleFindMyRank = React.useCallback(() => {
-    if (!meQuery.data?.rank || !meQuery.data.page) return;
-    const { rank, page } = meQuery.data;
+    if (!bestMatch) return;
+    const { rank, page } = bestMatch;
     if (currentPage !== page) setCurrentPage(page);
     setHighlightedRank(rank);
     setTimeout(() => {
@@ -93,11 +99,11 @@ export function LeaderboardPageContent() {
       if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
     }, 100);
     setTimeout(() => setHighlightedRank(null), 3000);
-  }, [meQuery.data, currentPage]);
+  }, [bestMatch, currentPage]);
 
   // Prefer server-reported rank so the banner shows even when the user is not on the current page.
-  const bannerRank = meQuery.data?.rank ?? userEntry?.rank ?? null;
-  const bannerPoints = meQuery.data?.points ?? userEntry?.points ?? null;
+  const bannerRank = bestMatch?.rank ?? userEntry?.rank ?? null;
+  const bannerPoints = bestMatch?.points ?? userEntry?.points ?? null;
   const hasRankedEntry = bannerRank !== null;
 
   const handlePageChange = (page: number) => {

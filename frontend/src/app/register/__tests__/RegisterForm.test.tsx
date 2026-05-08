@@ -19,17 +19,16 @@ describe('RegisterForm', () => {
     signUpMock.mockReset();
   });
 
-  it('rejects a username that does not match the format', async () => {
+  it('rejects an invalid email', async () => {
     const user = userEvent.setup();
     render(<RegisterForm />);
 
-    await user.type(screen.getByLabelText(/^Username/i), 'ab');
-    await user.type(screen.getByLabelText(/^Email/i), 'a@b.com');
+    await user.type(screen.getByLabelText(/^Email/i), 'not-an-email');
     await user.type(screen.getByLabelText(/^Password/i), 'password123');
     await user.type(screen.getByLabelText(/Confirm password/i), 'password123');
     await user.click(screen.getByRole('button', { name: /Create account/i }));
 
-    expect(screen.getByRole('alert')).toHaveTextContent(/3–24 characters/);
+    expect(screen.getByRole('alert')).toHaveTextContent(/valid email/);
     expect(signUpMock).not.toHaveBeenCalled();
   });
 
@@ -37,7 +36,6 @@ describe('RegisterForm', () => {
     const user = userEvent.setup();
     render(<RegisterForm />);
 
-    await user.type(screen.getByLabelText(/^Username/i), 'alice');
     await user.type(screen.getByLabelText(/^Email/i), 'a@b.com');
     await user.type(screen.getByLabelText(/^Password/i), 'short');
     await user.type(screen.getByLabelText(/Confirm password/i), 'short');
@@ -51,7 +49,6 @@ describe('RegisterForm', () => {
     const user = userEvent.setup();
     render(<RegisterForm />);
 
-    await user.type(screen.getByLabelText(/^Username/i), 'alice');
     await user.type(screen.getByLabelText(/^Email/i), 'a@b.com');
     await user.type(screen.getByLabelText(/^Password/i), 'password123');
     await user.type(screen.getByLabelText(/Confirm password/i), 'password456');
@@ -61,12 +58,13 @@ describe('RegisterForm', () => {
     expect(signUpMock).not.toHaveBeenCalled();
   });
 
-  it('submits valid input to supabase', async () => {
+  it('submits without a username field — server auto-generates one', async () => {
     signUpMock.mockResolvedValue({ data: { session: null }, error: null });
     const user = userEvent.setup();
     render(<RegisterForm />);
 
-    await user.type(screen.getByLabelText(/^Username/i), 'alice');
+    expect(screen.queryByLabelText(/^Username/i)).not.toBeInTheDocument();
+
     await user.type(screen.getByLabelText(/^Email/i), 'alice@example.com');
     await user.type(screen.getByLabelText(/^Password/i), 'password123');
     await user.type(screen.getByLabelText(/Confirm password/i), 'password123');
@@ -75,24 +73,22 @@ describe('RegisterForm', () => {
     expect(signUpMock).toHaveBeenCalledWith({
       email: 'alice@example.com',
       password: 'password123',
-      options: { data: { username: 'alice' } },
     });
   });
 
-  it('surfaces a friendlier message when username is taken', async () => {
+  it('surfaces a friendly error when the email is already registered', async () => {
     signUpMock.mockResolvedValue({
       data: { session: null },
-      error: { message: 'duplicate key value violates unique constraint "profiles_username_key"' },
+      error: { message: 'User already registered' },
     });
     const user = userEvent.setup();
     render(<RegisterForm />);
 
-    await user.type(screen.getByLabelText(/^Username/i), 'alice');
     await user.type(screen.getByLabelText(/^Email/i), 'alice@example.com');
     await user.type(screen.getByLabelText(/^Password/i), 'password123');
     await user.type(screen.getByLabelText(/Confirm password/i), 'password123');
     await user.click(screen.getByRole('button', { name: /Create account/i }));
 
-    expect(await screen.findByRole('alert')).toHaveTextContent(/already taken/);
+    expect(await screen.findByRole('alert')).toHaveTextContent(/already exists/);
   });
 });

@@ -2,24 +2,17 @@ import { NextResponse, type NextRequest } from 'next/server';
 import { requireAdmin, isAdminGateError } from '@/lib/auth/requireAdmin';
 import { safeMessage } from '@/lib/api/errors';
 
-export async function GET(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+type RouteContext = { params: Promise<{ predictionId: string }> };
+
+export async function GET(_request: NextRequest, context: RouteContext) {
   const ctx = await requireAdmin();
   if (isAdminGateError(ctx)) return ctx.response;
-
-  const { id } = await params;
-  const tournamentId = new URL(request.url).searchParams.get('tournamentId');
-  if (!tournamentId) {
-    return NextResponse.json({ error: 'tournamentId is required' }, { status: 400 });
-  }
+  const { predictionId } = await context.params;
 
   const { data, error } = await ctx.supabase
     .from('tournament_payments')
     .select('paid_at, marked_by')
-    .eq('user_id', id)
-    .eq('tournament_id', tournamentId)
+    .eq('prediction_id', predictionId)
     .maybeSingle();
 
   if (error) return NextResponse.json({ error: safeMessage(error) }, { status: 400 });
@@ -31,23 +24,13 @@ export async function GET(
   });
 }
 
-export async function PATCH(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function PATCH(request: NextRequest, context: RouteContext) {
   const ctx = await requireAdmin();
   if (isAdminGateError(ctx)) return ctx.response;
+  const { predictionId } = await context.params;
 
-  const { id } = await params;
-  const body = (await request.json()) as {
-    tournamentId?: string;
-    paid?: boolean;
-    paidAt?: string | null;
-  };
+  const body = (await request.json()) as { paid?: boolean; paidAt?: string | null };
 
-  if (typeof body.tournamentId !== 'string' || !body.tournamentId) {
-    return NextResponse.json({ error: 'tournamentId is required' }, { status: 400 });
-  }
   if (typeof body.paid !== 'boolean') {
     return NextResponse.json({ error: 'paid must be a boolean' }, { status: 400 });
   }
@@ -61,16 +44,16 @@ export async function PATCH(
     paidAt = parsed.toISOString();
   }
 
-  const { error } = await ctx.supabase.rpc('admin_set_payment', {
-    p_user_id: id,
-    p_tournament_id: body.tournamentId,
+  const { error } = await ctx.supabase.rpc('admin_set_prediction_payment', {
+    p_prediction_id: predictionId,
     p_paid: body.paid,
     p_paid_at: paidAt,
   });
 
   if (error) {
-    return NextResponse.json({ error: safeMessage(error) }, { status: 400 });
+    const msg = error.message ?? '';
+    const status = msg.includes('not found') ? 404 : 400;
+    return NextResponse.json({ error: safeMessage(error) }, { status });
   }
-
   return NextResponse.json({ paid: body.paid, paidAt: body.paid ? paidAt : null });
 }

@@ -34,10 +34,8 @@ export async function GET(request: NextRequest) {
     username: string;
     is_admin: boolean;
     is_super_admin: boolean;
-    has_prediction: boolean;
-    submitted_at: string | null;
-    is_paid: boolean;
-    paid_at: string | null;
+    prediction_count: number;
+    paid_prediction_count: number;
     total_count: number;
   }>;
 
@@ -47,10 +45,8 @@ export async function GET(request: NextRequest) {
       username: r.username,
       isAdmin: r.is_admin,
       isSuperAdmin: r.is_super_admin,
-      hasPrediction: r.has_prediction,
-      submittedAt: r.submitted_at,
-      isPaid: r.is_paid,
-      paidAt: r.paid_at,
+      predictionCount: r.prediction_count,
+      paidPredictionCount: r.paid_prediction_count,
     })),
     total: Number(rows[0]?.total_count ?? 0),
     page,
