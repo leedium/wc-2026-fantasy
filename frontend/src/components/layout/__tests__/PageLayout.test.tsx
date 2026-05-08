@@ -1,4 +1,11 @@
 import { render, screen } from '@testing-library/react';
+
+// LockStatusBanner is exercised in its own test; mock it here so this layout
+// test stays a unit test and doesn't pull in QueryClient/useAuth wiring.
+jest.mock('../LockStatusBanner', () => ({
+  LockStatusBanner: () => null,
+}));
+
 import { PageLayout } from '../PageLayout';
 
 describe('PageLayout', () => {

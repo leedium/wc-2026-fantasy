@@ -33,7 +33,7 @@ export function AuthProvider({ children, initialUser, initialProfile }: AuthProv
     async (userId: string) => {
       const { data } = await supabase
         .from('profiles')
-        .select('id, username, display_name, avatar_url, is_admin')
+        .select('id, username, display_name, avatar_url, is_admin, is_super_admin')
         .eq('id', userId)
         .maybeSingle();
       if (!data) {
@@ -46,6 +46,7 @@ export function AuthProvider({ children, initialUser, initialProfile }: AuthProv
         displayName: data.display_name,
         avatarUrl: data.avatar_url,
         isAdmin: data.is_admin,
+        isSuperAdmin: data.is_super_admin,
       });
     },
     [supabase]
