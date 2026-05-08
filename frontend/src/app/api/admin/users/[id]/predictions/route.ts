@@ -41,7 +41,7 @@ export async function GET(
   const { data: predictions } = await supabase
     .from('predictions')
     .select(
-      'id, prediction_name, total_goals, submitted_at, tournament_payments(paid_at, marked_by)'
+      'id, prediction_name, total_goals, submitted_at, tournament_payments!prediction_id(paid_at, marked_by)'
     )
     .eq('user_id', userId)
     .eq('tournament_id', tournament.id)

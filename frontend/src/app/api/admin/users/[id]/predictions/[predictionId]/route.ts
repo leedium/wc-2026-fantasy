@@ -29,7 +29,7 @@ export async function GET(_request: NextRequest, context: RouteContext) {
   const { data: prediction } = await ctx.supabase
     .from('predictions')
     .select(
-      'id, prediction_name, tournament_id, total_goals, submitted_at, tournament_payments(paid_at, marked_by)'
+      'id, prediction_name, tournament_id, total_goals, submitted_at, tournament_payments!prediction_id(paid_at, marked_by)'
     )
     .eq('id', predictionId)
     .eq('user_id', userId)

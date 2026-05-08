@@ -30,7 +30,7 @@ export async function GET(_request: NextRequest, context: RouteContext) {
   const { data: prediction } = await supabase
     .from('predictions')
     .select(
-      'id, prediction_name, tournament_id, total_goals, submitted_at, tournament_payments(paid_at)'
+      'id, prediction_name, tournament_id, total_goals, submitted_at, tournament_payments!prediction_id(paid_at)'
     )
     .eq('id', id)
     .maybeSingle();
