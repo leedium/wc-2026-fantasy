@@ -312,4 +312,89 @@ describe('GroupStageForm', () => {
       expect(screen.getByText('Mexico')).toBeInTheDocument();
     });
   });
+
+  describe('auto-fill 4th place', () => {
+    it('auto-fires onPredictionChange for the 4th when 1, 2, 3 are filled', () => {
+      const mockOnChange = jest.fn();
+      const predictions = createEmptyPredictions();
+      // Group A teams: mex, kor, rsa, cze. Picking 1/2/3 leaves cze for 4th.
+      predictions[0] = {
+        groupId: 'A',
+        positions: { first: 'mex', second: 'kor', third: 'rsa', fourth: null },
+      };
+
+      render(
+        <GroupStageForm
+          groups={fixtureGroups}
+          predictions={predictions}
+          onPredictionChange={mockOnChange}
+        />
+      );
+
+      expect(mockOnChange).toHaveBeenCalledWith('A', 'fourth', 'cze');
+    });
+
+    it('does not re-fire onPredictionChange when 4 already matches the leftover', () => {
+      const mockOnChange = jest.fn();
+      const predictions = createEmptyPredictions();
+      predictions[0] = {
+        groupId: 'A',
+        positions: { first: 'mex', second: 'kor', third: 'rsa', fourth: 'cze' },
+      };
+
+      render(
+        <GroupStageForm
+          groups={fixtureGroups}
+          predictions={predictions}
+          onPredictionChange={mockOnChange}
+        />
+      );
+
+      expect(mockOnChange).not.toHaveBeenCalled();
+    });
+
+    it('disables the 4th-place select when auto-filled', () => {
+      const mockOnChange = jest.fn();
+      const predictions = createEmptyPredictions();
+      predictions[0] = {
+        groupId: 'A',
+        positions: { first: 'mex', second: 'kor', third: 'rsa', fourth: 'cze' },
+      };
+
+      render(
+        <GroupStageForm
+          groups={fixtureGroups}
+          predictions={predictions}
+          onPredictionChange={mockOnChange}
+        />
+      );
+
+      const selects = screen.getAllByRole('combobox');
+      // Group A is the first card in the grid → first 4 selects belong to it.
+      const groupAFourth = selects[3];
+      expect(groupAFourth).toBeDisabled();
+    });
+
+    it('leaves the 4th select enabled when top-3 is incomplete', () => {
+      const mockOnChange = jest.fn();
+      const predictions = createEmptyPredictions();
+      predictions[0] = {
+        groupId: 'A',
+        positions: { first: 'mex', second: 'kor', third: null, fourth: null },
+      };
+
+      render(
+        <GroupStageForm
+          groups={fixtureGroups}
+          predictions={predictions}
+          onPredictionChange={mockOnChange}
+        />
+      );
+
+      const selects = screen.getAllByRole('combobox');
+      const groupAFourth = selects[3];
+      expect(groupAFourth).toBeEnabled();
+      expect(mockOnChange).not.toHaveBeenCalled();
+    });
+  });
 });
