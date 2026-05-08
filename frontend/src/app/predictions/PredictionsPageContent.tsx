@@ -1,6 +1,7 @@
 'use client';
 
 import * as React from 'react';
+import { useRouter } from 'next/navigation';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { ArrowLeft, ArrowRight, Clock, Save } from 'lucide-react';
 import { toast } from 'sonner';
@@ -13,10 +14,19 @@ import { TiebreakerInput } from '@/components/predictions/TiebreakerInput';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { FieldError } from '@/components/ui/field-error';
 import { Progress } from '@/components/ui/progress';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useAuthContext } from '@/providers/AuthProvider';
-import { useDraftPersistence } from '@/hooks/useDraftPersistence';
+import {
+  NEW_PREDICTION_SENTINEL,
+  clearDraftForPrediction,
+  useDraftPersistence,
+} from '@/hooks/useDraftPersistence';
+import { PREDICTION_NAME_MAX, PREDICTION_NAME_REGEX, ROUTES } from '@/lib/constants';
+import { cn } from '@/lib/utils';
 import type {
   Group,
   GroupPrediction,
@@ -98,10 +108,13 @@ function topOf(step: Step): TopStep {
   return 'knockout';
 }
 
-interface StoredPredictions {
-  tournamentId: string;
+export interface InitialPrediction {
+  id: string;
+  name: string;
   totalGoals: number | null;
   submittedAt: string | null;
+  isPaid: boolean;
+  paidAt: string | null;
   groups: Array<{
     groupId: string;
     first: string | null;
@@ -113,9 +126,20 @@ interface StoredPredictions {
 }
 
 interface DraftData {
+  predictionName: string;
   groupPredictions: GroupPrediction[];
   knockoutPredictions: KnockoutMatchPrediction[];
   totalGoals: number | null;
+}
+
+interface PredictionsPageContentProps {
+  mode: 'create' | 'edit';
+  predictionId?: string;
+  initial?: InitialPrediction;
+  /** Override the API base for create/edit. Defaults to /api/predictions. */
+  apiBasePath?: string;
+  /** Where to navigate after a successful save. Defaults to /predictions. */
+  redirectAfterSave?: string;
 }
 
 async function fetchJSON<T>(url: string): Promise<T> {
@@ -151,25 +175,20 @@ function buildEmptyKnockout(matches: KnockoutMatch[]): KnockoutMatchPrediction[]
   return matches.map((m) => ({ matchId: m.id, winnerId: null }));
 }
 
-function isFreshServerState(stored: StoredPredictions): boolean {
-  return (
-    stored.submittedAt === null && stored.groups.length === 0 && stored.knockout.length === 0
-  );
-}
-
 function PaymentStatusBanner({
-  payment,
+  isPaid,
+  paidAt,
   lockTime,
   isLocked,
 }: {
-  payment: { paid: boolean; paidAt: string | null } | null;
+  isPaid: boolean;
+  paidAt: string | null;
   lockTime: Date | null;
   isLocked: boolean;
 }) {
-  if (!payment || !lockTime) return null;
+  if (!lockTime) return null;
 
-  const eligible =
-    payment.paid && payment.paidAt && new Date(payment.paidAt) <= lockTime;
+  const eligible = isPaid && paidAt && new Date(paidAt) <= lockTime;
 
   let tone: 'success' | 'warning' | 'danger';
   let title: string;
@@ -178,21 +197,21 @@ function PaymentStatusBanner({
   if (eligible) {
     tone = 'success';
     title = 'Payment received';
-    body = 'Your entry is eligible for the leaderboard.';
-  } else if (payment.paid && !eligible) {
+    body = 'This prediction is eligible for the leaderboard.';
+  } else if (isPaid && !eligible) {
     tone = 'danger';
     title = 'Payment recorded after lock time';
     body =
-      'Your payment was recorded after the deadline, so your entry is not on the leaderboard. Contact the admin if this is wrong.';
+      'Payment was recorded after the deadline, so this prediction is not on the leaderboard. Contact the admin if this is wrong.';
   } else if (isLocked) {
     tone = 'danger';
     title = 'Payment not recorded by lock time';
     body =
-      'Your entry will not be counted on the leaderboard. Contact the admin if you paid in time.';
+      'This prediction will not be counted on the leaderboard. Contact the admin if you paid in time.';
   } else {
     tone = 'warning';
     title = 'Payment not yet recorded';
-    body = `Your entry will not count unless your payment is recorded by ${lockTime.toLocaleString()}. Pay the admin in cash, then they will mark you as paid.`;
+    body = `This prediction will not count unless your payment is recorded by ${lockTime.toLocaleString()}. Pay the admin in cash, then they will mark it as paid.`;
   }
 
   const toneClasses: Record<typeof tone, string> = {
@@ -211,7 +230,14 @@ function PaymentStatusBanner({
   );
 }
 
-export function PredictionsPageContent() {
+export function PredictionsPageContent({
+  mode,
+  predictionId,
+  initial,
+  apiBasePath = '/api/predictions',
+  redirectAfterSave,
+}: PredictionsPageContentProps) {
+  const router = useRouter();
   const queryClient = useQueryClient();
   const { user } = useAuthContext();
 
@@ -242,87 +268,87 @@ export function PredictionsPageContent() {
     queryFn: () => fetchJSON('/api/knockout-matches'),
   });
 
-  const predictionsQuery = useQuery<StoredPredictions>({
-    queryKey: ['predictions'],
-    queryFn: () => fetchJSON('/api/predictions'),
-  });
-
-  const tournamentId = tournamentQuery.data?.id;
-  const paymentQuery = useQuery<{ paid: boolean; paidAt: string | null }>({
-    queryKey: ['payment', tournamentId],
-    queryFn: () =>
-      fetchJSON(`/api/payment?tournamentId=${encodeURIComponent(tournamentId!)}`),
-    enabled: !!tournamentId,
-  });
-
+  const [predictionName, setPredictionName] = React.useState(initial?.name ?? '');
+  const [predictionNameTouched, setPredictionNameTouched] = React.useState(false);
+  const [serverNameError, setServerNameError] = React.useState<string | null>(null);
   const [groupPredictions, setGroupPredictions] = React.useState<GroupPrediction[]>([]);
   const [knockoutPredictions, setKnockoutPredictions] = React.useState<KnockoutMatchPrediction[]>(
     []
   );
-  const [totalGoals, setTotalGoals] = React.useState<number | null>(null);
+  const [totalGoals, setTotalGoals] = React.useState<number | null>(initial?.totalGoals ?? null);
   const [isSubmitting, setIsSubmitting] = React.useState(false);
+  const [isSavingProgress, setIsSavingProgress] = React.useState(false);
   const [hydrated, setHydrated] = React.useState(false);
   const [currentStep, setCurrentStep] = React.useState<Step>('groups');
   const tabsContentRef = React.useRef<HTMLDivElement | null>(null);
   const userInteractedRef = React.useRef(false);
+  const nameRef = React.useRef<HTMLInputElement>(null);
 
   const groups = groupsQuery.data;
   const teams = teamsQuery.data;
   const matches = matchesQuery.data;
-  const stored = predictionsQuery.data;
-
   const tournament = tournamentQuery.data;
   const lockTime = tournament ? new Date(tournament.lockTime) : null;
   const isLocked = lockTime ? new Date() >= lockTime : false;
 
+  const draftPredictionId = predictionId ?? NEW_PREDICTION_SENTINEL;
   const { loadDraft, saveDraft, clearDraft, lastSavedAt } = useDraftPersistence<DraftData>(
     user?.id,
-    tournament?.id
+    tournament?.id,
+    draftPredictionId
   );
 
   React.useEffect(() => {
-    if (!groups || !matches || !stored || hydrated) return;
+    if (!groups || !matches || hydrated) return;
     const baseGroups = buildEmptyGroups(groups);
     const baseKnockout = buildEmptyKnockout(matches);
 
-    const serverGroups = baseGroups.map((g) => {
-      const match = stored.groups.find((s) => s.groupId === g.groupId);
-      if (!match) return g;
-      return {
-        groupId: g.groupId,
-        positions: {
-          first: match.first,
-          second: match.second,
-          third: match.third,
-          fourth: match.fourth,
-        },
-      };
-    });
-    const serverKnockout = baseKnockout.map((m) => {
-      const match = stored.knockout.find((s) => s.matchId === m.matchId);
-      return match ? { matchId: m.matchId, winnerId: match.winner } : m;
-    });
+    const seedGroups = initial
+      ? baseGroups.map((g) => {
+          const match = initial.groups.find((s) => s.groupId === g.groupId);
+          return match
+            ? {
+                groupId: g.groupId,
+                positions: {
+                  first: match.first,
+                  second: match.second,
+                  third: match.third,
+                  fourth: match.fourth,
+                },
+              }
+            : g;
+        })
+      : baseGroups;
+    const seedKnockout = initial
+      ? baseKnockout.map((m) => {
+          const match = initial.knockout.find((s) => s.matchId === m.matchId);
+          return match ? { matchId: m.matchId, winnerId: match.winner } : m;
+        })
+      : baseKnockout;
 
-    let groupSeed = serverGroups;
-    let knockoutSeed = serverKnockout;
-    let totalGoalsSeed = stored.totalGoals;
+    let groupSeed = seedGroups;
+    let knockoutSeed = seedKnockout;
+    let nameSeed = initial?.name ?? '';
+    let totalGoalsSeed = initial?.totalGoals ?? null;
     let restoredFromDraft = false;
 
     if (isLocked) {
       clearDraft();
-    } else if (isFreshServerState(stored)) {
+    } else {
       const draft = loadDraft();
-      if (draft) {
-        const draftGroups = baseGroups.map((g) => {
+      const isFreshCreate = mode === 'create' && !initial;
+      const isFreshEdit =
+        mode === 'edit' && initial && initial.submittedAt === null;
+      if (draft && (isFreshCreate || isFreshEdit)) {
+        groupSeed = baseGroups.map((g) => {
           const match = draft.data.groupPredictions.find((s) => s.groupId === g.groupId);
           return match ? { groupId: g.groupId, positions: { ...match.positions } } : g;
         });
-        const draftKnockout = baseKnockout.map((m) => {
+        knockoutSeed = baseKnockout.map((m) => {
           const match = draft.data.knockoutPredictions.find((s) => s.matchId === m.matchId);
           return match ? { matchId: m.matchId, winnerId: match.winnerId } : m;
         });
-        groupSeed = draftGroups;
-        knockoutSeed = draftKnockout;
+        nameSeed = draft.data.predictionName ?? nameSeed;
         totalGoalsSeed = draft.data.totalGoals;
         restoredFromDraft = true;
       }
@@ -331,6 +357,7 @@ export function PredictionsPageContent() {
     setGroupPredictions(groupSeed);
     setKnockoutPredictions(knockoutSeed);
     setTotalGoals(totalGoalsSeed);
+    setPredictionName(nameSeed);
     setHydrated(true);
 
     if (restoredFromDraft) {
@@ -339,21 +366,21 @@ export function PredictionsPageContent() {
           label: 'Discard',
           onClick: () => {
             clearDraft();
-            setGroupPredictions(serverGroups);
-            setKnockoutPredictions(serverKnockout);
-            setTotalGoals(stored.totalGoals);
+            setGroupPredictions(seedGroups);
+            setKnockoutPredictions(seedKnockout);
+            setTotalGoals(initial?.totalGoals ?? null);
+            setPredictionName(initial?.name ?? '');
           },
         },
       });
     }
-  }, [groups, matches, stored, hydrated, isLocked, loadDraft, clearDraft]);
+  }, [groups, matches, hydrated, isLocked, loadDraft, clearDraft, initial, mode]);
 
   const isLoading =
     tournamentQuery.isLoading ||
     groupsQuery.isLoading ||
     teamsQuery.isLoading ||
     matchesQuery.isLoading ||
-    predictionsQuery.isLoading ||
     !hydrated;
 
   const totalGroupsCount = groups?.length ?? 0;
@@ -379,6 +406,18 @@ export function PredictionsPageContent() {
     totalKnockoutMatches > 0 && completedKnockoutMatches === totalKnockoutMatches;
   const isTiebreakerComplete = totalGoals !== null;
   const isPredictionsComplete = isGroupsComplete && isBracketComplete && isTiebreakerComplete;
+
+  const trimmedName = predictionName.trim();
+  const nameError =
+    !trimmedName
+      ? 'Prediction name is required.'
+      : trimmedName.length > PREDICTION_NAME_MAX
+        ? `Max ${PREDICTION_NAME_MAX} characters.`
+        : !PREDICTION_NAME_REGEX.test(trimmedName)
+          ? 'Letters, numbers, spaces, and basic punctuation only.'
+          : null;
+  const showNameError = serverNameError ?? (predictionNameTouched ? nameError : null);
+  const isReadyToSubmit = isPredictionsComplete && !nameError;
 
   const matchesByStage = React.useMemo(() => {
     const grouped: Record<KnockoutStage, KnockoutMatch[]> = {
@@ -456,13 +495,29 @@ export function PredictionsPageContent() {
     (next: Partial<DraftData>) => {
       if (isLocked || !hydrated) return;
       saveDraft({
+        predictionName:
+          next.predictionName !== undefined ? next.predictionName : predictionName,
         groupPredictions: next.groupPredictions ?? groupPredictions,
         knockoutPredictions: next.knockoutPredictions ?? knockoutPredictions,
         totalGoals: next.totalGoals !== undefined ? next.totalGoals : totalGoals,
       });
     },
-    [isLocked, hydrated, saveDraft, groupPredictions, knockoutPredictions, totalGoals]
+    [
+      isLocked,
+      hydrated,
+      saveDraft,
+      predictionName,
+      groupPredictions,
+      knockoutPredictions,
+      totalGoals,
+    ]
   );
+
+  const handleNameChange = (value: string) => {
+    setServerNameError(null);
+    setPredictionName(value);
+    persistDraft({ predictionName: value });
+  };
 
   const handleGroupPredictionChange = (
     groupId: string,
@@ -504,9 +559,7 @@ export function PredictionsPageContent() {
     if (!TOP_STEPS.includes(value as TopStep)) return;
     if (value === 'groups') return goToStep('groups');
     if (value === 'tiebreaker') return goToStep('tiebreaker');
-    // Knockout: jump to the first incomplete knockout stage, or R32 if all empty.
-    const target =
-      KNOCKOUT_STAGE_LIST.find((s) => !stageCompletion[s]) ?? 'round_of_32';
+    const target = KNOCKOUT_STAGE_LIST.find((s) => !stageCompletion[s]) ?? 'round_of_32';
     goToStep(target);
   };
 
@@ -543,49 +596,95 @@ export function PredictionsPageContent() {
     });
   };
 
-  const handleSubmit = async () => {
+  const persist = async ({ markSubmitted }: { markSubmitted: boolean }) => {
     if (!tournament) return;
-    if (!isPredictionsComplete) {
+    setPredictionNameTouched(true);
+    if (nameError) {
+      nameRef.current?.focus();
+      return;
+    }
+    if (markSubmitted && !isPredictionsComplete) {
       toast.error('Please complete all predictions before submitting');
       return;
     }
 
-    setIsSubmitting(true);
+    if (markSubmitted) setIsSubmitting(true);
+    else setIsSavingProgress(true);
     try {
-      const res = await fetch('/api/predictions', {
-        method: 'POST',
+      const body = {
+        tournamentId: tournament.id,
+        predictionName: trimmedName,
+        totalGoals,
+        submit: markSubmitted,
+        groups: groupPredictions.map((g) => ({
+          groupId: g.groupId,
+          first: g.positions.first,
+          second: g.positions.second,
+          third: g.positions.third,
+          fourth: g.positions.fourth,
+        })),
+        knockout: knockoutPredictions.map((k) => ({
+          matchId: k.matchId,
+          winner: k.winnerId,
+        })),
+      };
+
+      const url =
+        mode === 'edit' && predictionId
+          ? `${apiBasePath}/${encodeURIComponent(predictionId)}`
+          : apiBasePath;
+      const method = mode === 'edit' ? 'PATCH' : 'POST';
+
+      const res = await fetch(url, {
+        method,
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          tournamentId: tournament.id,
-          totalGoals,
-          groups: groupPredictions.map((g) => ({
-            groupId: g.groupId,
-            first: g.positions.first,
-            second: g.positions.second,
-            third: g.positions.third,
-            fourth: g.positions.fourth,
-          })),
-          knockout: knockoutPredictions.map((k) => ({
-            matchId: k.matchId,
-            winner: k.winnerId,
-          })),
-        }),
+        body: JSON.stringify(body),
       });
 
       if (!res.ok) {
-        const body = await res.json().catch(() => ({}));
-        throw new Error(body.error ?? 'Failed to submit predictions');
+        const errBody = await res.json().catch(() => ({}));
+        const msg = String(errBody.error ?? 'Failed to save');
+        if (msg.includes('name taken')) {
+          setServerNameError('That prediction name is already in use.');
+          nameRef.current?.focus();
+          throw new Error('Pick a different prediction name.');
+        }
+        if (msg.includes('limit reached')) {
+          throw new Error('You have reached the prediction limit.');
+        }
+        throw new Error(msg);
       }
 
+      const data = (await res.json().catch(() => ({}))) as { predictionId?: string };
+      const newId = data.predictionId ?? predictionId;
+
       clearDraft();
-      await queryClient.invalidateQueries({ queryKey: ['predictions'] });
-      toast.success('Predictions saved');
+      if (mode === 'create' && user?.id && tournament.id) {
+        clearDraftForPrediction(user.id, tournament.id, NEW_PREDICTION_SENTINEL);
+      }
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['predictions'] }),
+        queryClient.invalidateQueries({ queryKey: ['prediction', newId] }),
+      ]);
+      toast.success(markSubmitted ? 'Prediction submitted' : 'Progress saved');
+
+      if (markSubmitted) {
+        router.push(redirectAfterSave ?? ROUTES.predictions);
+      } else if (mode === 'create' && newId) {
+        // Stay on the wizard but transition to edit-mode URL so subsequent
+        // saves update the same draft instead of creating new ones.
+        router.replace(`${ROUTES.predictions}/${encodeURIComponent(newId)}`);
+      }
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Failed to submit predictions');
+      toast.error(err instanceof Error ? err.message : 'Failed to save');
     } finally {
       setIsSubmitting(false);
+      setIsSavingProgress(false);
     }
   };
+
+  const handleSubmit = () => persist({ markSubmitted: true });
+  const handleSaveProgress = () => persist({ markSubmitted: false });
 
   if (isLoading || !tournament || !groups || !teams || !matches) {
     return (
@@ -609,7 +708,9 @@ export function PredictionsPageContent() {
   return (
     <PageLayout>
       <div className="mb-8">
-        <h1 className="mb-2 text-3xl font-bold">Make Your Predictions</h1>
+        <h1 className="mb-2 text-3xl font-bold">
+          {mode === 'edit' ? 'Edit Prediction' : 'New Prediction'}
+        </h1>
         <p className="text-muted-foreground">
           Submit your bracket predictions for the World Cup 2026. Complete all sections below.
         </p>
@@ -640,12 +741,42 @@ export function PredictionsPageContent() {
         </CardContent>
       </Card>
 
-      <PaymentStatusBanner
-        payment={paymentQuery.data ?? null}
-        lockTime={lockTime}
-        isLocked={isLocked}
-      />
+      {mode === 'edit' && initial && (
+        <PaymentStatusBanner
+          isPaid={initial.isPaid}
+          paidAt={initial.paidAt}
+          lockTime={lockTime}
+          isLocked={isLocked}
+        />
+      )}
 
+      <Card className="mb-6">
+        <CardContent className="space-y-2 py-4">
+          <Label htmlFor="prediction-name">Prediction name</Label>
+          <Input
+            id="prediction-name"
+            ref={nameRef}
+            type="text"
+            value={predictionName}
+            onChange={(e) => handleNameChange(e.target.value)}
+            onBlur={() => setPredictionNameTouched(true)}
+            disabled={isLocked || isSubmitting}
+            maxLength={PREDICTION_NAME_MAX}
+            aria-invalid={showNameError ? true : undefined}
+            aria-describedby={
+              showNameError ? 'prediction-name-error' : 'prediction-name-help'
+            }
+            className={cn(showNameError && 'border-destructive focus-visible:ring-destructive')}
+            placeholder="e.g. Main bracket"
+          />
+          {!showNameError && (
+            <p id="prediction-name-help" className="text-muted-foreground text-xs">
+              Up to {PREDICTION_NAME_MAX} characters. Shown next to your username on the leaderboard.
+            </p>
+          )}
+          <FieldError id="prediction-name-error" message={showNameError || undefined} />
+        </CardContent>
+      </Card>
 
       <div className="mb-8">
         <div className="mb-2 flex items-center justify-between text-sm">
@@ -734,27 +865,40 @@ export function PredictionsPageContent() {
       </div>
 
       <Card id="submit-predictions-card" className="border-primary/20 bg-primary/5">
-        <CardContent className="flex flex-col items-center gap-4 py-6 sm:flex-row sm:justify-between">
+        <CardContent className="flex flex-col gap-4 py-6 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <p className="font-semibold">Ready to submit?</p>
             <p className="text-muted-foreground text-sm">
-              {!isPredictionsComplete
-                ? 'Complete all predictions to submit'
-                : 'Save your bracket to the leaderboard'}
+              {isPredictionsComplete
+                ? 'Submit puts this bracket on the leaderboard once an admin marks it paid.'
+                : 'Save progress to keep working — or complete every pick to submit.'}
             </p>
           </div>
-          <Button
-            size="lg"
-            onClick={handleSubmit}
-            disabled={!isPredictionsComplete || isLocked || isSubmitting}
-            className="min-w-[180px]"
-          >
-            {isSubmitting
-              ? 'Submitting...'
-              : isLocked
-                ? 'Predictions Locked'
-                : 'Submit Predictions'}
-          </Button>
+          <div className="flex flex-col gap-2 sm:flex-row">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={handleSaveProgress}
+              disabled={isLocked || isSubmitting || isSavingProgress || !!nameError}
+              className="min-w-[160px]"
+            >
+              {isSavingProgress ? 'Saving…' : 'Save progress'}
+            </Button>
+            <Button
+              size="lg"
+              onClick={handleSubmit}
+              disabled={!isReadyToSubmit || isLocked || isSubmitting || isSavingProgress}
+              className="min-w-[180px]"
+            >
+              {isSubmitting
+                ? 'Submitting...'
+                : isLocked
+                  ? 'Predictions Locked'
+                  : mode === 'edit'
+                    ? 'Save Changes'
+                    : 'Submit Prediction'}
+            </Button>
+          </div>
         </CardContent>
       </Card>
     </PageLayout>

@@ -48,13 +48,37 @@ export interface Predictions {
   totalGoals: number | null;
 }
 
+export interface PredictionSummary {
+  id: string;
+  name: string;
+  totalGoals: number | null;
+  submittedAt: string | null;
+  isPaid: boolean;
+  paidAt: string | null;
+}
+
+export interface PredictionDetail extends PredictionSummary {
+  groups: GroupPrediction[];
+  knockout: KnockoutMatchPrediction[];
+}
+
 export interface LeaderboardEntry {
   rank: number;
+  predictionId: string;
+  predictionName: string;
   username: string;
   points: number;
   change: number;
   groupPoints: number;
   knockoutPoints: number;
+}
+
+export interface LeaderboardRankMatch {
+  predictionId: string;
+  predictionName: string;
+  rank: number;
+  page: number;
+  points: number;
 }
 
 export interface UserEntry {

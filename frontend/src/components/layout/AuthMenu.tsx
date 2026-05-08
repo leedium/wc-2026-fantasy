@@ -3,7 +3,7 @@
 import * as React from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { LogOut, User as UserIcon } from 'lucide-react';
+import { LogOut, Settings, User as UserIcon } from 'lucide-react';
 import { toast } from 'sonner';
 
 import { Button } from '@/components/ui/button';
@@ -68,6 +68,17 @@ export function AuthMenu() {
             <p className="text-sm font-medium">{profile?.username ?? 'Account'}</p>
             <p className="text-muted-foreground truncate text-xs">{user.email}</p>
           </div>
+          <Button
+            variant="outline"
+            size="sm"
+            className="w-full justify-start gap-2"
+            asChild
+          >
+            <Link href={ROUTES.account}>
+              <Settings className="h-4 w-4" />
+              Account settings
+            </Link>
+          </Button>
           <Button
             variant="outline"
             size="sm"

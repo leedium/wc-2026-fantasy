@@ -5,6 +5,7 @@ import * as React from 'react';
 export const DRAFT_VERSION = 1;
 export const DRAFT_DEBOUNCE_MS = 300;
 const KEY_PREFIX = 'wc2026:draft:';
+export const NEW_PREDICTION_SENTINEL = 'new';
 
 export interface DraftPayload<T> {
   v: number;
@@ -12,7 +13,11 @@ export interface DraftPayload<T> {
   data: T;
 }
 
-function getKey(userId: string, tournamentId: string) {
+function getKey(userId: string, tournamentId: string, predictionId: string) {
+  return `${KEY_PREFIX}${userId}:${tournamentId}:${predictionId}`;
+}
+
+function legacyKey(userId: string, tournamentId: string) {
   return `${KEY_PREFIX}${userId}:${tournamentId}`;
 }
 
@@ -23,12 +28,39 @@ interface UseDraftPersistenceOptions<T> {
 export function useDraftPersistence<T>(
   userId: string | null | undefined,
   tournamentId: string | null | undefined,
+  predictionId: string | null | undefined,
   options: UseDraftPersistenceOptions<T> = {}
 ) {
-  const key = userId && tournamentId ? getKey(userId, tournamentId) : null;
+  const key =
+    userId && tournamentId && predictionId
+      ? getKey(userId, tournamentId, predictionId)
+      : null;
   const [lastSavedAt, setLastSavedAt] = React.useState<Date | null>(null);
   const timeoutRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
   const { onExternalUpdate } = options;
+
+  // One-time legacy migration: if a 2-arg key (wc2026:draft:{u}:{t}) exists,
+  // copy it under the {u}:{t}:new slot, then delete the legacy entry.
+  React.useEffect(() => {
+    if (
+      !userId ||
+      !tournamentId ||
+      predictionId !== NEW_PREDICTION_SENTINEL ||
+      typeof window === 'undefined'
+    )
+      return;
+    const legacy = legacyKey(userId, tournamentId);
+    const target = getKey(userId, tournamentId, NEW_PREDICTION_SENTINEL);
+    try {
+      const raw = window.localStorage.getItem(legacy);
+      if (raw && !window.localStorage.getItem(target)) {
+        window.localStorage.setItem(target, raw);
+      }
+      if (raw) window.localStorage.removeItem(legacy);
+    } catch {
+      // best-effort
+    }
+  }, [userId, tournamentId, predictionId]);
 
   const loadDraft = React.useCallback((): DraftPayload<T> | null => {
     if (!key || typeof window === 'undefined') return null;
@@ -116,5 +148,18 @@ export function clearAllDrafts(userId?: string | null) {
   for (let i = window.localStorage.length - 1; i >= 0; i--) {
     const k = window.localStorage.key(i);
     if (k && k.startsWith(prefix)) window.localStorage.removeItem(k);
+  }
+}
+
+export function clearDraftForPrediction(
+  userId: string,
+  tournamentId: string,
+  predictionId: string
+) {
+  if (typeof window === 'undefined') return;
+  try {
+    window.localStorage.removeItem(getKey(userId, tournamentId, predictionId));
+  } catch {
+    // best-effort
   }
 }

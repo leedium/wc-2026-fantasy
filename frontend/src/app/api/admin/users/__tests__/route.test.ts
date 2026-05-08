@@ -82,10 +82,8 @@ describe('GET /api/admin/users', () => {
           username: 'alice',
           is_admin: false,
           is_super_admin: false,
-          has_prediction: true,
-          submitted_at: '2026-04-30T00:00:00Z',
-          is_paid: true,
-          paid_at: '2026-04-29T00:00:00Z',
+          prediction_count: 3,
+          paid_prediction_count: 2,
           total_count: 2,
         },
         {
@@ -93,10 +91,8 @@ describe('GET /api/admin/users', () => {
           username: 'bob',
           is_admin: true,
           is_super_admin: true,
-          has_prediction: false,
-          submitted_at: null,
-          is_paid: false,
-          paid_at: null,
+          prediction_count: 0,
+          paid_prediction_count: 0,
           total_count: 2,
         },
       ],
@@ -109,15 +105,16 @@ describe('GET /api/admin/users', () => {
     expect(body.users).toHaveLength(2);
     expect(body.users[0]).toMatchObject({
       username: 'alice',
-      isPaid: true,
+      predictionCount: 3,
+      paidPredictionCount: 2,
       isSuperAdmin: false,
-      paidAt: '2026-04-29T00:00:00Z',
     });
     expect(body.users[1]).toMatchObject({
       username: 'bob',
       isAdmin: true,
       isSuperAdmin: true,
-      isPaid: false,
+      predictionCount: 0,
+      paidPredictionCount: 0,
     });
     expect(body.tournament).toEqual({ id: 't1', lockTime: '2026-06-01T00:00:00Z' });
   });

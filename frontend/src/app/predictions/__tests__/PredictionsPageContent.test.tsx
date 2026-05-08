@@ -131,7 +131,7 @@ import { PredictionsPageContent } from '../PredictionsPageContent';
 import { DRAFT_DEBOUNCE_MS, DRAFT_VERSION } from '@/hooks/useDraftPersistence';
 
 const TOURNAMENT_ID = 'tournament-1';
-const DRAFT_KEY = `wc2026:draft:user-1:${TOURNAMENT_ID}`;
+const DRAFT_KEY = `wc2026:draft:user-1:${TOURNAMENT_ID}:new`;
 
 interface QueryConfig {
   tournamentLockTime?: string;
@@ -210,7 +210,7 @@ describe('PredictionsPageContent — stepper navigation', () => {
   it('disables Continue until the current step is complete', async () => {
     configureQueries();
     const user = userEvent.setup();
-    render(<PredictionsPageContent />);
+    render(<PredictionsPageContent mode="create" />);
 
     const continueBtn = await screen.findByRole('button', { name: /Continue to Round of 32/ });
     expect(continueBtn).toBeDisabled();
@@ -222,7 +222,7 @@ describe('PredictionsPageContent — stepper navigation', () => {
   it('advances to Round of 32 when Continue is clicked from groups', async () => {
     configureQueries();
     const user = userEvent.setup();
-    render(<PredictionsPageContent />);
+    render(<PredictionsPageContent mode="create" />);
 
     await user.click(await screen.findByTestId('fill-all-groups'));
     await user.click(screen.getByRole('button', { name: /Continue to Round of 32/ }));
@@ -239,7 +239,7 @@ describe('PredictionsPageContent — stepper navigation', () => {
   it('walks through all 8 steps with Continue and reaches the tiebreaker', async () => {
     configureQueries();
     const user = userEvent.setup();
-    render(<PredictionsPageContent />);
+    render(<PredictionsPageContent mode="create" />);
 
     await user.click(await screen.findByTestId('fill-all-groups'));
     await user.click(screen.getByRole('button', { name: /Continue to Round of 32/ }));
@@ -263,7 +263,7 @@ describe('PredictionsPageContent — stepper navigation', () => {
 
   it('renders all top stepper triggers as disabled when the tournament is locked', async () => {
     configureQueries({ tournamentLockTime: new Date(Date.now() - 1000).toISOString() });
-    render(<PredictionsPageContent />);
+    render(<PredictionsPageContent mode="create" />);
 
     await screen.findByText(/Predictions Locked/);
     // Only the top row is rendered when not on a knockout step; assert all top tabs are disabled.
@@ -277,7 +277,7 @@ describe('PredictionsPageContent — autosave', () => {
     configureQueries();
     jest.useFakeTimers({ doNotFake: ['queueMicrotask'] });
     const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
-    render(<PredictionsPageContent />);
+    render(<PredictionsPageContent mode="create" />);
 
     await user.click(await screen.findByTestId('fill-one-group-position'));
     expect(window.localStorage.getItem(DRAFT_KEY)).toBeNull();
@@ -319,7 +319,7 @@ describe('PredictionsPageContent — autosave', () => {
     );
     configureQueries();
 
-    render(<PredictionsPageContent />);
+    render(<PredictionsPageContent mode="create" />);
 
     // Draft has 1 group slot + 1 tiebreaker filled (total 2). Server would have 0.
     await waitFor(() => expect(screen.getByTestId('groups-filled')).toHaveTextContent('1'));
@@ -330,13 +330,15 @@ describe('PredictionsPageContent — autosave', () => {
     expect(toastInfo).toHaveBeenCalled();
   });
 
-  it('ignores localStorage draft when the server has stored picks', async () => {
+  it('ignores localStorage draft in edit mode when the prediction has been submitted', async () => {
+    const EDIT_DRAFT_KEY = `wc2026:draft:user-1:${TOURNAMENT_ID}:pred-1`;
     window.localStorage.setItem(
-      DRAFT_KEY,
+      EDIT_DRAFT_KEY,
       JSON.stringify({
         v: DRAFT_VERSION,
         savedAt: new Date().toISOString(),
         data: {
+          predictionName: 'Drafted',
           groupPredictions: fixtureGroups.map((g) => ({
             groupId: g.id,
             positions: { first: 'mex', second: 'kor', third: null, fourth: null },
@@ -346,18 +348,26 @@ describe('PredictionsPageContent — autosave', () => {
         },
       })
     );
-    configureQueries({
-      storedSubmittedAt: new Date().toISOString(),
-      storedTotalGoals: 7,
-      // Server has only one group with one position filled — distinct count from draft.
-      storedGroups: [
-        { groupId: 'A', first: 'kor', second: null, third: null, fourth: null },
-      ],
-    });
+    configureQueries();
 
-    render(<PredictionsPageContent />);
+    render(
+      <PredictionsPageContent
+        mode="edit"
+        predictionId="pred-1"
+        initial={{
+          id: 'pred-1',
+          name: 'Server',
+          totalGoals: 7,
+          submittedAt: new Date().toISOString(),
+          isPaid: false,
+          paidAt: null,
+          groups: [{ groupId: 'A', first: 'kor', second: null, third: null, fourth: null }],
+          knockout: [],
+        }}
+      />
+    );
 
-    // Server hydration → exactly 1 filled slot (Group A first). Draft would have been 24.
+    // Server hydration → exactly 1 filled slot. Draft would have been 24.
     await waitFor(() =>
       expect(screen.getByTestId('groups-filled')).toHaveTextContent('1')
     );
@@ -379,7 +389,7 @@ describe('PredictionsPageContent — autosave', () => {
     );
     configureQueries({ tournamentLockTime: new Date(Date.now() - 1000).toISOString() });
 
-    render(<PredictionsPageContent />);
+    render(<PredictionsPageContent mode="create" />);
 
     await screen.findByText(/Predictions Locked/);
     expect(window.localStorage.getItem(DRAFT_KEY)).toBeNull();
@@ -394,7 +404,7 @@ describe('PredictionsPageContent — autosave', () => {
     jest.useFakeTimers({ doNotFake: ['queueMicrotask'] });
     const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
 
-    render(<PredictionsPageContent />);
+    render(<PredictionsPageContent mode="create" />);
 
     await user.click(await screen.findByTestId('fill-all-groups'));
     await user.click(screen.getByRole('button', { name: /Continue to Round of 32/ }));
@@ -421,7 +431,10 @@ describe('PredictionsPageContent — autosave', () => {
     });
     expect(window.localStorage.getItem(DRAFT_KEY)).not.toBeNull();
 
-    await user.click(screen.getByRole('button', { name: /Submit Predictions/ }));
+    // Provide a prediction name (required to submit).
+    await user.type(screen.getByLabelText(/Prediction name/), 'Main');
+
+    await user.click(screen.getByRole('button', { name: /Submit Prediction/ }));
 
     await waitFor(() => expect(toastSuccess).toHaveBeenCalled());
     expect(window.localStorage.getItem(DRAFT_KEY)).toBeNull();

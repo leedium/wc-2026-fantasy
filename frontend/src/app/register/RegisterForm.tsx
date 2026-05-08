@@ -10,24 +10,17 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { FieldError } from '@/components/ui/field-error';
 import { createSupabaseBrowserClient } from '@/lib/supabase/client';
-import {
-  ROUTES,
-  USERNAME_REGEX,
-  EMAIL_REGEX,
-  PASSWORD_MIN_LENGTH,
-} from '@/lib/constants';
+import { ROUTES, EMAIL_REGEX, PASSWORD_MIN_LENGTH } from '@/lib/constants';
 import { cn } from '@/lib/utils';
 
-type FieldName = 'username' | 'email' | 'password' | 'confirmPassword';
+type FieldName = 'email' | 'password' | 'confirmPassword';
 
 export function RegisterForm() {
   const router = useRouter();
-  const [username, setUsername] = React.useState('');
   const [email, setEmail] = React.useState('');
   const [password, setPassword] = React.useState('');
   const [confirmPassword, setConfirmPassword] = React.useState('');
   const [touched, setTouched] = React.useState<Record<FieldName, boolean>>({
-    username: false,
     email: false,
     password: false,
     confirmPassword: false,
@@ -39,24 +32,17 @@ export function RegisterForm() {
     message: string;
   } | null>(null);
 
-  const usernameRef = React.useRef<HTMLInputElement>(null);
   const emailRef = React.useRef<HTMLInputElement>(null);
   const passwordRef = React.useRef<HTMLInputElement>(null);
   const confirmPasswordRef = React.useRef<HTMLInputElement>(null);
 
   const refsByField: Record<FieldName, React.RefObject<HTMLInputElement | null>> = {
-    username: usernameRef,
     email: emailRef,
     password: passwordRef,
     confirmPassword: confirmPasswordRef,
   };
 
   const errors: Record<FieldName, string | null> = {
-    username: !username.trim()
-      ? 'Username is required.'
-      : !USERNAME_REGEX.test(username.trim())
-        ? 'Username must be 3–24 characters, letters, numbers, or underscores.'
-        : null,
     email: !email.trim()
       ? 'Email is required.'
       : !EMAIL_REGEX.test(email.trim())
@@ -86,7 +72,6 @@ export function RegisterForm() {
 
   const handleChange = (field: FieldName, value: string) => {
     if (serverFieldError?.field === field) setServerFieldError(null);
-    if (field === 'username') setUsername(value);
     if (field === 'email') setEmail(value);
     if (field === 'password') setPassword(value);
     if (field === 'confirmPassword') setConfirmPassword(value);
@@ -96,9 +81,9 @@ export function RegisterForm() {
     e.preventDefault();
     setServerError(null);
     setServerFieldError(null);
-    setTouched({ username: true, email: true, password: true, confirmPassword: true });
+    setTouched({ email: true, password: true, confirmPassword: true });
 
-    const order: FieldName[] = ['username', 'email', 'password', 'confirmPassword'];
+    const order: FieldName[] = ['email', 'password', 'confirmPassword'];
     const firstInvalid = order.find((f) => errors[f]);
     if (firstInvalid) {
       refsByField[firstInvalid].current?.focus();
@@ -111,26 +96,11 @@ export function RegisterForm() {
     const { data, error: signUpError } = await supabase.auth.signUp({
       email: email.trim(),
       password,
-      options: {
-        data: { username: username.trim() },
-      },
     });
 
     if (signUpError) {
       const raw = signUpError.message;
-      if (raw.includes('username taken') || raw.includes('profiles_username_key')) {
-        setServerFieldError({ field: 'username', message: 'That username is already taken.' });
-        usernameRef.current?.focus();
-      } else if (raw.includes('username invalid format')) {
-        setServerFieldError({
-          field: 'username',
-          message: 'Username must be 3–24 characters, letters, numbers, or underscores.',
-        });
-        usernameRef.current?.focus();
-      } else if (raw.includes('username is required')) {
-        setServerFieldError({ field: 'username', message: 'Username is required.' });
-        usernameRef.current?.focus();
-      } else if (
+      if (
         raw.toLowerCase().includes('already registered') ||
         raw.toLowerCase().includes('already in use')
       ) {
@@ -162,31 +132,6 @@ export function RegisterForm() {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4" noValidate>
-      <div className="space-y-2">
-        <Label htmlFor="username">Username</Label>
-        <Input
-          id="username"
-          ref={usernameRef}
-          type="text"
-          autoComplete="username"
-          required
-          value={username}
-          onChange={(e) => handleChange('username', e.target.value)}
-          onBlur={() => markTouched('username')}
-          disabled={isSubmitting}
-          aria-invalid={showError('username') ? true : undefined}
-          aria-describedby={
-            showError('username') ? 'username-error' : 'username-help'
-          }
-          className={fieldClass('username')}
-        />
-        {!showError('username') && (
-          <p id="username-help" className="text-muted-foreground text-xs">
-            3–24 characters. Letters, numbers, and underscores only.
-          </p>
-        )}
-        <FieldError id="username-error" message={showError('username') || undefined} />
-      </div>
       <div className="space-y-2">
         <Label htmlFor="email">Email</Label>
         <Input

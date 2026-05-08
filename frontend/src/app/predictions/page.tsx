@@ -1,13 +1,12 @@
 import type { Metadata } from 'next';
 
-import { PredictionsPageContent } from './PredictionsPageContent';
+import { PredictionsListPage } from './PredictionsListPage';
 
 export const metadata: Metadata = {
-  title: 'Make Your Predictions | World Cup 2026',
-  description:
-    'Submit your bracket predictions for the FIFA World Cup 2026. Predict group stage standings, knockout bracket winners, and total tournament goals.',
+  title: 'Your Predictions | World Cup 2026',
+  description: 'Manage your World Cup 2026 bracket predictions.',
 };
 
-export default function PredictionsPage() {
-  return <PredictionsPageContent />;
+export default function PredictionsIndexPage() {
+  return <PredictionsListPage />;
 }

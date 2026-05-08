@@ -84,7 +84,7 @@ export function LeaderboardTable({
 
           return (
             <TableRow
-              key={entry.username}
+              key={entry.predictionId}
               id={`rank-${entry.rank}`}
               className={cn(
                 isEvenRow && 'bg-muted/30',
@@ -103,14 +103,20 @@ export function LeaderboardTable({
                 )}
               </TableCell>
               <TableCell>
-                <span
-                  className={cn('text-sm', isCurrentUser && 'text-primary font-semibold')}
-                >
-                  {entry.username}
-                  {isCurrentUser && (
-                    <span className="text-muted-foreground ml-2 text-xs">(You)</span>
-                  )}
-                </span>
+                <div className="flex flex-col">
+                  <span
+                    className={cn(
+                      'text-sm font-medium',
+                      isCurrentUser && 'text-primary font-semibold'
+                    )}
+                  >
+                    {entry.predictionName}
+                    {isCurrentUser && (
+                      <span className="text-muted-foreground ml-2 text-xs">(You)</span>
+                    )}
+                  </span>
+                  <span className="text-muted-foreground text-xs">{entry.username}</span>
+                </div>
               </TableCell>
               <TableCell className="text-right">
                 <span className="font-semibold">{entry.points}</span>

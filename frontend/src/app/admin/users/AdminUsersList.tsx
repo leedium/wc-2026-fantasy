@@ -38,10 +38,8 @@ interface AdminUser {
   username: string;
   isAdmin: boolean;
   isSuperAdmin: boolean;
-  hasPrediction: boolean;
-  submittedAt: string | null;
-  isPaid: boolean;
-  paidAt: string | null;
+  predictionCount: number;
+  paidPredictionCount: number;
 }
 
 interface UsersResponse {
@@ -88,7 +86,6 @@ export function AdminUsersList() {
   });
 
   const totalPages = Math.max(1, Math.ceil((query.data?.total ?? 0) / PAGE_SIZE));
-  const tournament = query.data?.tournament ?? null;
 
   const refetchUsers = () => queryClient.invalidateQueries({ queryKey: ['admin-users'] });
 
@@ -105,30 +102,6 @@ export function AdminUsersList() {
     } catch (e) {
       toast.error(e instanceof Error ? e.message : 'Failed');
     }
-  };
-
-  const togglePaid = async (user: AdminUser) => {
-    if (!tournament) {
-      toast.error('No active tournament');
-      return;
-    }
-    try {
-      const res = await fetch(`/api/admin/users/${user.id}/payment`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ tournamentId: tournament.id, paid: !user.isPaid }),
-      });
-      if (!res.ok) throw new Error(await readError(res));
-      toast.success(`${user.username} marked ${!user.isPaid ? 'paid' : 'unpaid'}`);
-      await refetchUsers();
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'Failed');
-    }
-  };
-
-  const isLatePayment = (user: AdminUser) => {
-    if (!user.isPaid || !user.paidAt || !tournament) return false;
-    return new Date(user.paidAt) > new Date(tournament.lockTime);
   };
 
   const isSelf = (user: AdminUser) => currentUser?.id === user.id;
@@ -165,8 +138,7 @@ export function AdminUsersList() {
                 <TableRow>
                   <TableHead>Username</TableHead>
                   <TableHead>Status</TableHead>
-                  <TableHead>Submitted</TableHead>
-                  <TableHead>Paid</TableHead>
+                  <TableHead>Predictions</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
@@ -183,33 +155,19 @@ export function AdminUsersList() {
                         <Badge variant="outline">user</Badge>
                       )}
                     </TableCell>
-                    <TableCell className="text-muted-foreground text-sm">
-                      {u.hasPrediction ? (u.submittedAt ?? 'yes') : '—'}
-                    </TableCell>
                     <TableCell className="text-sm">
-                      {u.isPaid ? (
-                        isLatePayment(u) ? (
-                          <Badge variant="destructive" title="Paid after lock — not eligible">
-                            paid (late)
-                          </Badge>
-                        ) : (
-                          <Badge>paid</Badge>
-                        )
+                      {u.predictionCount > 0 ? (
+                        <span>
+                          <span className="font-medium">{u.paidPredictionCount}</span>
+                          <span className="text-muted-foreground"> / {u.predictionCount} paid</span>
+                        </span>
                       ) : (
-                        <Badge variant="outline">unpaid</Badge>
+                        <span className="text-muted-foreground">—</span>
                       )}
                     </TableCell>
                     <TableCell className="space-x-2 text-right">
                       <Button variant="outline" size="sm" asChild>
-                        <Link href={`/admin/users/${u.id}`}>View bracket</Link>
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => togglePaid(u)}
-                        disabled={!tournament}
-                      >
-                        {u.isPaid ? 'Mark unpaid' : 'Mark paid'}
+                        <Link href={`/admin/users/${u.id}`}>Manage predictions</Link>
                       </Button>
                       <Button
                         variant="outline"
@@ -252,7 +210,7 @@ export function AdminUsersList() {
                 ))}
                 {(query.data?.users ?? []).length === 0 && (
                   <TableRow>
-                    <TableCell colSpan={5} className="text-muted-foreground py-8 text-center">
+                    <TableCell colSpan={4} className="text-muted-foreground py-8 text-center">
                       No users found
                     </TableCell>
                   </TableRow>

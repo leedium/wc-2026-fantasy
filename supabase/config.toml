@@ -38,6 +38,11 @@ enable_confirmations = true
 subject = "Reset your password"
 content_path = "./supabase/templates/recovery.html"
 
+# Same fix for the signup confirmation email.
+[auth.email.template.confirmation]
+subject = "Confirm your email"
+content_path = "./supabase/templates/confirmation.html"
+
 [inbucket]
 enabled = true
 port = 54324

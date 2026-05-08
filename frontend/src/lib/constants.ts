@@ -27,6 +27,7 @@ export const ROUTES = {
   forgotPassword: '/forgot-password',
   resetPassword: '/reset-password',
   admin: '/admin',
+  account: '/account',
 } as const;
 
 export const API_ENDPOINTS = {
@@ -47,3 +48,7 @@ export const USERNAME_REGEX = /^[a-zA-Z0-9_]{3,24}$/;
 export const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export const PASSWORD_MIN_LENGTH = 8;
+
+export const PREDICTION_NAME_REGEX = /^[A-Za-z0-9 _\-.''‘’]+$/;
+export const PREDICTION_NAME_MAX = 60;
+export const PREDICTION_CAP = 5;
