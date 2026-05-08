@@ -61,7 +61,7 @@ describe('LockStatusBanner', () => {
     mockTournament({ lockOffsetMs: 7 * 24 * 60 * 60 * 1000 });
     render(wrap(<LockStatusBanner />));
     await waitFor(() => expect(screen.getByRole('status')).toBeInTheDocument());
-    expect(screen.getByRole('status')).toHaveTextContent(/Predictions lock in/);
+    expect(screen.getByRole('status')).toHaveTextContent(/left to choose your picks/i);
     expect(screen.getByRole('status').className).toContain('bg-green-600');
   });
 
