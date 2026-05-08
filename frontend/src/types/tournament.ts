@@ -113,4 +113,5 @@ export interface Profile {
   displayName: string | null;
   avatarUrl: string | null;
   isAdmin: boolean;
+  isSuperAdmin: boolean;
 }

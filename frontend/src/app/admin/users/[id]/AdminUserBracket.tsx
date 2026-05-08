@@ -3,7 +3,7 @@
 import * as React from 'react';
 import Link from 'next/link';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Plus, Trash2 } from 'lucide-react';
+import { Eye, Plus, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 
 import { PageLayout } from '@/components/layout/PageLayout';
@@ -21,6 +21,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import { BracketPreviewDialog } from '@/components/predictions/BracketPreviewDialog';
 
 interface AdminPrediction {
   id: string;
@@ -149,6 +150,7 @@ export function AdminUserBracket({ userId }: { userId: string }) {
   const queryClient = useQueryClient();
   const [pendingDelete, setPendingDelete] = React.useState<AdminPrediction | null>(null);
   const [isDeleting, setIsDeleting] = React.useState(false);
+  const [previewId, setPreviewId] = React.useState<string | null>(null);
 
   const query = useQuery<AdminPredictionsResponse>({
     queryKey: ['admin-user-predictions', userId],
@@ -240,6 +242,15 @@ export function AdminUserBracket({ userId }: { userId: string }) {
                     </Link>
                   </Button>
                   <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setPreviewId(p.id)}
+                    title="Preview bracket"
+                  >
+                    <Eye className="h-4 w-4" />
+                    <span className="sr-only">Preview</span>
+                  </Button>
+                  <Button
                     variant="ghost"
                     size="sm"
                     onClick={() => setPendingDelete(p)}
@@ -285,6 +296,14 @@ export function AdminUserBracket({ userId }: { userId: string }) {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <BracketPreviewDialog
+        predictionId={previewId}
+        apiBasePath={`/api/admin/users/${userId}/predictions`}
+        onOpenChange={(open) => {
+          if (!open) setPreviewId(null);
+        }}
+      />
     </PageLayout>
   );
 }

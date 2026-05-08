@@ -3,7 +3,7 @@
 import * as React from 'react';
 import Link from 'next/link';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { CheckCircle2, Clock, FileEdit, Plus, Trash2 } from 'lucide-react';
+import { CheckCircle2, Clock, Eye, FileEdit, Plus, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 
 import { PageLayout } from '@/components/layout/PageLayout';
@@ -24,6 +24,8 @@ import {
   NEW_PREDICTION_SENTINEL,
   clearDraftForPrediction,
 } from '@/hooks/useDraftPersistence';
+import { useTournamentLock } from '@/hooks/useTournamentLock';
+import { BracketPreviewDialog } from '@/components/predictions/BracketPreviewDialog';
 import { PREDICTION_CAP, ROUTES } from '@/lib/constants';
 
 interface ApiPrediction {
@@ -54,22 +56,26 @@ function formatTime(value: string | null) {
 
 export function PredictionsListPage() {
   const queryClient = useQueryClient();
-  const { user } = useAuthContext();
+  const { user, profile } = useAuthContext();
   const [pendingDelete, setPendingDelete] = React.useState<ApiPrediction | null>(null);
   const [isDeleting, setIsDeleting] = React.useState(false);
+  const [previewId, setPreviewId] = React.useState<string | null>(null);
 
   const query = useQuery<ApiResponse>({
     queryKey: ['predictions'],
     queryFn: () => fetchJSON('/api/predictions'),
   });
 
+  // Skew-adjusted lock state — robust to client clock manipulation. The
+  // server-side RPC enforces the actual write boundary; this is purely UX.
+  const { isLocked } = useTournamentLock();
+  const isSuperAdmin = profile?.isSuperAdmin === true;
+
   const predictions = query.data?.predictions ?? [];
   const cap = query.data?.cap ?? PREDICTION_CAP;
-  const lockTime = query.data?.tournament.lockTime
-    ? new Date(query.data.tournament.lockTime)
-    : null;
-  const isLocked = lockTime ? new Date() >= lockTime : false;
   const atCap = predictions.length >= cap;
+  // Super admins can keep adding past lock; everyone else can't.
+  const canCreate = !atCap && (!isLocked || isSuperAdmin);
 
   const handleDelete = async () => {
     if (!pendingDelete) return;
@@ -104,16 +110,14 @@ export function PredictionsListPage() {
             Create up to {cap} brackets. Each paid bracket is ranked separately on the leaderboard.
           </p>
         </div>
-        <Button asChild disabled={atCap || isLocked} size="lg">
+        <Button asChild disabled={!canCreate} size="lg">
           <Link
             href={
-              atCap || isLocked
-                ? '#'
-                : `${ROUTES.predictions}/${NEW_PREDICTION_SENTINEL}`
+              canCreate ? `${ROUTES.predictions}/${NEW_PREDICTION_SENTINEL}` : '#'
             }
-            aria-disabled={atCap || isLocked}
+            aria-disabled={!canCreate}
             title={
-              isLocked
+              isLocked && !isSuperAdmin
                 ? 'Predictions are locked'
                 : atCap
                   ? `You've reached the cap of ${cap}`
@@ -178,18 +182,27 @@ export function PredictionsListPage() {
                 <div className="flex items-center gap-2">
                   <Button asChild variant="outline" size="sm">
                     <Link href={`${ROUTES.predictions}/${encodeURIComponent(p.id)}`}>
-                      {isLocked ? 'View' : 'Edit'}
+                      {isLocked && !isSuperAdmin ? 'View' : 'Edit'}
                     </Link>
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setPreviewId(p.id)}
+                    title="Preview bracket"
+                  >
+                    <Eye className="h-4 w-4" />
+                    <span className="sr-only">Preview</span>
                   </Button>
                   <Button
                     variant="ghost"
                     size="sm"
                     onClick={() => setPendingDelete(p)}
-                    disabled={isLocked || p.isPaid}
+                    disabled={(isLocked && !isSuperAdmin) || p.isPaid}
                     title={
                       p.isPaid
                         ? 'Ask an admin to mark unpaid before deleting'
-                        : isLocked
+                        : isLocked && !isSuperAdmin
                           ? 'Predictions are locked'
                           : 'Delete'
                     }
@@ -232,6 +245,14 @@ export function PredictionsListPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <BracketPreviewDialog
+        predictionId={previewId}
+        apiBasePath="/api/predictions"
+        onOpenChange={(open) => {
+          if (!open) setPreviewId(null);
+        }}
+      />
     </PageLayout>
   );
 }

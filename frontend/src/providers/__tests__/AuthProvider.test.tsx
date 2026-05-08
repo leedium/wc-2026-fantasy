@@ -48,6 +48,7 @@ describe('AuthProvider', () => {
           displayName: null,
           avatarUrl: null,
           isAdmin: false,
+          isSuperAdmin: false,
         }}
       >
         <Consumer />

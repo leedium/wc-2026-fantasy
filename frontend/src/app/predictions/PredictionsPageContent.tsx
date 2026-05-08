@@ -20,6 +20,7 @@ import { FieldError } from '@/components/ui/field-error';
 import { Progress } from '@/components/ui/progress';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useAuthContext } from '@/providers/AuthProvider';
+import { useTournamentLock } from '@/hooks/useTournamentLock';
 import {
   NEW_PREDICTION_SENTINEL,
   clearDraftForPrediction,
@@ -239,7 +240,15 @@ export function PredictionsPageContent({
 }: PredictionsPageContentProps) {
   const router = useRouter();
   const queryClient = useQueryClient();
-  const { user } = useAuthContext();
+  const { user, profile } = useAuthContext();
+  const { isLocked } = useTournamentLock();
+  // When a super admin is editing their *own* predictions past lock, the
+  // regular submit_predictions RPC will reject. Route through the admin RPC
+  // (scoped to their own user id) which permits super admins past lock.
+  const effectiveApiBasePath =
+    apiBasePath === '/api/predictions' && profile?.isSuperAdmin && isLocked && user?.id
+      ? `/api/admin/users/${user.id}/predictions`
+      : apiBasePath;
 
   const tournamentQuery = useQuery<{
     id: string;
@@ -289,7 +298,6 @@ export function PredictionsPageContent({
   const matches = matchesQuery.data;
   const tournament = tournamentQuery.data;
   const lockTime = tournament ? new Date(tournament.lockTime) : null;
-  const isLocked = lockTime ? new Date() >= lockTime : false;
 
   const draftPredictionId = predictionId ?? NEW_PREDICTION_SENTINEL;
   const { loadDraft, saveDraft, clearDraft, lastSavedAt } = useDraftPersistence<DraftData>(
@@ -631,8 +639,8 @@ export function PredictionsPageContent({
 
       const url =
         mode === 'edit' && predictionId
-          ? `${apiBasePath}/${encodeURIComponent(predictionId)}`
-          : apiBasePath;
+          ? `${effectiveApiBasePath}/${encodeURIComponent(predictionId)}`
+          : effectiveApiBasePath;
       const method = mode === 'edit' ? 'PATCH' : 'POST';
 
       const res = await fetch(url, {
