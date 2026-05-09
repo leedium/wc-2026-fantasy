@@ -46,16 +46,16 @@ export function GroupStandingsEditor({
   groups: Group[];
 }) {
   const queryClient = useQueryClient();
+  // No `initialData` here — pairing it with the global `staleTime: 60s`
+  // makes React Query treat the empty seed as fresh and skip the mount
+  // fetch, so saved standings never appear until a manual invalidation.
   const standings = useQuery<GroupStandingRow[]>({
     queryKey: ['group-standings', tournamentId],
     queryFn: async () => {
-      const res = await fetch(`/api/admin/group-standings?tournamentId=${tournamentId}`).catch(
-        () => null
-      );
-      if (res && res.ok) return res.json();
-      return [];
+      const res = await fetch(`/api/admin/group-standings?tournamentId=${tournamentId}`);
+      if (!res.ok) throw new Error((await res.json())?.error ?? 'Failed to load standings');
+      return res.json();
     },
-    initialData: [],
   });
 
   const submittedById = React.useMemo(() => {
