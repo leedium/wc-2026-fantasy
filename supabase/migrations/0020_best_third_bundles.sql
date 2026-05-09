@@ -114,6 +114,25 @@ create policy "advancers_admin_write"
 grant select on public.tournament_third_place_advancers to anon, authenticated;
 grant insert, update, delete on public.tournament_third_place_advancers to authenticated;
 
--- The R32 layout (M1..M16) is now seeded with the FIFA bundle pattern
--- directly in supabase/seed.sql, so no UPDATE is needed here. R16
--- onwards (M17..M32) is unchanged.
+-- The R32 layout (M1..M16) is also seeded with the FIFA bundle pattern in
+-- supabase/seed.sql for fresh local resets. seed.sql doesn't run on prod
+-- though, so existing prod rows must be UPDATED explicitly here. The
+-- UPDATEs are idempotent — setting the same values when re-run is a no-op.
+-- R16 onwards (M17..M32) is unchanged.
+
+update public.knockout_matches set team1_source = '2A', team2_source = '2B'      where id = 'M1';
+update public.knockout_matches set team1_source = '1E', team2_source = '3-ABCDF' where id = 'M2';
+update public.knockout_matches set team1_source = '1F', team2_source = '2C'      where id = 'M3';
+update public.knockout_matches set team1_source = '1C', team2_source = '2F'      where id = 'M4';
+update public.knockout_matches set team1_source = '1I', team2_source = '3-CDFGH' where id = 'M5';
+update public.knockout_matches set team1_source = '2E', team2_source = '2I'      where id = 'M6';
+update public.knockout_matches set team1_source = '1A', team2_source = '3-CEFHI' where id = 'M7';
+update public.knockout_matches set team1_source = '1L', team2_source = '3-EHIJK' where id = 'M8';
+update public.knockout_matches set team1_source = '1D', team2_source = '3-BEFIJ' where id = 'M9';
+update public.knockout_matches set team1_source = '1G', team2_source = '3-AEHIJ' where id = 'M10';
+update public.knockout_matches set team1_source = '2K', team2_source = '2L'      where id = 'M11';
+update public.knockout_matches set team1_source = '1H', team2_source = '2J'      where id = 'M12';
+update public.knockout_matches set team1_source = '1B', team2_source = '3-EFGIJ' where id = 'M13';
+update public.knockout_matches set team1_source = '1J', team2_source = '2H'      where id = 'M14';
+update public.knockout_matches set team1_source = '1K', team2_source = '3-DEIJL' where id = 'M15';
+update public.knockout_matches set team1_source = '2D', team2_source = '2G'      where id = 'M16';
