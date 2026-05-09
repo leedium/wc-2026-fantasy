@@ -72,13 +72,10 @@ function GroupCard({
     // `getAvailableTeams` logic keeps that consistent.
   }, [autoFillFourth, disabled, prediction.positions.fourth, onPositionChange]);
 
-  // Get available teams for a position (not selected in other positions)
-  const getAvailableTeams = (position: PositionKey): Team[] => {
-    const currentSelection = prediction.positions[position];
-    return group.teams.filter(
-      (team) => team.id === currentSelection || !selectedTeamIds.has(team.id)
-    );
-  };
+  // Every team in the group is selectable from every position's dropdown.
+  // Picking a team that's already in another slot swaps the two — handled by
+  // the parent's onPredictionChange (it detects the conflict and reassigns).
+  const availableTeams: Team[] = group.teams;
 
   return (
     <Card className={cn(isComplete && 'border-green-500/50 bg-green-500/5 dark:bg-green-500/10')}>
@@ -100,7 +97,6 @@ function GroupCard({
       </CardHeader>
       <CardContent className="space-y-3">
         {(Object.keys(POSITION_LABELS) as PositionKey[]).map((position) => {
-          const availableTeams = getAvailableTeams(position);
           const selectedValue = prediction.positions[position];
           const isAutoFilled = position === 'fourth' && autoFillFourth !== null;
 
