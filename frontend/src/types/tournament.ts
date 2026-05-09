@@ -4,12 +4,21 @@
 
 export type TournamentStatus = 'upcoming' | 'group_stage' | 'knockout' | 'completed';
 
+export type TournamentPhase =
+  | 'phase1'
+  | 'phase1_locked'
+  | 'phase2_open'
+  | 'phase2_locked';
+
 export interface TournamentInfo {
   id: string;
   slug: string;
   name: string;
   status: TournamentStatus;
   lockTime: Date;
+  knockoutLockTime: Date | null;
+  knockoutUnlocked: boolean;
+  phase: TournamentPhase;
   totalEntries: number;
   championTotalGoals: number | null;
 }

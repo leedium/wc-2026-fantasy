@@ -186,7 +186,11 @@ function configureQueries({
             name: 'World Cup 2026',
             status: 'upcoming',
             lockTime: tournamentLockTime,
+            knockoutLockTime: null,
+            knockoutUnlocked: false,
+            phase: new Date(tournamentLockTime) > new Date() ? 'phase1' : 'phase1_locked',
             totalEntries: 0,
+            serverTime: new Date().toISOString(),
           },
           isLoading: false,
         };

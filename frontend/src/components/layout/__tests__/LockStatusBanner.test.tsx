@@ -30,12 +30,17 @@ function wrap(children: React.ReactNode) {
 function mockTournament({
   lockOffsetMs,
   serverOffsetMs = 0,
+  phase,
 }: {
   lockOffsetMs: number;
   serverOffsetMs?: number;
+  phase?: 'phase1' | 'phase1_locked' | 'phase2_open' | 'phase2_locked';
 }) {
   const lockTime = new Date(Date.now() + lockOffsetMs).toISOString();
   const serverTime = new Date(Date.now() + serverOffsetMs).toISOString();
+  // If the test didn't specify a phase, infer it from the lock offset:
+  //   future lock → phase1, past lock + no knockout unlock → phase1_locked.
+  const inferredPhase: 'phase1' | 'phase1_locked' = lockOffsetMs > 0 ? 'phase1' : 'phase1_locked';
   global.fetch = jest.fn().mockResolvedValue({
     ok: true,
     json: async () => ({
@@ -44,6 +49,9 @@ function mockTournament({
       name: 'WC',
       status: 'upcoming',
       lockTime,
+      knockoutLockTime: null,
+      knockoutUnlocked: false,
+      phase: phase ?? inferredPhase,
       totalEntries: 0,
       serverTime,
     }),
@@ -61,7 +69,7 @@ describe('LockStatusBanner', () => {
     mockTournament({ lockOffsetMs: 7 * 24 * 60 * 60 * 1000 });
     render(wrap(<LockStatusBanner />));
     await waitFor(() => expect(screen.getByRole('status')).toBeInTheDocument());
-    expect(screen.getByRole('status')).toHaveTextContent(/left to choose your picks/i);
+    expect(screen.getByRole('status')).toHaveTextContent(/left to choose/i);
     expect(screen.getByRole('status').className).toContain('bg-green-600');
   });
 
@@ -72,17 +80,25 @@ describe('LockStatusBanner', () => {
     expect(screen.getByRole('status').className).toContain('bg-amber-600');
   });
 
-  it('renders the locked state when lock is in the past', async () => {
+  it('renders the between-phases state when phase 1 has ended', async () => {
     mockTournament({ lockOffsetMs: -60_000 });
     render(wrap(<LockStatusBanner />));
     await waitFor(() => expect(screen.getByRole('status')).toBeInTheDocument());
-    expect(screen.getByRole('status')).toHaveTextContent(/locked/i);
+    expect(screen.getByRole('status')).toHaveTextContent(/Group stage in progress/i);
+    expect(screen.getByRole('status').className).toContain('bg-slate-600');
+  });
+
+  it('renders the fully locked state when phase 2 has closed', async () => {
+    mockTournament({ lockOffsetMs: -60_000, phase: 'phase2_locked' });
+    render(wrap(<LockStatusBanner />));
+    await waitFor(() => expect(screen.getByRole('status')).toBeInTheDocument());
+    expect(screen.getByRole('status')).toHaveTextContent(/All predictions locked/i);
     expect(screen.getByRole('status').className).toContain('bg-red-600');
   });
 
   it('shows the super-admin chip when locked + super admin', async () => {
     mockProfile.isSuperAdmin = true;
-    mockTournament({ lockOffsetMs: -60_000 });
+    mockTournament({ lockOffsetMs: -60_000, phase: 'phase2_locked' });
     render(wrap(<LockStatusBanner />));
     await waitFor(() =>
       expect(screen.getByText(/Super admin: edits still open/i)).toBeInTheDocument()

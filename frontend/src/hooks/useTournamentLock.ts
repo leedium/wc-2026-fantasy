@@ -3,12 +3,17 @@
 import * as React from 'react';
 import { useQuery } from '@tanstack/react-query';
 
+type Phase = 'phase1' | 'phase1_locked' | 'phase2_open' | 'phase2_locked';
+
 interface TournamentResponse {
   id: string;
   slug: string;
   name: string;
   status: string;
   lockTime: string;
+  knockoutLockTime: string | null;
+  knockoutUnlocked: boolean;
+  phase: Phase;
   totalEntries: number;
   serverTime: string;
 }
@@ -16,12 +21,22 @@ interface TournamentResponse {
 export interface TournamentLockState {
   tournamentId: string | null;
   lockTime: Date | null;
+  knockoutLockTime: Date | null;
+  knockoutUnlocked: boolean;
+  phase: Phase;
   isLoading: boolean;
   /** Server-time minus client-time, in ms. 0 if data not loaded. */
   skewMs: number;
-  /** True iff `Date.now() + skewMs >= lockTime`. */
+  /**
+   * True when *any* lock is currently active for the user-side wizard:
+   * `phase1_locked` (waiting for admin to open phase 2) or `phase2_locked`.
+   */
   isLocked: boolean;
-  /** Milliseconds remaining until lock (clamped at 0). */
+  /** True iff phase 1 is currently accepting writes (groups + bundles). */
+  isPhase1Open: boolean;
+  /** True iff phase 2 is currently accepting writes (knockout + tiebreaker). */
+  isPhase2Open: boolean;
+  /** Milliseconds remaining until the active phase locks (clamped at 0). */
   remainingMs: number;
   /** True if |skewMs| > 5 minutes — surface a hint to the user. */
   clockSuspect: boolean;
@@ -51,6 +66,10 @@ export function useTournamentLock(): TournamentLockState {
     () => (data?.lockTime ? new Date(data.lockTime) : null),
     [data?.lockTime]
   );
+  const knockoutLockTime = React.useMemo(
+    () => (data?.knockoutLockTime ? new Date(data.knockoutLockTime) : null),
+    [data?.knockoutLockTime]
+  );
 
   // Tick once per second so the countdown updates.
   const [tick, setTick] = React.useState(0);
@@ -60,22 +79,38 @@ export function useTournamentLock(): TournamentLockState {
     return () => clearInterval(id);
   }, [lockTime]);
 
-  const remainingMs = React.useMemo(() => {
-    if (!lockTime) return 0;
-    return Math.max(0, lockTime.getTime() - (Date.now() + skewMs));
-    // tick included so this re-evaluates each second
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [lockTime, skewMs, tick]);
+  const phase: Phase = data?.phase ?? 'phase1';
+  const knockoutUnlocked = data?.knockoutUnlocked ?? false;
 
-  const isLocked = remainingMs === 0 && !!lockTime;
+  // The relevant deadline for "remainingMs" depends on phase:
+  //   phase1 → lockTime
+  //   phase2_open → knockoutLockTime (may be null = no second deadline yet)
+  //   locked phases → 0
+  const activeDeadline =
+    phase === 'phase1' ? lockTime : phase === 'phase2_open' ? knockoutLockTime : null;
+
+  const remainingMs = React.useMemo(() => {
+    if (!activeDeadline) return 0;
+    return Math.max(0, activeDeadline.getTime() - (Date.now() + skewMs));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeDeadline, skewMs, tick]);
+
+  const isPhase1Open = phase === 'phase1';
+  const isPhase2Open = phase === 'phase2_open';
+  const isLocked = phase === 'phase1_locked' || phase === 'phase2_locked';
   const clockSuspect = Math.abs(skewMs) > FIVE_MINUTES_MS;
 
   return {
     tournamentId: data?.id ?? null,
     lockTime,
+    knockoutLockTime,
+    knockoutUnlocked,
+    phase,
     isLoading: query.isLoading,
     skewMs,
     isLocked,
+    isPhase1Open,
+    isPhase2Open,
     remainingMs,
     clockSuspect,
   };

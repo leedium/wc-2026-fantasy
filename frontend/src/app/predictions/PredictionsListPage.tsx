@@ -66,16 +66,17 @@ export function PredictionsListPage() {
     queryFn: () => fetchJSON('/api/predictions'),
   });
 
-  // Skew-adjusted lock state — robust to client clock manipulation. The
+  // Skew-adjusted phase state — robust to client clock manipulation. The
   // server-side RPC enforces the actual write boundary; this is purely UX.
-  const { isLocked } = useTournamentLock();
+  const { isLocked, phase } = useTournamentLock();
   const isSuperAdmin = profile?.isSuperAdmin === true;
 
   const predictions = query.data?.predictions ?? [];
   const cap = query.data?.cap ?? PREDICTION_CAP;
   const atCap = predictions.length >= cap;
-  // Super admins can keep adding past lock; everyone else can't.
-  const canCreate = !atCap && (!isLocked || isSuperAdmin);
+  // Late-joiner block: new predictions can only be created during phase 1.
+  // Super admins bypass.
+  const canCreate = !atCap && (phase === 'phase1' || isSuperAdmin);
 
   const handleDelete = async () => {
     if (!pendingDelete) return;
