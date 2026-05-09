@@ -251,14 +251,20 @@ export function PredictionsPageContent({
   const router = useRouter();
   const queryClient = useQueryClient();
   const { user, profile } = useAuthContext();
-  const { isLocked } = useTournamentLock();
-  // When a super admin is editing their *own* predictions past lock, the
-  // regular submit_predictions RPC will reject. Route through the admin RPC
-  // (scoped to their own user id) which permits super admins past lock.
+  const { phase, isLocked } = useTournamentLock();
+  const isSuperAdmin = profile?.isSuperAdmin === true;
+  // Super admin user-side writes route through the admin RPC so they can edit
+  // their own predictions in any phase (including phase1_locked / phase2_*).
   const effectiveApiBasePath =
-    apiBasePath === '/api/predictions' && profile?.isSuperAdmin && isLocked && user?.id
+    apiBasePath === '/api/predictions' &&
+    isSuperAdmin &&
+    phase !== 'phase1' &&
+    user?.id
       ? `/api/admin/users/${user.id}/predictions`
       : apiBasePath;
+  // Per-phase editability for the user-side forms. Super admin bypasses both.
+  const phase1Editable = phase === 'phase1' || isSuperAdmin;
+  const phase2Editable = phase === 'phase2_open' || isSuperAdmin;
 
   const tournamentQuery = useQuery<{
     id: string;
@@ -863,7 +869,7 @@ export function PredictionsPageContent({
               groups={groups}
               predictions={groupPredictions}
               onPredictionChange={handleGroupPredictionChange}
-              disabled={isLocked}
+              disabled={!phase1Editable}
             />
           )}
 
@@ -873,7 +879,7 @@ export function PredictionsPageContent({
               groupPredictions={groupPredictions}
               bundlePredictions={bundlePredictions}
               onBundleChange={handleBundleChange}
-              disabled={isLocked}
+              disabled={!phase1Editable}
             />
           )}
 
@@ -885,7 +891,7 @@ export function PredictionsPageContent({
               knockoutPredictions={knockoutPredictions}
               bundlePredictions={bundlePredictions}
               onPredictionChange={handleKnockoutPredictionChange}
-              disabled={isLocked}
+              disabled={!phase2Editable}
               stage={currentStep}
             />
           )}
@@ -894,7 +900,7 @@ export function PredictionsPageContent({
             <TiebreakerInput
               value={totalGoals}
               onChange={handleTotalGoalsChange}
-              disabled={isLocked}
+              disabled={!phase2Editable}
             />
           )}
         </div>

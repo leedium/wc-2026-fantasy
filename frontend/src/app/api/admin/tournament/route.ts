@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { requireAdmin, isAdminGateError } from '@/lib/auth/requireAdmin';
+import { safeMessage } from '@/lib/api/errors';
 
 interface Body {
   id?: string;
@@ -7,6 +8,10 @@ interface Body {
   lockTime?: string;
   isActive?: boolean;
   championTotalGoals?: number | null;
+  /** Phase 2 toggle. When set, routes through admin_set_phase_two RPC which
+   *  validates that all 8 advancers are populated before opening. */
+  knockoutUnlocked?: boolean;
+  knockoutLockTime?: string | null;
 }
 
 const VALID_STATUSES = ['upcoming', 'group_stage', 'knockout', 'completed'] as const;
@@ -35,6 +40,21 @@ export async function PATCH(request: NextRequest) {
     );
   }
 
+  // Phase 2 toggle has its own RPC (validates advancer count). Run it first
+  // so a failed check leaves the rest of the patch intact.
+  if (body.knockoutUnlocked !== undefined) {
+    const { error: phaseError } = await ctx.supabase.rpc('admin_set_phase_two', {
+      p_tournament_id: body.id,
+      p_unlocked: body.knockoutUnlocked,
+      p_lock_time: body.knockoutLockTime ?? null,
+    });
+    if (phaseError) {
+      const msg = phaseError.message ?? '';
+      const status = msg.includes('all 8 advancers') ? 409 : 400;
+      return NextResponse.json({ error: safeMessage(phaseError) }, { status });
+    }
+  }
+
   const update: Record<string, unknown> = {};
   if (body.status !== undefined) update.status = body.status;
   if (body.lockTime !== undefined) update.lock_time = body.lockTime;
@@ -42,7 +62,7 @@ export async function PATCH(request: NextRequest) {
   if (body.championTotalGoals !== undefined) update.champion_total_goals = body.championTotalGoals;
 
   if (Object.keys(update).length === 0) {
-    return NextResponse.json({ error: 'no fields to update' }, { status: 400 });
+    return NextResponse.json({ ok: true });
   }
 
   const { error } = await ctx.supabase.from('tournaments').update(update).eq('id', body.id);

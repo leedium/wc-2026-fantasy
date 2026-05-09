@@ -22,17 +22,17 @@ function formatRemaining(ms: number): string {
   return `${seconds}s`;
 }
 
-function dismissKey(tournamentId: string, locked: boolean): string {
-  return `wc2026:banner-dismissed:${tournamentId}:${locked ? 'locked' : 'open'}`;
+function dismissKey(tournamentId: string, phase: string): string {
+  return `wc2026:banner-dismissed:${tournamentId}:${phase}`;
 }
 
 export function LockStatusBanner() {
-  const { tournamentId, lockTime, isLoading, isLocked, remainingMs, clockSuspect } =
+  const { tournamentId, lockTime, isLoading, phase, remainingMs, clockSuspect } =
     useTournamentLock();
   const { profile } = useAuth();
   const [dismissed, setDismissed] = React.useState(false);
 
-  // Re-evaluate dismissal state when the tournament or locked-flag change so
+  // Re-evaluate dismissal state when the tournament or phase change so
   // a state transition re-shows the banner.
   React.useEffect(() => {
     if (!tournamentId || typeof window === 'undefined') {
@@ -40,36 +40,43 @@ export function LockStatusBanner() {
       return;
     }
     try {
-      const flag = window.sessionStorage.getItem(dismissKey(tournamentId, isLocked));
+      const flag = window.sessionStorage.getItem(dismissKey(tournamentId, phase));
       setDismissed(flag === '1');
     } catch {
       setDismissed(false);
     }
-  }, [tournamentId, isLocked]);
+  }, [tournamentId, phase]);
 
   const handleDismiss = React.useCallback(() => {
     if (!tournamentId || typeof window === 'undefined') return;
     try {
-      window.sessionStorage.setItem(dismissKey(tournamentId, isLocked), '1');
+      window.sessionStorage.setItem(dismissKey(tournamentId, phase), '1');
     } catch {
       // best-effort
     }
     setDismissed(true);
-  }, [tournamentId, isLocked]);
+  }, [tournamentId, phase]);
 
   if (isLoading || !lockTime || dismissed) return null;
 
-  const urgent = !isLocked && remainingMs <= ONE_DAY_MS;
   const isSuperAdmin = profile?.isSuperAdmin === true;
+  const urgent =
+    (phase === 'phase1' || phase === 'phase2_open') && remainingMs <= ONE_DAY_MS;
 
-  const tone = isLocked ? 'locked' : urgent ? 'urgent' : 'open';
+  // Tone + icon per phase.
+  let tone: 'open' | 'urgent' | 'between' | 'locked' = 'open';
+  if (phase === 'phase1_locked') tone = 'between';
+  else if (phase === 'phase2_locked') tone = 'locked';
+  else if (urgent) tone = 'urgent';
+
   const toneClasses = {
     open: 'bg-green-600 text-white',
     urgent: 'bg-amber-600 text-white',
+    between: 'bg-slate-600 text-white',
     locked: 'bg-red-600 text-white',
   } as const;
 
-  const Icon = isLocked ? Lock : Unlock;
+  const Icon = phase === 'phase1' || phase === 'phase2_open' ? Unlock : Lock;
 
   return (
     <div
@@ -80,11 +87,16 @@ export function LockStatusBanner() {
         <div className="flex flex-1 flex-wrap items-center justify-center gap-x-3 gap-y-1 text-center">
           <Icon className="h-4 w-4 shrink-0" aria-hidden />
           <span className="font-medium">
-            {isLocked
-              ? 'Predictions are locked. Tournament is underway.'
-              : `You have ${formatRemaining(remainingMs)} left to choose your picks before the tournament starts! Don't miss out!`}
+            {phase === 'phase1' &&
+              `You have ${formatRemaining(remainingMs)} left to choose your group + best-3rd picks before the tournament starts! Don't miss out!`}
+            {phase === 'phase1_locked' &&
+              'Group stage in progress. Knockout predictions will open once the admin posts the best-3rd advancers.'}
+            {phase === 'phase2_open' &&
+              `You have ${formatRemaining(remainingMs)} left to make your knockout picks!`}
+            {phase === 'phase2_locked' &&
+              'Tournament in progress. All predictions locked.'}
           </span>
-          {isLocked && isSuperAdmin && (
+          {(phase === 'phase1_locked' || phase === 'phase2_locked') && isSuperAdmin && (
             <span className="rounded-md bg-white/15 px-2 py-0.5 text-xs font-medium">
               Super admin: edits still open
             </span>

@@ -33,6 +33,9 @@ const KNOWN_ERROR_FRAGMENTS = [
   'could not generate unique username',
   'invalid bundle group letter',
   'unknown bundle slot',
+  'phase 1 ended',
+  'phase 1 only fields allowed',
+  'all 8 advancers must be set',
 ] as const;
 
 export function safeMessage(
