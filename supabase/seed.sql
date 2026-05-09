@@ -93,3 +93,61 @@ insert into public.knockout_matches (id, stage, team1_source, team2_source, poin
 
 insert into public.tournaments (slug, name, status, lock_time, is_active)
 values ('wc2026', 'FIFA World Cup 2026', 'upcoming', now() + interval '30 days', true);
+
+-- =============================================================================
+-- Local-only dev accounts
+-- =============================================================================
+-- Re-seeded on every `supabase db reset` so local super-admin access doesn't
+-- get wiped. seed.sql is local-only — never runs against production.
+-- Add new accounts by following the same pattern (auth.users + auth.identities
+-- + a post-trigger profile flag flip). All inserts are idempotent on the
+-- stable UUID, so re-running the seed is safe.
+--
+-- Account: leedium@me.com / localdev123 (super admin, username `user_4f1fc348`)
+-- =============================================================================
+
+insert into auth.users (
+    instance_id, id, aud, role, email,
+    encrypted_password, email_confirmed_at,
+    raw_app_meta_data, raw_user_meta_data,
+    created_at, updated_at,
+    confirmation_token, recovery_token, email_change_token_new, email_change
+) values (
+    '00000000-0000-0000-0000-000000000000',
+    '0b42c609-f4e3-493e-bb06-162aa57318e7',
+    'authenticated', 'authenticated',
+    'leedium@me.com',
+    extensions.crypt('localdev123', extensions.gen_salt('bf')),
+    now(),
+    '{"provider":"email","providers":["email"]}'::jsonb,
+    '{"username":"user_4f1fc348"}'::jsonb,
+    now(), now(),
+    '', '', '', ''
+)
+on conflict (id) do nothing;
+
+insert into auth.identities (
+    id, user_id, identity_data, provider, provider_id,
+    last_sign_in_at, created_at, updated_at
+) values (
+    extensions.gen_random_uuid(),
+    '0b42c609-f4e3-493e-bb06-162aa57318e7',
+    '{"sub":"0b42c609-f4e3-493e-bb06-162aa57318e7","email":"leedium@me.com"}'::jsonb,
+    'email',
+    '0b42c609-f4e3-493e-bb06-162aa57318e7',
+    now(), now(), now()
+)
+on conflict (provider, provider_id) do nothing;
+
+-- handle_new_user trigger created the profile row above with the username
+-- from raw_user_meta_data. Now flip is_admin/is_super_admin — we have to
+-- temporarily disable prevent_super_admin_change (which always blocks
+-- is_super_admin transitions from app context) to do it.
+alter table public.profiles disable trigger profiles_block_super_admin_change;
+
+update public.profiles
+   set is_admin = true,
+       is_super_admin = true
+ where id = '0b42c609-f4e3-493e-bb06-162aa57318e7';
+
+alter table public.profiles enable trigger profiles_block_super_admin_change;
