@@ -575,11 +575,23 @@ export function PredictionsPageContent({
     teamId: string | null
   ) => {
     setGroupPredictions((prev) => {
-      const next = prev.map((group) =>
-        group.groupId === groupId
-          ? { ...group, positions: { ...group.positions, [position]: teamId } }
-          : group
-      );
+      const next = prev.map((group) => {
+        if (group.groupId !== groupId) return group;
+        const positions = { ...group.positions };
+        // Picking a team that's already in another slot swaps them: the
+        // displaced team takes the slot the user just freed up, so the user
+        // can reorder picks without first clearing their group.
+        if (teamId) {
+          const conflictPos = (Object.keys(positions) as PositionKey[]).find(
+            (p) => p !== position && positions[p] === teamId
+          );
+          if (conflictPos) {
+            positions[conflictPos] = positions[position] ?? null;
+          }
+        }
+        positions[position] = teamId;
+        return { ...group, positions };
+      });
       persistDraft({ groupPredictions: next });
       return next;
     });
