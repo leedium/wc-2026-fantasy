@@ -173,6 +173,7 @@ All by client IP. The first three protect against email enumeration / mailbox fl
 ## Git Commits
 
 - Do not include "Co-Authored-By" lines in commit messages.
+- **Never push directly to `main`.** All changes — including small follow-up fixes — must land on a feature branch and go through a pull request. Even one-line fixes during a session: branch, commit, push, open PR.
 
 
 ## SQL Statements
