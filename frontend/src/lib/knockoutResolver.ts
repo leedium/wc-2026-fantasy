@@ -1,4 +1,6 @@
+import { BUNDLE_SLOTS } from '@/lib/constants';
 import type {
+  BundlePrediction,
   GroupPrediction,
   KnockoutMatch,
   KnockoutMatchPrediction,
@@ -6,14 +8,16 @@ import type {
 
 /**
  * Resolves a `team1_source` / `team2_source` reference (e.g. `"1A"`, `"M5"`,
- * `"L-M29"`) to the predicted team id, given a user's group + knockout picks.
- * Returns null when the picks for the source aren't filled in yet.
+ * `"L-M29"`, `"3-ABCDF"`) to the predicted team id, given a user's group +
+ * bundle + knockout picks. Returns null when the picks for the source
+ * aren't filled in yet.
  */
 export function resolveTeamSource(
   source: string,
   matches: KnockoutMatch[],
   groupPredictions: GroupPrediction[],
-  knockoutPredictions: KnockoutMatchPrediction[]
+  knockoutPredictions: KnockoutMatchPrediction[],
+  bundlePredictions: BundlePrediction[] = []
 ): string | null {
   // Group position source: '1A' = 1st in Group A, '2B' = 2nd in Group B, etc.
   const groupMatch = source.match(/^([123])([A-L])$/);
@@ -31,6 +35,19 @@ export function resolveTeamSource(
       default:
         return null;
     }
+  }
+
+  // Best-3rd-of-bundle source: '3-ABCDF' = whichever group's 3rd-place team
+  // the user predicted to advance from the 5-group bundle.
+  const bundleMatch = source.match(/^3-([A-L]{5})$/);
+  if (bundleMatch) {
+    const bundleKey = bundleMatch[1];
+    const slot = BUNDLE_SLOTS.find((s) => s.bundleKey === bundleKey);
+    if (!slot) return null;
+    const pick = bundlePredictions.find((b) => b.slotIndex === slot.slotIndex);
+    if (!pick?.groupLetter) return null;
+    const groupPrediction = groupPredictions.find((p) => p.groupId === pick.groupLetter);
+    return groupPrediction?.positions.third ?? null;
   }
 
   // Match winner source: 'M1' = the predicted winner of M1.
@@ -52,13 +69,15 @@ export function resolveTeamSource(
       match.team1Source,
       matches,
       groupPredictions,
-      knockoutPredictions
+      knockoutPredictions,
+      bundlePredictions
     );
     const team2Id = resolveTeamSource(
       match.team2Source,
       matches,
       groupPredictions,
-      knockoutPredictions
+      knockoutPredictions,
+      bundlePredictions
     );
 
     if (matchPrediction.winnerId === team1Id) return team2Id;

@@ -70,4 +70,27 @@ describe('resolveTeamSource', () => {
   it('returns null for an unrecognised source', () => {
     expect(resolveTeamSource('garbage', matches, groupPredictions, [])).toBeNull();
   });
+
+  describe('best-3rd-of-bundle source', () => {
+    // Slot 0 (bundle ABCDF) feeds match M2 per BUNDLE_SLOTS. Picking 'A' for
+    // slot 0 should resolve '3-ABCDF' to whichever team the user predicted as
+    // 3rd in Group A.
+    it('resolves to the predicted 3rd of the picked group', () => {
+      const bundlePredictions = [{ slotIndex: 0, groupLetter: 'A' }];
+      expect(
+        resolveTeamSource('3-ABCDF', matches, groupPredictions, [], bundlePredictions)
+      ).toBe('rsa');
+    });
+
+    it('returns null when the user has no bundle pick yet', () => {
+      expect(resolveTeamSource('3-ABCDF', matches, groupPredictions, [], [])).toBeNull();
+    });
+
+    it('returns null when the bundle key is unknown', () => {
+      const bundlePredictions = [{ slotIndex: 0, groupLetter: 'A' }];
+      expect(
+        resolveTeamSource('3-XXXXX', matches, groupPredictions, [], bundlePredictions)
+      ).toBeNull();
+    });
+  });
 });

@@ -31,6 +31,8 @@ const KNOWN_ERROR_FRAGMENTS = [
   'prediction name taken',
   'prediction not found',
   'could not generate unique username',
+  'invalid bundle group letter',
+  'unknown bundle slot',
 ] as const;
 
 export function safeMessage(

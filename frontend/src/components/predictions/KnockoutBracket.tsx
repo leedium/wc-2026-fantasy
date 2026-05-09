@@ -10,6 +10,7 @@ import { TeamFlag } from '@/components/shared/TeamFlag';
 import { resolveTeamSource } from '@/lib/knockoutResolver';
 import { cn } from '@/lib/utils';
 import type {
+  BundlePrediction,
   GroupPrediction,
   KnockoutMatch,
   KnockoutMatchPrediction,
@@ -80,6 +81,7 @@ interface KnockoutBracketProps {
   teams: Team[];
   groupPredictions: GroupPrediction[];
   knockoutPredictions: KnockoutMatchPrediction[];
+  bundlePredictions?: BundlePrediction[];
   onPredictionChange: (matchId: string, winnerId: string | null) => void;
   disabled?: boolean;
   stage: KnockoutStage;
@@ -96,6 +98,15 @@ function getTeamDisplay(
   const team = teams.find((t) => t.id === teamId);
   if (!team) return null;
   return { name: team.name, code: team.code };
+}
+
+// Friendly placeholder for an unresolved team source. Bundle sources
+// ("3-ABCDF") read as "Best 3rd of A/B/C/D/F"; group/match sources fall back
+// to the raw source string.
+function describeSource(source: string): string {
+  const bundle = source.match(/^3-([A-L]{5})$/);
+  if (bundle) return `Best 3rd of ${bundle[1].split('').join('/')}`;
+  return source;
 }
 
 // Single match card component
@@ -165,7 +176,7 @@ function MatchCard({
               {effectiveWinnerId === team1Id && <Trophy className="h-4 w-4 text-yellow-500" />}
             </span>
           ) : (
-            <span className="text-xs">TBD ({match.team1Source})</span>
+            <span className="text-xs">TBD · {describeSource(match.team1Source)}</span>
           )}
         </Button>
 
@@ -187,7 +198,7 @@ function MatchCard({
               {effectiveWinnerId === team2Id && <Trophy className="h-4 w-4 text-yellow-500" />}
             </span>
           ) : (
-            <span className="text-xs">TBD ({match.team2Source})</span>
+            <span className="text-xs">TBD · {describeSource(match.team2Source)}</span>
           )}
         </Button>
       </CardContent>
@@ -203,6 +214,7 @@ function StageSection({
   teams,
   groupPredictions,
   knockoutPredictions,
+  bundlePredictions,
   onPredictionChange,
   disabled,
 }: {
@@ -212,6 +224,7 @@ function StageSection({
   teams: Team[];
   groupPredictions: GroupPrediction[];
   knockoutPredictions: KnockoutMatchPrediction[];
+  bundlePredictions: BundlePrediction[];
   onPredictionChange: (matchId: string, winnerId: string | null) => void;
   disabled?: boolean;
 }) {
@@ -264,13 +277,15 @@ function StageSection({
             match.team1Source,
             allMatches,
             groupPredictions,
-            knockoutPredictions
+            knockoutPredictions,
+            bundlePredictions
           );
           const team2Id = resolveTeamSource(
             match.team2Source,
             allMatches,
             groupPredictions,
-            knockoutPredictions
+            knockoutPredictions,
+            bundlePredictions
           );
           const prediction = knockoutPredictions.find((p) => p.matchId === match.id);
           const selectedWinnerId = prediction?.winnerId ?? null;
@@ -298,6 +313,7 @@ export function KnockoutBracket({
   teams,
   groupPredictions,
   knockoutPredictions,
+  bundlePredictions = [],
   onPredictionChange,
   disabled = false,
   stage,
@@ -374,6 +390,7 @@ export function KnockoutBracket({
         teams={teams}
         groupPredictions={groupPredictions}
         knockoutPredictions={knockoutPredictions}
+        bundlePredictions={bundlePredictions}
         onPredictionChange={onPredictionChange}
         disabled={disabled}
       />

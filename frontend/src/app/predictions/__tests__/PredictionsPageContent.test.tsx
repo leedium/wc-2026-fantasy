@@ -127,6 +127,27 @@ jest.mock('@/components/predictions/TiebreakerInput', () => ({
   ),
 }));
 
+interface BestThirdBundleFormProps {
+  bundlePredictions: Array<{ slotIndex: number; groupLetter: string }>;
+  onBundleChange: (slotIndex: number, groupLetter: string | null) => void;
+}
+jest.mock('@/components/predictions/BestThirdBundleForm', () => ({
+  BestThirdBundleForm: ({ onBundleChange }: BestThirdBundleFormProps) => (
+    <div data-testid="best-third-bundle-form">
+      <button
+        type="button"
+        data-testid="fill-all-bundles"
+        onClick={() => {
+          // The wizard awaits 8 distinct slots; the actual letter doesn't
+          // matter for navigation tests since BUNDLE_SLOTS validation lives
+          // in the real component / RPC.
+          for (let i = 0; i < 8; i++) onBundleChange(i, 'A');
+        }}
+      />
+    </div>
+  ),
+}));
+
 import { PredictionsPageContent } from '../PredictionsPageContent';
 import { DRAFT_DEBOUNCE_MS, DRAFT_VERSION } from '@/hooks/useDraftPersistence';
 
@@ -212,19 +233,24 @@ describe('PredictionsPageContent — stepper navigation', () => {
     const user = userEvent.setup();
     render(<PredictionsPageContent mode="create" />);
 
-    const continueBtn = await screen.findByRole('button', { name: /Continue to Round of 32/ });
+    const continueBtn = await screen.findByRole('button', { name: /Continue to Best 3rds/ });
     expect(continueBtn).toBeDisabled();
 
     await user.click(screen.getByTestId('fill-all-groups'));
-    expect(screen.getByRole('button', { name: /Continue to Round of 32/ })).toBeEnabled();
+    expect(screen.getByRole('button', { name: /Continue to Best 3rds/ })).toBeEnabled();
   });
 
-  it('advances to Round of 32 when Continue is clicked from groups', async () => {
+  it('advances Groups → Best 3rds → Round of 32 via Continue', async () => {
     configureQueries();
     const user = userEvent.setup();
     render(<PredictionsPageContent mode="create" />);
 
     await user.click(await screen.findByTestId('fill-all-groups'));
+    await user.click(screen.getByRole('button', { name: /Continue to Best 3rds/ }));
+    // Best 3rds step active.
+    expect(screen.getByTestId('best-third-bundle-form')).toBeInTheDocument();
+
+    await user.click(screen.getByTestId('fill-all-bundles'));
     await user.click(screen.getByRole('button', { name: /Continue to Round of 32/ }));
 
     // Top "Knockout" chip is now current; sub row appears with R32 selected.
@@ -236,12 +262,14 @@ describe('PredictionsPageContent — stepper navigation', () => {
     expect(screen.getByRole('tab', { name: /R32/ })).toHaveAttribute('aria-selected', 'true');
   });
 
-  it('walks through all 8 steps with Continue and reaches the tiebreaker', async () => {
+  it('walks through every step with Continue and reaches the tiebreaker', async () => {
     configureQueries();
     const user = userEvent.setup();
     render(<PredictionsPageContent mode="create" />);
 
     await user.click(await screen.findByTestId('fill-all-groups'));
+    await user.click(screen.getByRole('button', { name: /Continue to Best 3rds/ }));
+    await user.click(screen.getByTestId('fill-all-bundles'));
     await user.click(screen.getByRole('button', { name: /Continue to Round of 32/ }));
     // Filling all knockout matches at once satisfies every knockout sub-step.
     await user.click(screen.getByTestId('fill-all-knockout'));
@@ -407,6 +435,8 @@ describe('PredictionsPageContent — autosave', () => {
     render(<PredictionsPageContent mode="create" />);
 
     await user.click(await screen.findByTestId('fill-all-groups'));
+    await user.click(screen.getByRole('button', { name: /Continue to Best 3rds/ }));
+    await user.click(screen.getByTestId('fill-all-bundles'));
     await user.click(screen.getByRole('button', { name: /Continue to Round of 32/ }));
     await user.click(screen.getByTestId('fill-all-knockout'));
     // Walk through R16 → QF → SF → Final → 3rd → Tiebreaker via Continue.

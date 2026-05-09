@@ -18,8 +18,10 @@ describe('USERNAME_REGEX', () => {
 });
 
 describe('SCORING / TOURNAMENT_CONFIG', () => {
-  it('max total points = group + knockout', () => {
-    expect(SCORING.maxGroupPoints + SCORING.maxKnockoutPoints).toBe(SCORING.maxTotalPoints);
+  it('max total points = group + bundle + knockout', () => {
+    expect(
+      SCORING.maxGroupPoints + SCORING.maxBundlePoints + SCORING.maxKnockoutPoints
+    ).toBe(SCORING.maxTotalPoints);
   });
 
   it('tournament config matches the 48/12/4 structure', () => {

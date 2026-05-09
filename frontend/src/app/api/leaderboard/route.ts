@@ -26,13 +26,16 @@ export async function GET(request: NextRequest) {
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
+  // Postgres `numeric` arrives as a string over the wire; coerce to Number for
+  // the JSON response so the frontend can render fractional points cleanly.
   const rows = (data ?? []) as Array<{
     rank: number;
     prediction_id: string;
     prediction_name: string;
     username: string;
-    points: number;
+    points: number | string;
     group_points: number;
+    bundle_points: number | string;
     knockout_points: number;
     total_goals: number | null;
     total_count: number;
@@ -44,9 +47,10 @@ export async function GET(request: NextRequest) {
       predictionId: row.prediction_id,
       predictionName: row.prediction_name,
       username: row.username,
-      points: row.points,
+      points: Number(row.points),
       change: 0,
       groupPoints: row.group_points,
+      bundlePoints: Number(row.bundle_points),
       knockoutPoints: row.knockout_points,
     })),
     total: Number(rows[0]?.total_count ?? 0),
