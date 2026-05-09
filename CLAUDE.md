@@ -1,7 +1,7 @@
 # CLAUDE.md
 
-> **Version:** 3.0.0
-> **Last Updated:** 2026-04-30
+> **Version:** 3.1.0
+> **Last Updated:** 2026-05-09
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
@@ -154,6 +154,7 @@ Admin-controlled v1: an admin (`profiles.is_admin = true`) submits final group s
 - **Don't trust the client**: any new mutation must validate at the RPC boundary, not in the route handler.
 - **Never import `lib/supabase/admin.ts` from a client component** — service-role key would leak.
 - **Cloudflare Workers runtime**: `npm run preview` builds with OpenNext and runs locally on the Worker runtime. If you add a Node-only dep, expect to need `compatibility_flags = ["nodejs_compat"]` in `wrangler.toml` (already set) or to find an edge-friendly alternative.
+- **Local dev accounts must survive `supabase db reset`.** `supabase db reset` wipes `auth.users` along with everything else and reruns migrations + `seed.sql`. Any account you want preserved across resets must be re-seeded from `supabase/seed.sql` (local-only, never runs against prod). To add one: insert into `auth.users` (with `extensions.crypt(password, extensions.gen_salt('bf'))`) + `auth.identities`, both with stable UUIDs guarded by `on conflict do nothing`. The `handle_new_user` trigger creates the profile from `raw_user_meta_data.username`. To set `is_admin` / `is_super_admin`, temporarily `disable trigger profiles_block_super_admin_change` on `public.profiles`, update, re-enable — `set session_replication_role = 'replica'` won't work in seed because seed runs as the non-superuser `postgres` role.
 
 ## Production rate limits (Cloudflare WAF)
 
