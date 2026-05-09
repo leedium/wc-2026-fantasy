@@ -6,6 +6,7 @@ import { AdminNav } from '@/components/admin/AdminNav';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { GroupStandingsEditor } from './GroupStandingsEditor';
 import { KnockoutResultsEditor } from './KnockoutResultsEditor';
+import { AdvancersForm } from '../advancers/AdvancersForm';
 import type { Group, KnockoutMatch, Team } from '@/types/tournament';
 
 interface TournamentInfo {
@@ -49,6 +50,7 @@ export function AdminResults() {
         <Tabs defaultValue="groups">
           <TabsList className="mb-6">
             <TabsTrigger value="groups">Group Standings</TabsTrigger>
+            <TabsTrigger value="advancers">Advancers</TabsTrigger>
             <TabsTrigger value="knockout">Knockout Results</TabsTrigger>
           </TabsList>
           <TabsContent value="groups">
@@ -56,6 +58,9 @@ export function AdminResults() {
               tournamentId={tournament.data!.id}
               groups={groups.data!}
             />
+          </TabsContent>
+          <TabsContent value="advancers">
+            <AdvancersForm />
           </TabsContent>
           <TabsContent value="knockout">
             <KnockoutResultsEditor

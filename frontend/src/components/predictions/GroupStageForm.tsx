@@ -24,14 +24,29 @@ const POSITION_LABELS = {
   fourth: '4th',
 } as const;
 
-type PositionKey = keyof typeof POSITION_LABELS;
+export type GroupPositionKey = keyof typeof POSITION_LABELS;
 
 interface GroupStageFormProps {
   groups: Group[];
   predictions: GroupPrediction[];
-  onPredictionChange: (groupId: string, position: PositionKey, teamId: string | null) => void;
+  onPredictionChange: (
+    groupId: string,
+    position: GroupPositionKey,
+    teamId: string | null
+  ) => void;
   disabled?: boolean;
+  /**
+   * Variant: 'predict' (default) is the user-side wizard with scoring tips.
+   * 'admin' hides the scoring tips and renames the heading; admins also
+   * typically pass `extraPerCard` to inject a Save button + submitted badge.
+   */
+  variant?: 'predict' | 'admin';
+  /** Optional render-prop appended inside each group card (e.g., a Save row). */
+  extraPerCard?: (groupId: string) => React.ReactNode;
 }
+
+// Local alias for the existing internal usage.
+type PositionKey = GroupPositionKey;
 
 // Single group card component
 function GroupCard({
@@ -39,11 +54,13 @@ function GroupCard({
   prediction,
   onPositionChange,
   disabled,
+  extra,
 }: {
   group: Group;
   prediction: GroupPrediction;
   onPositionChange: (position: PositionKey, teamId: string | null) => void;
   disabled?: boolean;
+  extra?: React.ReactNode;
 }) {
   // Get selected team IDs for this group
   const selectedTeamIds = new Set(
@@ -131,6 +148,7 @@ function GroupCard({
             </div>
           );
         })}
+        {extra ? <div className="border-t pt-3">{extra}</div> : null}
       </CardContent>
     </Card>
   );
@@ -141,7 +159,11 @@ export function GroupStageForm({
   predictions,
   onPredictionChange,
   disabled = false,
+  variant = 'predict',
+  extraPerCard,
 }: GroupStageFormProps) {
+  const isAdmin = variant === 'admin';
+
   // Calculate completion stats
   const completedGroups = predictions.filter((p) => {
     const filledPositions = Object.values(p.positions).filter((v) => v !== null).length;
@@ -150,47 +172,46 @@ export function GroupStageForm({
 
   return (
     <div className="space-y-6">
-      {/* Summary */}
       <div className="flex items-center justify-between">
-        <h3 className="text-lg font-semibold">Group Stage Predictions</h3>
+        <h3 className="text-lg font-semibold">
+          {isAdmin ? 'Group Standings' : 'Group Stage Predictions'}
+        </h3>
         <Badge variant={completedGroups === 12 ? 'default' : 'secondary'}>
-          {completedGroups} / 12 groups complete
+          {completedGroups} / 12 groups {isAdmin ? 'filled in' : 'complete'}
         </Badge>
       </div>
 
-      {/* How is this scored? — collapsible, opens by default the first time. */}
-      <details
-        className="group bg-muted/40 rounded-md border px-4 py-3 open:pb-4"
-        open
-      >
-        <summary className="cursor-pointer list-none text-sm font-medium select-none [&::-webkit-details-marker]:hidden">
-          <span className="inline-flex items-center gap-1.5">
-            <span className="text-muted-foreground transition-transform group-open:rotate-90">▶</span>
-            How is this scored?
-          </span>
-        </summary>
-        <div className="text-muted-foreground mt-3 space-y-2 text-sm">
-          <p>
-            Predict the final standings for each group: who finishes 1st, 2nd, 3rd, and 4th. Each
-            team can only be selected once per group.
-          </p>
-          <p>
-            <strong>Scoring uses only the top two finishers.</strong> 3rd and 4th picks aren&apos;t
-            scored, but your 3rd-place picks for groups A–H seed your Round of 32 bracket.
-          </p>
-          <p>
-            <strong>Per group:</strong> +6 for both top-two correct in exact order · +4 if both
-            correct but swapped · +3 for one correct in the right slot · +2 for one correct in the
-            wrong slot · 0 otherwise.
-          </p>
-          <p>
-            <strong>Group I (&ldquo;Group of Death&rdquo;)</strong> pays a +8 bonus instead of +6
-            when both top-two finishers are predicted in exact order.
-          </p>
-        </div>
-      </details>
+      {!isAdmin && (
+        <details className="group bg-muted/40 rounded-md border px-4 py-3 open:pb-4" open>
+          <summary className="cursor-pointer list-none text-sm font-medium select-none [&::-webkit-details-marker]:hidden">
+            <span className="inline-flex items-center gap-1.5">
+              <span className="text-muted-foreground transition-transform group-open:rotate-90">▶</span>
+              How is this scored?
+            </span>
+          </summary>
+          <div className="text-muted-foreground mt-3 space-y-2 text-sm">
+            <p>
+              Predict the final standings for each group: who finishes 1st, 2nd, 3rd, and 4th. Each
+              team can only be selected once per group.
+            </p>
+            <p>
+              <strong>Scoring uses only the top two finishers.</strong> 3rd and 4th picks
+              aren&apos;t scored, but your 3rd-place picks for groups A–H seed your Round of 32
+              bracket.
+            </p>
+            <p>
+              <strong>Per group:</strong> +6 for both top-two correct in exact order · +4 if both
+              correct but swapped · +3 for one correct in the right slot · +2 for one correct in
+              the wrong slot · 0 otherwise.
+            </p>
+            <p>
+              <strong>Group I (&ldquo;Group of Death&rdquo;)</strong> pays a +8 bonus instead of +6
+              when both top-two finishers are predicted in exact order.
+            </p>
+          </div>
+        </details>
+      )}
 
-      {/* Groups Grid */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
         {groups.map((group) => {
           const prediction = predictions.find((p) => p.groupId === group.id);
@@ -205,6 +226,7 @@ export function GroupStageForm({
                 onPredictionChange(group.id, position, teamId)
               }
               disabled={disabled}
+              extra={extraPerCard?.(group.id)}
             />
           );
         })}

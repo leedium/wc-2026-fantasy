@@ -1,11 +1,5 @@
-import type { Metadata } from 'next';
-
-import { AdvancersForm } from './AdvancersForm';
-
-export const metadata: Metadata = {
-  title: 'Best-3rd advancers | Admin',
-};
+import { redirect } from 'next/navigation';
 
 export default function AdvancersPage() {
-  return <AdvancersForm />;
+  redirect('/admin/results');
 }

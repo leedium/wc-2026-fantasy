@@ -39,6 +39,7 @@ import type {
   TournamentInfo,
 } from '@/types/tournament';
 import { BUNDLE_SLOTS } from '@/lib/constants';
+import { applyGroupPositionChange } from '@/lib/groupSwap';
 import { BestThirdBundleForm } from '@/components/predictions/BestThirdBundleForm';
 
 type PositionKey = 'first' | 'second' | 'third' | 'fourth';
@@ -575,23 +576,9 @@ export function PredictionsPageContent({
     teamId: string | null
   ) => {
     setGroupPredictions((prev) => {
-      const next = prev.map((group) => {
-        if (group.groupId !== groupId) return group;
-        const positions = { ...group.positions };
-        // Picking a team that's already in another slot swaps them: the
-        // displaced team takes the slot the user just freed up, so the user
-        // can reorder picks without first clearing their group.
-        if (teamId) {
-          const conflictPos = (Object.keys(positions) as PositionKey[]).find(
-            (p) => p !== position && positions[p] === teamId
-          );
-          if (conflictPos) {
-            positions[conflictPos] = positions[position] ?? null;
-          }
-        }
-        positions[position] = teamId;
-        return { ...group, positions };
-      });
+      // Conflict-swap semantics live in @/lib/groupSwap so admin code can
+      // reuse the same behavior.
+      const next = applyGroupPositionChange(prev, groupId, position, teamId);
       persistDraft({ groupPredictions: next });
       return next;
     });

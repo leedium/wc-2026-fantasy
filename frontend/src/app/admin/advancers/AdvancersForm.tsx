@@ -5,8 +5,6 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { CheckCircle2, Lock, Unlock } from 'lucide-react';
 import { toast } from 'sonner';
 
-import { PageLayout } from '@/components/layout/PageLayout';
-import { AdminNav } from '@/components/admin/AdminNav';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -20,7 +18,9 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
+import { TeamFlag } from '@/components/shared/TeamFlag';
 import { BUNDLE_SLOTS } from '@/lib/constants';
+import type { Team } from '@/types/tournament';
 
 interface AdvancersResponse {
   tournamentId: string;
@@ -32,6 +32,11 @@ interface TournamentResponse {
   knockoutUnlocked: boolean;
   knockoutLockTime: string | null;
   phase: 'phase1' | 'phase1_locked' | 'phase2_open' | 'phase2_locked';
+}
+
+interface GroupStandingRow {
+  group_id: string;
+  third_team_id: string | null;
 }
 
 async function fetchJSON<T>(url: string): Promise<T> {
@@ -70,6 +75,34 @@ export function AdvancersForm() {
   const completedCount = advancers.length;
   const allEight = completedCount === 8;
   const knockoutUnlocked = tournamentQuery.data?.knockoutUnlocked ?? false;
+
+  // Look up the actual 3rd-place team per group from admin-entered standings
+  // so the group-letter dropdowns can preview the country if it's known.
+  const standingsQuery = useQuery<GroupStandingRow[]>({
+    queryKey: ['admin-group-standings', tournamentId],
+    queryFn: () => fetchJSON(`/api/admin/group-standings?tournamentId=${tournamentId}`),
+    enabled: !!tournamentId,
+  });
+  const teamsQuery = useQuery<Team[]>({
+    queryKey: ['teams'],
+    queryFn: () => fetchJSON('/api/teams'),
+  });
+
+  const teamById = React.useMemo(() => {
+    const map = new Map<string, Team>();
+    for (const t of teamsQuery.data ?? []) map.set(t.id, t);
+    return map;
+  }, [teamsQuery.data]);
+
+  const thirdByGroup = React.useMemo(() => {
+    const map = new Map<string, Team>();
+    for (const row of standingsQuery.data ?? []) {
+      if (!row.third_team_id) continue;
+      const team = teamById.get(row.third_team_id);
+      if (team) map.set(row.group_id, team);
+    }
+    return map;
+  }, [standingsQuery.data, teamById]);
 
   const setSlot = async (slotIndex: number, groupLetter: string) => {
     if (!tournamentId) return;
@@ -121,10 +154,7 @@ export function AdvancersForm() {
   };
 
   return (
-    <PageLayout>
-      <h1 className="mb-2 text-3xl font-bold">Admin</h1>
-      <AdminNav />
-
+    <div>
       <div className="mb-6">
         <h2 className="text-xl font-semibold">Best-3rd advancers</h2>
         <p className="text-muted-foreground text-sm">
@@ -176,11 +206,24 @@ export function AdvancersForm() {
                       <SelectValue placeholder="Pick a group" />
                     </SelectTrigger>
                     <SelectContent>
-                      {slot.allowedLetters.map((letter) => (
-                        <SelectItem key={letter} value={letter}>
-                          Group {letter}
-                        </SelectItem>
-                      ))}
+                      {slot.allowedLetters.map((letter) => {
+                        const team = thirdByGroup.get(letter);
+                        return (
+                          <SelectItem key={letter} value={letter}>
+                            {team ? (
+                              <span className="flex items-center gap-2">
+                                <TeamFlag code={team.code} />
+                                <span className="text-muted-foreground font-mono text-xs">
+                                  {letter}
+                                </span>
+                                <span>{team.name}</span>
+                              </span>
+                            ) : (
+                              <>Group {letter}</>
+                            )}
+                          </SelectItem>
+                        );
+                      })}
                     </SelectContent>
                   </Select>
                 </CardContent>
@@ -230,6 +273,6 @@ export function AdvancersForm() {
           </div>
         </CardContent>
       </Card>
-    </PageLayout>
+    </div>
   );
 }
