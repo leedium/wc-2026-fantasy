@@ -42,9 +42,15 @@ export interface KnockoutMatchPrediction {
   winnerId: string | null;
 }
 
+export interface BundlePrediction {
+  slotIndex: number;
+  groupLetter: string;
+}
+
 export interface Predictions {
   groups: GroupPrediction[];
   knockout: KnockoutMatchPrediction[];
+  bundles: BundlePrediction[];
   totalGoals: number | null;
 }
 
@@ -70,6 +76,7 @@ export interface LeaderboardEntry {
   points: number;
   change: number;
   groupPoints: number;
+  bundlePoints: number;
   knockoutPoints: number;
 }
 

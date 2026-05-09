@@ -16,6 +16,7 @@ interface SubmitPayload {
     fourth: string | null;
   }>;
   knockout?: Array<{ matchId: string; winner: string | null }>;
+  bundles?: Array<{ slotIndex: number; groupLetter: string }>;
 }
 
 export async function GET() {
@@ -46,7 +47,7 @@ export async function GET() {
 
   const ids = (predictions ?? []).map((p) => p.id);
 
-  const [groupsRes, knockoutRes] = await Promise.all([
+  const [groupsRes, knockoutRes, bundlesRes] = await Promise.all([
     ids.length
       ? supabase
           .from('group_predictions')
@@ -59,6 +60,12 @@ export async function GET() {
       ? supabase
           .from('knockout_predictions')
           .select('prediction_id, match_id, winner_team_id')
+          .in('prediction_id', ids)
+      : Promise.resolve({ data: [] as never[] }),
+    ids.length
+      ? supabase
+          .from('third_place_bundle_predictions')
+          .select('prediction_id, slot_index, group_letter')
           .in('prediction_id', ids)
       : Promise.resolve({ data: [] as never[] }),
   ]);
@@ -77,6 +84,12 @@ export async function GET() {
     winner_team_id: string | null;
   };
 
+  type BundleRow = {
+    prediction_id: string;
+    slot_index: number;
+    group_letter: string;
+  };
+
   const groupsByPrediction = new Map<string, GroupRow[]>();
   for (const g of (groupsRes.data ?? []) as GroupRow[]) {
     const list = groupsByPrediction.get(g.prediction_id) ?? [];
@@ -88,6 +101,12 @@ export async function GET() {
     const list = knockoutByPrediction.get(k.prediction_id) ?? [];
     list.push(k);
     knockoutByPrediction.set(k.prediction_id, list);
+  }
+  const bundlesByPrediction = new Map<string, BundleRow[]>();
+  for (const b of (bundlesRes.data ?? []) as BundleRow[]) {
+    const list = bundlesByPrediction.get(b.prediction_id) ?? [];
+    list.push(b);
+    bundlesByPrediction.set(b.prediction_id, list);
   }
 
   type Payment = { paid_at: string | null };
@@ -126,6 +145,10 @@ export async function GET() {
         knockout: (knockoutByPrediction.get(p.id) ?? []).map((k) => ({
           matchId: k.match_id,
           winner: k.winner_team_id,
+        })),
+        bundles: (bundlesByPrediction.get(p.id) ?? []).map((b) => ({
+          slotIndex: b.slot_index,
+          groupLetter: b.group_letter,
         })),
       };
     }),
@@ -174,6 +197,10 @@ export async function POST(request: NextRequest) {
       match_id: k.matchId,
       winner: k.winner,
     })),
+    bundles: (body.bundles ?? []).map((b) => ({
+      slot_index: b.slotIndex,
+      group_letter: b.groupLetter,
+    })),
   };
 
   const { data, error } = await supabase.rpc('submit_predictions', { payload });
@@ -182,6 +209,7 @@ export async function POST(request: NextRequest) {
     let status = 400;
     if (msg.includes('locked')) status = 403;
     else if (msg.includes('limit reached') || msg.includes('name taken')) status = 409;
+    else if (msg.includes('bundle')) status = 400;
     return NextResponse.json({ error: safeMessage(error) }, { status });
   }
 

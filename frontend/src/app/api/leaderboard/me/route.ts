@@ -33,7 +33,7 @@ export async function GET(request: NextRequest) {
     prediction_name: string;
     rank: number;
     page: number;
-    points: number;
+    points: number | string;
   };
   const rows = (data ?? []) as Row[];
 
@@ -43,7 +43,7 @@ export async function GET(request: NextRequest) {
       predictionName: r.prediction_name,
       rank: r.rank,
       page: r.page,
-      points: r.points,
+      points: Number(r.points),
     })),
   });
 }

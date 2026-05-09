@@ -29,6 +29,7 @@ import {
 import { PREDICTION_NAME_MAX, PREDICTION_NAME_REGEX, ROUTES } from '@/lib/constants';
 import { cn } from '@/lib/utils';
 import type {
+  BundlePrediction,
   Group,
   GroupPrediction,
   KnockoutMatch,
@@ -37,11 +38,14 @@ import type {
   Team,
   TournamentInfo,
 } from '@/types/tournament';
+import { BUNDLE_SLOTS } from '@/lib/constants';
+import { BestThirdBundleForm } from '@/components/predictions/BestThirdBundleForm';
 
 type PositionKey = 'first' | 'second' | 'third' | 'fourth';
 
 type Step =
   | 'groups'
+  | 'best_thirds'
   | 'round_of_32'
   | 'round_of_16'
   | 'quarter_finals'
@@ -50,10 +54,11 @@ type Step =
   | 'third_place'
   | 'tiebreaker';
 
-type TopStep = 'groups' | 'knockout' | 'tiebreaker';
+type TopStep = 'groups' | 'best_thirds' | 'knockout' | 'tiebreaker';
 
 const STEP_ORDER: Step[] = [
   'groups',
+  'best_thirds',
   'round_of_32',
   'round_of_16',
   'quarter_finals',
@@ -65,6 +70,7 @@ const STEP_ORDER: Step[] = [
 
 const STEP_LABELS: Record<Step, string> = {
   groups: 'Group Stage',
+  best_thirds: 'Best 3rds',
   round_of_32: 'Round of 32',
   round_of_16: 'Round of 16',
   quarter_finals: 'Quarter-finals',
@@ -92,9 +98,10 @@ const SUB_STEP_LABELS: Record<KnockoutStage, string> = {
   third_place: '3rd',
 };
 
-const TOP_STEPS: TopStep[] = ['groups', 'knockout', 'tiebreaker'];
+const TOP_STEPS: TopStep[] = ['groups', 'best_thirds', 'knockout', 'tiebreaker'];
 const TOP_STEP_LABELS: Record<TopStep, string> = {
   groups: 'Group Stage',
+  best_thirds: 'Best 3rds',
   knockout: 'Knockout',
   tiebreaker: 'Tiebreaker',
 };
@@ -105,6 +112,7 @@ function isKnockoutStage(step: Step): step is KnockoutStage {
 
 function topOf(step: Step): TopStep {
   if (step === 'groups') return 'groups';
+  if (step === 'best_thirds') return 'best_thirds';
   if (step === 'tiebreaker') return 'tiebreaker';
   return 'knockout';
 }
@@ -124,12 +132,14 @@ export interface InitialPrediction {
     fourth: string | null;
   }>;
   knockout: Array<{ matchId: string; winner: string | null }>;
+  bundles?: Array<{ slotIndex: number; groupLetter: string }>;
 }
 
 interface DraftData {
   predictionName: string;
   groupPredictions: GroupPrediction[];
   knockoutPredictions: KnockoutMatchPrediction[];
+  bundlePredictions: BundlePrediction[];
   totalGoals: number | null;
 }
 
@@ -284,6 +294,13 @@ export function PredictionsPageContent({
   const [knockoutPredictions, setKnockoutPredictions] = React.useState<KnockoutMatchPrediction[]>(
     []
   );
+  const [bundlePredictions, setBundlePredictions] = React.useState<BundlePrediction[]>(
+    () =>
+      (initial?.bundles ?? []).map((b) => ({
+        slotIndex: b.slotIndex,
+        groupLetter: b.groupLetter,
+      }))
+  );
   const [totalGoals, setTotalGoals] = React.useState<number | null>(initial?.totalGoals ?? null);
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [isSavingProgress, setIsSavingProgress] = React.useState(false);
@@ -334,8 +351,14 @@ export function PredictionsPageContent({
         })
       : baseKnockout;
 
+    const seedBundles: BundlePrediction[] = (initial?.bundles ?? []).map((b) => ({
+      slotIndex: b.slotIndex,
+      groupLetter: b.groupLetter,
+    }));
+
     let groupSeed = seedGroups;
     let knockoutSeed = seedKnockout;
+    let bundleSeed = seedBundles;
     let nameSeed = initial?.name ?? '';
     let totalGoalsSeed = initial?.totalGoals ?? null;
     let restoredFromDraft = false;
@@ -356,6 +379,7 @@ export function PredictionsPageContent({
           const match = draft.data.knockoutPredictions.find((s) => s.matchId === m.matchId);
           return match ? { matchId: m.matchId, winnerId: match.winnerId } : m;
         });
+        bundleSeed = draft.data.bundlePredictions ?? [];
         nameSeed = draft.data.predictionName ?? nameSeed;
         totalGoalsSeed = draft.data.totalGoals;
         restoredFromDraft = true;
@@ -364,6 +388,7 @@ export function PredictionsPageContent({
 
     setGroupPredictions(groupSeed);
     setKnockoutPredictions(knockoutSeed);
+    setBundlePredictions(bundleSeed);
     setTotalGoals(totalGoalsSeed);
     setPredictionName(nameSeed);
     setHydrated(true);
@@ -376,6 +401,7 @@ export function PredictionsPageContent({
             clearDraft();
             setGroupPredictions(seedGroups);
             setKnockoutPredictions(seedKnockout);
+            setBundlePredictions(seedBundles);
             setTotalGoals(initial?.totalGoals ?? null);
             setPredictionName(initial?.name ?? '');
           },
@@ -402,18 +428,23 @@ export function PredictionsPageContent({
     (p) => Object.values(p.positions).filter((v) => v !== null).length === 4
   ).length;
   const completedKnockoutMatches = knockoutPredictions.filter((p) => p.winnerId !== null).length;
+  const completedBundles = bundlePredictions.filter((b) => !!b.groupLetter).length;
   const tiebreakerSlots = 1;
   const filledTiebreaker = totalGoals !== null ? 1 : 0;
 
-  const totalSlots = totalGroupSlots + totalKnockoutMatches + tiebreakerSlots;
-  const filledSlots = filledGroupSlots + completedKnockoutMatches + filledTiebreaker;
+  const totalSlots =
+    totalGroupSlots + BUNDLE_SLOTS.length + totalKnockoutMatches + tiebreakerSlots;
+  const filledSlots =
+    filledGroupSlots + completedBundles + completedKnockoutMatches + filledTiebreaker;
   const overallPercent = totalSlots > 0 ? Math.round((filledSlots / totalSlots) * 100) : 0;
 
   const isGroupsComplete = totalGroupsCount > 0 && completedGroups === totalGroupsCount;
+  const isBundlesComplete = completedBundles === BUNDLE_SLOTS.length;
   const isBracketComplete =
     totalKnockoutMatches > 0 && completedKnockoutMatches === totalKnockoutMatches;
   const isTiebreakerComplete = totalGoals !== null;
-  const isPredictionsComplete = isGroupsComplete && isBracketComplete && isTiebreakerComplete;
+  const isPredictionsComplete =
+    isGroupsComplete && isBundlesComplete && isBracketComplete && isTiebreakerComplete;
 
   const trimmedName = predictionName.trim();
   const nameError =
@@ -459,6 +490,7 @@ export function PredictionsPageContent({
 
   const stepStatus: Record<Step, boolean> = {
     groups: isGroupsComplete,
+    best_thirds: isBundlesComplete,
     round_of_32: stageCompletion.round_of_32,
     round_of_16: stageCompletion.round_of_16,
     quarter_finals: stageCompletion.quarter_finals,
@@ -485,6 +517,8 @@ export function PredictionsPageContent({
       status = 'current';
     } else if (value === 'groups') {
       status = isGroupsComplete ? 'done' : 'upcoming';
+    } else if (value === 'best_thirds') {
+      status = isBundlesComplete ? 'done' : 'upcoming';
     } else if (value === 'knockout') {
       status = isBracketComplete ? 'done' : 'upcoming';
     } else {
@@ -507,6 +541,7 @@ export function PredictionsPageContent({
           next.predictionName !== undefined ? next.predictionName : predictionName,
         groupPredictions: next.groupPredictions ?? groupPredictions,
         knockoutPredictions: next.knockoutPredictions ?? knockoutPredictions,
+        bundlePredictions: next.bundlePredictions ?? bundlePredictions,
         totalGoals: next.totalGoals !== undefined ? next.totalGoals : totalGoals,
       });
     },
@@ -517,6 +552,7 @@ export function PredictionsPageContent({
       predictionName,
       groupPredictions,
       knockoutPredictions,
+      bundlePredictions,
       totalGoals,
     ]
   );
@@ -558,6 +594,16 @@ export function PredictionsPageContent({
     persistDraft({ totalGoals: value });
   };
 
+  const handleBundleChange = (slotIndex: number, groupLetter: string | null) => {
+    setBundlePredictions((prev) => {
+      const others = prev.filter((b) => b.slotIndex !== slotIndex);
+      const next = groupLetter ? [...others, { slotIndex, groupLetter }] : others;
+      next.sort((a, b) => a.slotIndex - b.slotIndex);
+      persistDraft({ bundlePredictions: next });
+      return next;
+    });
+  };
+
   const goToStep = (value: Step) => {
     setCurrentStep(value);
     userInteractedRef.current = true;
@@ -566,6 +612,7 @@ export function PredictionsPageContent({
   const handleTopChange = (value: string) => {
     if (!TOP_STEPS.includes(value as TopStep)) return;
     if (value === 'groups') return goToStep('groups');
+    if (value === 'best_thirds') return goToStep('best_thirds');
     if (value === 'tiebreaker') return goToStep('tiebreaker');
     const target = KNOCKOUT_STAGE_LIST.find((s) => !stageCompletion[s]) ?? 'round_of_32';
     goToStep(target);
@@ -634,6 +681,10 @@ export function PredictionsPageContent({
         knockout: knockoutPredictions.map((k) => ({
           matchId: k.matchId,
           winner: k.winnerId,
+        })),
+        bundles: bundlePredictions.map((b) => ({
+          slotIndex: b.slotIndex,
+          groupLetter: b.groupLetter,
         })),
       };
 
@@ -816,12 +867,23 @@ export function PredictionsPageContent({
             />
           )}
 
+          {currentStep === 'best_thirds' && (
+            <BestThirdBundleForm
+              teams={teams}
+              groupPredictions={groupPredictions}
+              bundlePredictions={bundlePredictions}
+              onBundleChange={handleBundleChange}
+              disabled={isLocked}
+            />
+          )}
+
           {isKnockoutStage(currentStep) && (
             <KnockoutBracket
               matches={matches}
               teams={teams}
               groupPredictions={groupPredictions}
               knockoutPredictions={knockoutPredictions}
+              bundlePredictions={bundlePredictions}
               onPredictionChange={handleKnockoutPredictionChange}
               disabled={isLocked}
               stage={currentStep}
