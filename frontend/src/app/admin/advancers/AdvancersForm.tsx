@@ -5,8 +5,6 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { CheckCircle2, Lock, Unlock } from 'lucide-react';
 import { toast } from 'sonner';
 
-import { PageLayout } from '@/components/layout/PageLayout';
-import { AdminNav } from '@/components/admin/AdminNav';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -121,10 +119,7 @@ export function AdvancersForm() {
   };
 
   return (
-    <PageLayout>
-      <h1 className="mb-2 text-3xl font-bold">Admin</h1>
-      <AdminNav />
-
+    <div>
       <div className="mb-6">
         <h2 className="text-xl font-semibold">Best-3rd advancers</h2>
         <p className="text-muted-foreground text-sm">
@@ -230,6 +225,6 @@ export function AdvancersForm() {
           </div>
         </CardContent>
       </Card>
-    </PageLayout>
+    </div>
   );
 }

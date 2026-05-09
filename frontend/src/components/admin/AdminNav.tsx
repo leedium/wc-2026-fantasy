@@ -9,7 +9,6 @@ const links = [
   { label: 'Results', href: '/admin/results' },
   { label: 'Users', href: '/admin/users' },
   { label: 'Tournament', href: '/admin/tournament' },
-  { label: 'Advancers', href: '/admin/advancers' },
 ];
 
 export function AdminNav() {
