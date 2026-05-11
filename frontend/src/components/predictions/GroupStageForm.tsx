@@ -1,9 +1,10 @@
 'use client';
 
 import * as React from 'react';
-import { CheckCircle2, Circle } from 'lucide-react';
+import { CheckCircle2, Circle, X } from 'lucide-react';
 
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
   Select,
@@ -55,12 +56,14 @@ function GroupCard({
   onPositionChange,
   disabled,
   extra,
+  showClear,
 }: {
   group: Group;
   prediction: GroupPrediction;
   onPositionChange: (position: PositionKey, teamId: string | null) => void;
   disabled?: boolean;
   extra?: React.ReactNode;
+  showClear?: boolean;
 }) {
   // Get selected team IDs for this group
   const selectedTeamIds = new Set(
@@ -145,6 +148,18 @@ function GroupCard({
                   ))}
                 </SelectContent>
               </Select>
+              {showClear && !disabled && !isAutoFilled && selectedValue ? (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="h-9 w-9 shrink-0"
+                  aria-label={`Clear ${POSITION_LABELS[position]} place`}
+                  onClick={() => onPositionChange(position, null)}
+                >
+                  <X className="h-4 w-4" aria-hidden />
+                </Button>
+              ) : null}
             </div>
           );
         })}
@@ -227,6 +242,7 @@ export function GroupStageForm({
               }
               disabled={disabled}
               extra={extraPerCard?.(group.id)}
+              showClear={isAdmin}
             />
           );
         })}

@@ -2,7 +2,7 @@
 
 import * as React from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { CheckCircle2, Lock, Unlock } from 'lucide-react';
+import { CheckCircle2, Lock, Unlock, X } from 'lucide-react';
 import { toast } from 'sonner';
 
 import { Badge } from '@/components/ui/badge';
@@ -122,6 +122,24 @@ export function AdvancersForm() {
     }
   };
 
+  const clearSlot = async (slotIndex: number) => {
+    if (!tournamentId) return;
+    try {
+      const res = await fetch('/api/admin/third-place-advancers', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tournamentId, slotIndex }),
+      });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(String(body.error ?? 'Failed'));
+      }
+      await queryClient.invalidateQueries({ queryKey: ['admin-advancers'] });
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Failed');
+    }
+  };
+
   const togglePhaseTwo = async (unlock: boolean) => {
     if (!tournamentId) return;
     setBusy(true);
@@ -198,34 +216,48 @@ export function AdvancersForm() {
                   </p>
                 </CardHeader>
                 <CardContent>
-                  <Select
-                    value={pick?.groupLetter ?? ''}
-                    onValueChange={(v) => setSlot(slot.slotIndex, v)}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Pick a group" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {slot.allowedLetters.map((letter) => {
-                        const team = thirdByGroup.get(letter);
-                        return (
-                          <SelectItem key={letter} value={letter}>
-                            {team ? (
-                              <span className="flex items-center gap-2">
-                                <TeamFlag code={team.code} />
-                                <span className="text-muted-foreground font-mono text-xs">
-                                  {letter}
+                  <div className="flex items-center gap-1">
+                    <Select
+                      value={pick?.groupLetter ?? ''}
+                      onValueChange={(v) => setSlot(slot.slotIndex, v)}
+                    >
+                      <SelectTrigger className="flex-1">
+                        <SelectValue placeholder="Pick a group" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {slot.allowedLetters.map((letter) => {
+                          const team = thirdByGroup.get(letter);
+                          return (
+                            <SelectItem key={letter} value={letter}>
+                              {team ? (
+                                <span className="flex items-center gap-2">
+                                  <TeamFlag code={team.code} />
+                                  <span className="text-muted-foreground font-mono text-xs">
+                                    {letter}
+                                  </span>
+                                  <span>{team.name}</span>
                                 </span>
-                                <span>{team.name}</span>
-                              </span>
-                            ) : (
-                              <>Group {letter}</>
-                            )}
-                          </SelectItem>
-                        );
-                      })}
-                    </SelectContent>
-                  </Select>
+                              ) : (
+                                <>Group {letter}</>
+                              )}
+                            </SelectItem>
+                          );
+                        })}
+                      </SelectContent>
+                    </Select>
+                    {pick ? (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="h-9 w-9 shrink-0"
+                        aria-label={`Clear slot ${slot.slotIndex + 1}`}
+                        onClick={() => clearSlot(slot.slotIndex)}
+                      >
+                        <X className="h-4 w-4" aria-hidden />
+                      </Button>
+                    ) : null}
+                  </div>
                 </CardContent>
               </Card>
             );
