@@ -5,7 +5,6 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import {
   Select,
   SelectContent,
@@ -14,13 +13,34 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import type { KnockoutMatch, Team } from '@/types/tournament';
+import { TeamFlag } from '@/components/shared/TeamFlag';
+import { resolveTeamSource } from '@/lib/knockoutResolver';
+import type {
+  BundlePrediction,
+  GroupPrediction,
+  KnockoutMatch,
+  KnockoutMatchPrediction,
+  Team,
+} from '@/types/tournament';
 
 interface KnockoutResultRow {
   match_id: string;
   winner_team_id: string;
   loser_team_id: string;
   total_goals: number | null;
+}
+
+interface GroupStandingRow {
+  group_id: string;
+  first_team_id: string | null;
+  second_team_id: string | null;
+  third_team_id: string | null;
+  fourth_team_id: string | null;
+}
+
+interface AdvancersResponse {
+  tournamentId: string;
+  advancers: Array<{ slotIndex: number; groupLetter: string }>;
 }
 
 const STAGE_LABELS: Record<KnockoutMatch['stage'], string> = {
@@ -32,15 +52,7 @@ const STAGE_LABELS: Record<KnockoutMatch['stage'], string> = {
   final: 'Final',
 };
 
-interface MatchPicks {
-  winner: string;
-  loser: string;
-  totalGoals: string;
-}
-const EMPTY: MatchPicks = { winner: '', loser: '', totalGoals: '' };
-
-// Sentinel for the admin-only "(none)" SelectItem. Radix forbids empty-string
-// item values, so we intercept this in onValueChange and fire a DELETE.
+// Sentinel for the admin-only "(none)" SelectItem (Radix forbids empty values).
 const CLEAR_VALUE = '__CLEAR__';
 
 export function KnockoutResultsEditor({
@@ -66,32 +78,105 @@ export function KnockoutResultsEditor({
     initialData: [],
   });
 
+  const standings = useQuery<GroupStandingRow[]>({
+    queryKey: ['group-standings', tournamentId],
+    queryFn: async () => {
+      const res = await fetch(`/api/admin/group-standings?tournamentId=${tournamentId}`).catch(
+        () => null
+      );
+      if (res && res.ok) return res.json();
+      return [];
+    },
+    initialData: [],
+  });
+
+  const advancers = useQuery<AdvancersResponse>({
+    queryKey: ['admin-advancers'],
+    queryFn: async () => {
+      const res = await fetch('/api/admin/third-place-advancers').catch(() => null);
+      if (res && res.ok) return res.json();
+      return { tournamentId, advancers: [] };
+    },
+  });
+
   const submittedById = React.useMemo(() => {
     const map = new Map<string, KnockoutResultRow>();
     for (const r of results.data ?? []) map.set(r.match_id, r);
     return map;
   }, [results.data]);
 
-  const [picks, setPicks] = React.useState<Record<string, MatchPicks>>({});
+  // Adapt server rows to the shapes resolveTeamSource expects.
+  const groupPredictions: GroupPrediction[] = React.useMemo(
+    () =>
+      (standings.data ?? []).map((row) => ({
+        groupId: row.group_id,
+        positions: {
+          first: row.first_team_id,
+          second: row.second_team_id,
+          third: row.third_team_id,
+          fourth: row.fourth_team_id,
+        },
+      })),
+    [standings.data]
+  );
+
+  const knockoutPredictions: KnockoutMatchPrediction[] = React.useMemo(
+    () =>
+      (results.data ?? []).map((r) => ({
+        matchId: r.match_id,
+        winnerId: r.winner_team_id,
+      })),
+    [results.data]
+  );
+
+  const bundlePredictions: BundlePrediction[] = React.useMemo(
+    () => advancers.data?.advancers ?? [],
+    [advancers.data]
+  );
+
+  const teamById = React.useMemo(() => {
+    const map = new Map<string, Team>();
+    for (const t of teams) map.set(t.id, t);
+    return map;
+  }, [teams]);
+
+  // For each match, resolve the two teams that will actually play.
+  const resolvedPairs = React.useMemo(() => {
+    const map = new Map<string, { team1Id: string | null; team2Id: string | null }>();
+    for (const m of matches) {
+      map.set(m.id, {
+        team1Id: resolveTeamSource(
+          m.team1Source,
+          matches,
+          groupPredictions,
+          knockoutPredictions,
+          bundlePredictions
+        ),
+        team2Id: resolveTeamSource(
+          m.team2Source,
+          matches,
+          groupPredictions,
+          knockoutPredictions,
+          bundlePredictions
+        ),
+      });
+    }
+    return map;
+  }, [matches, groupPredictions, knockoutPredictions, bundlePredictions]);
+
+  const [picks, setPicks] = React.useState<Record<string, string>>({});
   const [savingId, setSavingId] = React.useState<string | null>(null);
 
   React.useEffect(() => {
-    const next: Record<string, MatchPicks> = {};
+    const next: Record<string, string> = {};
     for (const m of matches) {
-      const r = submittedById.get(m.id);
-      next[m.id] = r
-        ? {
-            winner: r.winner_team_id,
-            loser: r.loser_team_id,
-            totalGoals: r.total_goals != null ? String(r.total_goals) : '',
-          }
-        : EMPTY;
+      next[m.id] = submittedById.get(m.id)?.winner_team_id ?? '';
     }
     setPicks(next);
   }, [matches, submittedById]);
 
   const handleClear = async (matchId: string) => {
-    setPicks((prev) => ({ ...prev, [matchId]: EMPTY }));
+    setPicks((prev) => ({ ...prev, [matchId]: '' }));
     if (!submittedById.has(matchId)) return;
     try {
       const res = await fetch('/api/admin/knockout-results', {
@@ -112,12 +197,14 @@ export function KnockoutResultsEditor({
   };
 
   const handleSave = async (matchId: string) => {
-    const p = picks[matchId];
-    if (!p || !p.winner || !p.loser) {
-      toast.error('Winner and loser are required');
+    const winner = picks[matchId];
+    const pair = resolvedPairs.get(matchId);
+    if (!winner || !pair?.team1Id || !pair?.team2Id) {
+      toast.error('Pick a winner first');
       return;
     }
-    if (p.winner === p.loser) {
+    const loser = pair.team1Id === winner ? pair.team2Id : pair.team1Id;
+    if (winner === loser) {
       toast.error('Winner and loser must differ');
       return;
     }
@@ -129,9 +216,9 @@ export function KnockoutResultsEditor({
         body: JSON.stringify({
           tournamentId,
           matchId,
-          winnerTeamId: p.winner,
-          loserTeamId: p.loser,
-          totalGoals: p.totalGoals ? Number(p.totalGoals) : null,
+          winnerTeamId: winner,
+          loserTeamId: loser,
+          totalGoals: null,
         }),
       });
       if (!res.ok) {
@@ -165,8 +252,13 @@ export function KnockoutResultsEditor({
           <h3 className="mb-3 text-lg font-semibold">{STAGE_LABELS[stage]}</h3>
           <div className="grid gap-3 md:grid-cols-2">
             {stageMatches.map((m) => {
-              const p = picks[m.id] ?? EMPTY;
+              const winner = picks[m.id] ?? '';
               const submitted = submittedById.has(m.id);
+              const pair = resolvedPairs.get(m.id);
+              const team1 = pair?.team1Id ? teamById.get(pair.team1Id) : undefined;
+              const team2 = pair?.team2Id ? teamById.get(pair.team2Id) : undefined;
+              const bothResolved = !!team1 && !!team2;
+
               return (
                 <Card key={m.id}>
                   <CardContent className="space-y-2 p-4">
@@ -183,82 +275,51 @@ export function KnockoutResultsEditor({
                         )}
                       </div>
                     </div>
-                    <div className="grid gap-2 sm:grid-cols-3">
+                    {bothResolved ? (
                       <Select
-                        value={p.winner}
+                        value={winner}
                         onValueChange={(v) => {
                           if (v === CLEAR_VALUE) {
                             void handleClear(m.id);
                             return;
                           }
-                          setPicks((prev) => ({
-                            ...prev,
-                            [m.id]: { ...prev[m.id], winner: v },
-                          }));
+                          setPicks((prev) => ({ ...prev, [m.id]: v }));
                         }}
                       >
                         <SelectTrigger>
-                          <SelectValue placeholder="Winner" />
+                          <SelectValue placeholder="Pick winner" />
                         </SelectTrigger>
                         <SelectContent>
-                          {p.winner ? (
+                          {winner ? (
                             <SelectItem value={CLEAR_VALUE}>
                               <span className="text-muted-foreground">(none)</span>
                             </SelectItem>
                           ) : null}
-                          {teams.map((t) => (
-                            <SelectItem key={t.id} value={t.id}>
-                              {t.name}
-                            </SelectItem>
-                          ))}
+                          {[team1, team2].map((t) =>
+                            t ? (
+                              <SelectItem key={t.id} value={t.id}>
+                                <span className="flex items-center gap-2">
+                                  <TeamFlag code={t.code} />
+                                  <span className="text-muted-foreground font-mono text-xs">
+                                    {t.code}
+                                  </span>
+                                  <span>{t.name}</span>
+                                </span>
+                              </SelectItem>
+                            ) : null
+                          )}
                         </SelectContent>
                       </Select>
-                      <Select
-                        value={p.loser}
-                        onValueChange={(v) => {
-                          if (v === CLEAR_VALUE) {
-                            void handleClear(m.id);
-                            return;
-                          }
-                          setPicks((prev) => ({
-                            ...prev,
-                            [m.id]: { ...prev[m.id], loser: v },
-                          }));
-                        }}
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Loser" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {p.loser ? (
-                            <SelectItem value={CLEAR_VALUE}>
-                              <span className="text-muted-foreground">(none)</span>
-                            </SelectItem>
-                          ) : null}
-                          {teams.map((t) => (
-                            <SelectItem key={t.id} value={t.id}>
-                              {t.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <Input
-                        placeholder="Goals"
-                        type="number"
-                        value={p.totalGoals}
-                        onChange={(e) =>
-                          setPicks((prev) => ({
-                            ...prev,
-                            [m.id]: { ...prev[m.id], totalGoals: e.target.value },
-                          }))
-                        }
-                      />
-                    </div>
+                    ) : (
+                      <p className="text-muted-foreground bg-muted/40 rounded-md border px-3 py-2 text-xs">
+                        TBD — set the earlier results that feed this match first.
+                      </p>
+                    )}
                     <Button
                       size="sm"
                       className="w-full"
                       onClick={() => handleSave(m.id)}
-                      disabled={savingId === m.id}
+                      disabled={savingId === m.id || !winner || !bothResolved}
                     >
                       {savingId === m.id ? 'Saving…' : submitted ? 'Update' : 'Save'}
                     </Button>
