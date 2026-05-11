@@ -11,6 +11,11 @@ interface Body {
   fourth?: string;
 }
 
+interface DeleteBody {
+  tournamentId?: string;
+  groupId?: string;
+}
+
 export async function GET(request: NextRequest) {
   const ctx = await requireAdmin();
   if (isAdminGateError(ctx)) return ctx.response;
@@ -52,6 +57,27 @@ export async function POST(request: NextRequest) {
     p_second: body.second,
     p_third: body.third,
     p_fourth: body.fourth,
+  });
+
+  if (error) return NextResponse.json({ error: safeMessage(error) }, { status: 400 });
+  return NextResponse.json({ ok: true });
+}
+
+export async function DELETE(request: NextRequest) {
+  const ctx = await requireAdmin();
+  if (isAdminGateError(ctx)) return ctx.response;
+
+  const body = (await request.json().catch(() => ({}))) as DeleteBody;
+  if (!body.tournamentId || !body.groupId) {
+    return NextResponse.json(
+      { error: 'tournamentId and groupId are required' },
+      { status: 400 }
+    );
+  }
+
+  const { error } = await ctx.supabase.rpc('admin_clear_group_standing', {
+    p_tournament_id: body.tournamentId,
+    p_group_id: body.groupId,
   });
 
   if (error) return NextResponse.json({ error: safeMessage(error) }, { status: 400 });

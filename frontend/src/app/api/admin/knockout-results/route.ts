@@ -10,6 +10,11 @@ interface Body {
   totalGoals?: number | null;
 }
 
+interface DeleteBody {
+  tournamentId?: string;
+  matchId?: string;
+}
+
 export async function GET(request: NextRequest) {
   const ctx = await requireAdmin();
   if (isAdminGateError(ctx)) return ctx.response;
@@ -47,6 +52,27 @@ export async function POST(request: NextRequest) {
     p_winner_team_id: body.winnerTeamId,
     p_loser_team_id: body.loserTeamId,
     p_total_goals: body.totalGoals ?? null,
+  });
+
+  if (error) return NextResponse.json({ error: safeMessage(error) }, { status: 400 });
+  return NextResponse.json({ ok: true });
+}
+
+export async function DELETE(request: NextRequest) {
+  const ctx = await requireAdmin();
+  if (isAdminGateError(ctx)) return ctx.response;
+
+  const body = (await request.json().catch(() => ({}))) as DeleteBody;
+  if (!body.tournamentId || !body.matchId) {
+    return NextResponse.json(
+      { error: 'tournamentId and matchId are required' },
+      { status: 400 }
+    );
+  }
+
+  const { error } = await ctx.supabase.rpc('admin_clear_knockout_result', {
+    p_tournament_id: body.tournamentId,
+    p_match_id: body.matchId,
   });
 
   if (error) return NextResponse.json({ error: safeMessage(error) }, { status: 400 });

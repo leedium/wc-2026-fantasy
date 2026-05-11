@@ -2,7 +2,7 @@
 
 import * as React from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { CheckCircle2, Lock, Unlock, X } from 'lucide-react';
+import { CheckCircle2, Lock, Unlock } from 'lucide-react';
 import { toast } from 'sonner';
 
 import { Badge } from '@/components/ui/badge';
@@ -26,6 +26,9 @@ interface AdvancersResponse {
   tournamentId: string;
   advancers: Array<{ slotIndex: number; groupLetter: string }>;
 }
+
+// Sentinel for the admin-only "(none)" SelectItem (Radix forbids empty values).
+const CLEAR_VALUE = '__CLEAR__';
 
 interface TournamentResponse {
   id: string;
@@ -216,48 +219,45 @@ export function AdvancersForm() {
                   </p>
                 </CardHeader>
                 <CardContent>
-                  <div className="flex items-center gap-1">
-                    <Select
-                      value={pick?.groupLetter ?? ''}
-                      onValueChange={(v) => setSlot(slot.slotIndex, v)}
-                    >
-                      <SelectTrigger className="flex-1">
-                        <SelectValue placeholder="Pick a group" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {slot.allowedLetters.map((letter) => {
-                          const team = thirdByGroup.get(letter);
-                          return (
-                            <SelectItem key={letter} value={letter}>
-                              {team ? (
-                                <span className="flex items-center gap-2">
-                                  <TeamFlag code={team.code} />
-                                  <span className="text-muted-foreground font-mono text-xs">
-                                    {letter}
-                                  </span>
-                                  <span>{team.name}</span>
+                  <Select
+                    value={pick?.groupLetter ?? ''}
+                    onValueChange={(v) => {
+                      if (v === CLEAR_VALUE) {
+                        void clearSlot(slot.slotIndex);
+                        return;
+                      }
+                      void setSlot(slot.slotIndex, v);
+                    }}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Pick a group" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {pick ? (
+                        <SelectItem value={CLEAR_VALUE}>
+                          <span className="text-muted-foreground">(none)</span>
+                        </SelectItem>
+                      ) : null}
+                      {slot.allowedLetters.map((letter) => {
+                        const team = thirdByGroup.get(letter);
+                        return (
+                          <SelectItem key={letter} value={letter}>
+                            {team ? (
+                              <span className="flex items-center gap-2">
+                                <TeamFlag code={team.code} />
+                                <span className="text-muted-foreground font-mono text-xs">
+                                  {letter}
                                 </span>
-                              ) : (
-                                <>Group {letter}</>
-                              )}
-                            </SelectItem>
-                          );
-                        })}
-                      </SelectContent>
-                    </Select>
-                    {pick ? (
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon"
-                        className="h-9 w-9 shrink-0"
-                        aria-label={`Clear slot ${slot.slotIndex + 1}`}
-                        onClick={() => clearSlot(slot.slotIndex)}
-                      >
-                        <X className="h-4 w-4" aria-hidden />
-                      </Button>
-                    ) : null}
-                  </div>
+                                <span>{team.name}</span>
+                              </span>
+                            ) : (
+                              <>Group {letter}</>
+                            )}
+                          </SelectItem>
+                        );
+                      })}
+                    </SelectContent>
+                  </Select>
                 </CardContent>
               </Card>
             );

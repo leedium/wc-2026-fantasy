@@ -3,7 +3,6 @@
 import * as React from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
-import { X } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -39,6 +38,10 @@ interface MatchPicks {
   totalGoals: string;
 }
 const EMPTY: MatchPicks = { winner: '', loser: '', totalGoals: '' };
+
+// Sentinel for the admin-only "(none)" SelectItem. Radix forbids empty-string
+// item values, so we intercept this in onValueChange and fire a DELETE.
+const CLEAR_VALUE = '__CLEAR__';
 
 export function KnockoutResultsEditor({
   tournamentId,
@@ -86,6 +89,27 @@ export function KnockoutResultsEditor({
     }
     setPicks(next);
   }, [matches, submittedById]);
+
+  const handleClear = async (matchId: string) => {
+    setPicks((prev) => ({ ...prev, [matchId]: EMPTY }));
+    if (!submittedById.has(matchId)) return;
+    try {
+      const res = await fetch('/api/admin/knockout-results', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tournamentId, matchId }),
+      });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body.error ?? 'Failed to clear');
+      }
+      toast.success(`Match ${matchId} cleared`);
+      await queryClient.invalidateQueries({ queryKey: ['knockout-results', tournamentId] });
+      await queryClient.invalidateQueries({ queryKey: ['leaderboard', 1] });
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Failed to clear');
+    }
+  };
 
   const handleSave = async (matchId: string) => {
     const p = picks[matchId];
@@ -160,84 +184,64 @@ export function KnockoutResultsEditor({
                       </div>
                     </div>
                     <div className="grid gap-2 sm:grid-cols-3">
-                      <div className="flex items-center gap-1">
-                        <Select
-                          value={p.winner}
-                          onValueChange={(v) =>
-                            setPicks((prev) => ({
-                              ...prev,
-                              [m.id]: { ...prev[m.id], winner: v },
-                            }))
+                      <Select
+                        value={p.winner}
+                        onValueChange={(v) => {
+                          if (v === CLEAR_VALUE) {
+                            void handleClear(m.id);
+                            return;
                           }
-                        >
-                          <SelectTrigger className="flex-1">
-                            <SelectValue placeholder="Winner" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {teams.map((t) => (
-                              <SelectItem key={t.id} value={t.id}>
-                                {t.name}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        {p.winner ? (
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="icon"
-                            className="h-9 w-9 shrink-0"
-                            aria-label="Clear winner"
-                            onClick={() =>
-                              setPicks((prev) => ({
-                                ...prev,
-                                [m.id]: { ...prev[m.id], winner: '' },
-                              }))
-                            }
-                          >
-                            <X className="h-4 w-4" aria-hidden />
-                          </Button>
-                        ) : null}
-                      </div>
-                      <div className="flex items-center gap-1">
-                        <Select
-                          value={p.loser}
-                          onValueChange={(v) =>
-                            setPicks((prev) => ({
-                              ...prev,
-                              [m.id]: { ...prev[m.id], loser: v },
-                            }))
+                          setPicks((prev) => ({
+                            ...prev,
+                            [m.id]: { ...prev[m.id], winner: v },
+                          }));
+                        }}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Winner" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {p.winner ? (
+                            <SelectItem value={CLEAR_VALUE}>
+                              <span className="text-muted-foreground">(none)</span>
+                            </SelectItem>
+                          ) : null}
+                          {teams.map((t) => (
+                            <SelectItem key={t.id} value={t.id}>
+                              {t.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <Select
+                        value={p.loser}
+                        onValueChange={(v) => {
+                          if (v === CLEAR_VALUE) {
+                            void handleClear(m.id);
+                            return;
                           }
-                        >
-                          <SelectTrigger className="flex-1">
-                            <SelectValue placeholder="Loser" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {teams.map((t) => (
-                              <SelectItem key={t.id} value={t.id}>
-                                {t.name}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        {p.loser ? (
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="icon"
-                            className="h-9 w-9 shrink-0"
-                            aria-label="Clear loser"
-                            onClick={() =>
-                              setPicks((prev) => ({
-                                ...prev,
-                                [m.id]: { ...prev[m.id], loser: '' },
-                              }))
-                            }
-                          >
-                            <X className="h-4 w-4" aria-hidden />
-                          </Button>
-                        ) : null}
-                      </div>
+                          setPicks((prev) => ({
+                            ...prev,
+                            [m.id]: { ...prev[m.id], loser: v },
+                          }));
+                        }}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Loser" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {p.loser ? (
+                            <SelectItem value={CLEAR_VALUE}>
+                              <span className="text-muted-foreground">(none)</span>
+                            </SelectItem>
+                          ) : null}
+                          {teams.map((t) => (
+                            <SelectItem key={t.id} value={t.id}>
+                              {t.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                       <Input
                         placeholder="Goals"
                         type="number"

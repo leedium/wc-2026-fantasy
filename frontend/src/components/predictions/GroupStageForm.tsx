@@ -1,10 +1,9 @@
 'use client';
 
 import * as React from 'react';
-import { CheckCircle2, Circle, X } from 'lucide-react';
+import { CheckCircle2, Circle } from 'lucide-react';
 
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
   Select,
@@ -16,6 +15,11 @@ import {
 import { TeamFlag } from '@/components/shared/TeamFlag';
 import { cn } from '@/lib/utils';
 import type { Group, GroupPrediction, Team } from '@/types/tournament';
+
+// Sentinel value for the admin-only "(none)" SelectItem. Radix Select forbids
+// empty-string item values, so we route this through onValueChange and translate
+// it back to null when calling onPositionChange.
+const CLEAR_VALUE = '__CLEAR__';
 
 // Position labels for display
 const POSITION_LABELS = {
@@ -127,7 +131,9 @@ function GroupCard({
               </span>
               <Select
                 value={selectedValue ?? ''}
-                onValueChange={(value) => onPositionChange(position, value || null)}
+                onValueChange={(value) =>
+                  onPositionChange(position, value === CLEAR_VALUE ? null : value || null)
+                }
                 disabled={disabled || isAutoFilled}
               >
                 <SelectTrigger
@@ -137,6 +143,11 @@ function GroupCard({
                   <SelectValue placeholder="Select team" />
                 </SelectTrigger>
                 <SelectContent>
+                  {showClear && !isAutoFilled && selectedValue ? (
+                    <SelectItem value={CLEAR_VALUE}>
+                      <span className="text-muted-foreground">(none)</span>
+                    </SelectItem>
+                  ) : null}
                   {availableTeams.map((team) => (
                     <SelectItem key={team.id} value={team.id}>
                       <span className="flex items-center gap-2">
@@ -148,18 +159,6 @@ function GroupCard({
                   ))}
                 </SelectContent>
               </Select>
-              {showClear && !disabled && !isAutoFilled && selectedValue ? (
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
-                  className="h-9 w-9 shrink-0"
-                  aria-label={`Clear ${POSITION_LABELS[position]} place`}
-                  onClick={() => onPositionChange(position, null)}
-                >
-                  <X className="h-4 w-4" aria-hidden />
-                </Button>
-              ) : null}
             </div>
           );
         })}

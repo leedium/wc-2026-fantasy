@@ -86,7 +86,42 @@ export function GroupStandingsEditor({
     position: GroupPositionKey,
     teamId: string | null
   ) => {
+    if (teamId === null) {
+      // Admin picked the "(none)" entry — revert the whole group standing.
+      // No-op for groups that were never saved.
+      if (submittedById.has(groupId)) {
+        void clearGroup(groupId);
+      } else {
+        setPredictions((prev) =>
+          prev.map((p) =>
+            p.groupId === groupId
+              ? { groupId, positions: { first: null, second: null, third: null, fourth: null } }
+              : p
+          )
+        );
+      }
+      return;
+    }
     setPredictions((prev) => applyGroupPositionChange(prev, groupId, position, teamId));
+  };
+
+  const clearGroup = async (groupId: string) => {
+    try {
+      const res = await fetch('/api/admin/group-standings', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tournamentId, groupId }),
+      });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body.error ?? 'Failed to clear');
+      }
+      toast.success(`Group ${groupId} cleared`);
+      await queryClient.invalidateQueries({ queryKey: ['group-standings', tournamentId] });
+      await queryClient.invalidateQueries({ queryKey: ['leaderboard', 1] });
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Failed to clear');
+    }
   };
 
   const handleSave = async (groupId: string) => {
