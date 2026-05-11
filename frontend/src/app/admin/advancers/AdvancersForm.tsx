@@ -27,6 +27,9 @@ interface AdvancersResponse {
   advancers: Array<{ slotIndex: number; groupLetter: string }>;
 }
 
+// Sentinel for the admin-only "(none)" SelectItem (Radix forbids empty values).
+const CLEAR_VALUE = '__CLEAR__';
+
 interface TournamentResponse {
   id: string;
   knockoutUnlocked: boolean;
@@ -122,6 +125,24 @@ export function AdvancersForm() {
     }
   };
 
+  const clearSlot = async (slotIndex: number) => {
+    if (!tournamentId) return;
+    try {
+      const res = await fetch('/api/admin/third-place-advancers', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tournamentId, slotIndex }),
+      });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(String(body.error ?? 'Failed'));
+      }
+      await queryClient.invalidateQueries({ queryKey: ['admin-advancers'] });
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Failed');
+    }
+  };
+
   const togglePhaseTwo = async (unlock: boolean) => {
     if (!tournamentId) return;
     setBusy(true);
@@ -200,12 +221,23 @@ export function AdvancersForm() {
                 <CardContent>
                   <Select
                     value={pick?.groupLetter ?? ''}
-                    onValueChange={(v) => setSlot(slot.slotIndex, v)}
+                    onValueChange={(v) => {
+                      if (v === CLEAR_VALUE) {
+                        void clearSlot(slot.slotIndex);
+                        return;
+                      }
+                      void setSlot(slot.slotIndex, v);
+                    }}
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="Pick a group" />
                     </SelectTrigger>
                     <SelectContent>
+                      {pick ? (
+                        <SelectItem value={CLEAR_VALUE}>
+                          <span className="text-muted-foreground">(none)</span>
+                        </SelectItem>
+                      ) : null}
                       {slot.allowedLetters.map((letter) => {
                         const team = thirdByGroup.get(letter);
                         return (

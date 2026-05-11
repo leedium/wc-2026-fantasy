@@ -450,8 +450,21 @@ export function PredictionsPageContent({
   const isBracketComplete =
     totalKnockoutMatches > 0 && completedKnockoutMatches === totalKnockoutMatches;
   const isTiebreakerComplete = totalGoals !== null;
-  const isPredictionsComplete =
-    isGroupsComplete && isBundlesComplete && isBracketComplete && isTiebreakerComplete;
+
+  // Which fields the current submit can actually accept depends on phase. The
+  // server-side RPC (submit_predictions in 0022) raises 'phase 1 only fields
+  // allowed' if a phase-1 payload includes knockout or total_goals, and
+  // 'phase 1 ended; group + bundle picks are frozen' on the inverse — so the
+  // wizard has to gate completeness on the same partition. Routes that go
+  // through admin_submit_predictions (super admin editing themselves in non-
+  // phase-1 phases, or any admin editing a user) bypass the guard and need
+  // everything filled to count as complete.
+  const usesAdminRoute = effectiveApiBasePath.startsWith('/api/admin/');
+  const isPredictionsComplete = usesAdminRoute
+    ? isGroupsComplete && isBundlesComplete && isBracketComplete && isTiebreakerComplete
+    : phase === 'phase2_open'
+      ? isBracketComplete && isTiebreakerComplete
+      : isGroupsComplete && isBundlesComplete;
 
   const trimmedName = predictionName.trim();
   const nameError =
@@ -671,26 +684,37 @@ export function PredictionsPageContent({
     if (markSubmitted) setIsSubmitting(true);
     else setIsSavingProgress(true);
     try {
+      // Phase-aware payload. The RPC rejects mismatched fields (see the
+      // matching gate around isPredictionsComplete above). Admin route
+      // (admin_submit_predictions) has no phase guards, so send everything.
+      const sendPhase1Fields = usesAdminRoute || phase === 'phase1';
+      const sendPhase2Fields = usesAdminRoute || phase === 'phase2_open';
       const body = {
         tournamentId: tournament.id,
         predictionName: trimmedName,
-        totalGoals,
+        totalGoals: sendPhase2Fields ? totalGoals : null,
         submit: markSubmitted,
-        groups: groupPredictions.map((g) => ({
-          groupId: g.groupId,
-          first: g.positions.first,
-          second: g.positions.second,
-          third: g.positions.third,
-          fourth: g.positions.fourth,
-        })),
-        knockout: knockoutPredictions.map((k) => ({
-          matchId: k.matchId,
-          winner: k.winnerId,
-        })),
-        bundles: bundlePredictions.map((b) => ({
-          slotIndex: b.slotIndex,
-          groupLetter: b.groupLetter,
-        })),
+        groups: sendPhase1Fields
+          ? groupPredictions.map((g) => ({
+              groupId: g.groupId,
+              first: g.positions.first,
+              second: g.positions.second,
+              third: g.positions.third,
+              fourth: g.positions.fourth,
+            }))
+          : [],
+        knockout: sendPhase2Fields
+          ? knockoutPredictions.map((k) => ({
+              matchId: k.matchId,
+              winner: k.winnerId,
+            }))
+          : [],
+        bundles: sendPhase1Fields
+          ? bundlePredictions.map((b) => ({
+              slotIndex: b.slotIndex,
+              groupLetter: b.groupLetter,
+            }))
+          : [],
       };
 
       const url =

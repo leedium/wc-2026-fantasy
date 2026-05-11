@@ -16,6 +16,11 @@ import { TeamFlag } from '@/components/shared/TeamFlag';
 import { cn } from '@/lib/utils';
 import type { Group, GroupPrediction, Team } from '@/types/tournament';
 
+// Sentinel value for the admin-only "(none)" SelectItem. Radix Select forbids
+// empty-string item values, so we route this through onValueChange and translate
+// it back to null when calling onPositionChange.
+const CLEAR_VALUE = '__CLEAR__';
+
 // Position labels for display
 const POSITION_LABELS = {
   first: '1st',
@@ -55,12 +60,14 @@ function GroupCard({
   onPositionChange,
   disabled,
   extra,
+  showClear,
 }: {
   group: Group;
   prediction: GroupPrediction;
   onPositionChange: (position: PositionKey, teamId: string | null) => void;
   disabled?: boolean;
   extra?: React.ReactNode;
+  showClear?: boolean;
 }) {
   // Get selected team IDs for this group
   const selectedTeamIds = new Set(
@@ -124,7 +131,9 @@ function GroupCard({
               </span>
               <Select
                 value={selectedValue ?? ''}
-                onValueChange={(value) => onPositionChange(position, value || null)}
+                onValueChange={(value) =>
+                  onPositionChange(position, value === CLEAR_VALUE ? null : value || null)
+                }
                 disabled={disabled || isAutoFilled}
               >
                 <SelectTrigger
@@ -134,6 +143,11 @@ function GroupCard({
                   <SelectValue placeholder="Select team" />
                 </SelectTrigger>
                 <SelectContent>
+                  {showClear && !isAutoFilled && selectedValue ? (
+                    <SelectItem value={CLEAR_VALUE}>
+                      <span className="text-muted-foreground">(none)</span>
+                    </SelectItem>
+                  ) : null}
                   {availableTeams.map((team) => (
                     <SelectItem key={team.id} value={team.id}>
                       <span className="flex items-center gap-2">
@@ -227,6 +241,7 @@ export function GroupStageForm({
               }
               disabled={disabled}
               extra={extraPerCard?.(group.id)}
+              showClear={isAdmin}
             />
           );
         })}

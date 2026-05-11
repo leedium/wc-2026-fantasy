@@ -8,6 +8,11 @@ interface PatchBody {
   groupLetter?: string;
 }
 
+interface DeleteBody {
+  tournamentId?: string;
+  slotIndex?: number;
+}
+
 export async function GET() {
   const ctx = await requireAdmin();
   if (isAdminGateError(ctx)) return ctx.response;
@@ -60,6 +65,28 @@ export async function PATCH(request: NextRequest) {
     const msg = error.message ?? '';
     const status = msg.includes('unknown bundle slot') ? 404 : 400;
     return NextResponse.json({ error: safeMessage(error) }, { status });
+  }
+  return NextResponse.json({ success: true });
+}
+
+export async function DELETE(request: NextRequest) {
+  const ctx = await requireAdmin();
+  if (isAdminGateError(ctx)) return ctx.response;
+
+  const body = (await request.json().catch(() => ({}))) as DeleteBody;
+  if (!body.tournamentId) {
+    return NextResponse.json({ error: 'tournamentId is required' }, { status: 400 });
+  }
+  if (typeof body.slotIndex !== 'number' || body.slotIndex < 0 || body.slotIndex > 7) {
+    return NextResponse.json({ error: 'slotIndex must be 0-7' }, { status: 400 });
+  }
+
+  const { error } = await ctx.supabase.rpc('admin_clear_third_place_advancer', {
+    p_tournament_id: body.tournamentId,
+    p_slot_index: body.slotIndex,
+  });
+  if (error) {
+    return NextResponse.json({ error: safeMessage(error) }, { status: 400 });
   }
   return NextResponse.json({ success: true });
 }
