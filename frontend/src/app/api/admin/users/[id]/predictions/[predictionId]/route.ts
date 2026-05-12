@@ -19,7 +19,7 @@ interface UpdatePayload {
     fourth: string | null;
   }>;
   knockout?: Array<{ matchId: string; winner: string | null }>;
-  bundles?: Array<{ slotIndex: number; groupLetter: string }>;
+  advancers?: Array<{ rank: number; teamId: string }>;
 }
 
 export async function GET(_request: NextRequest, context: RouteContext) {
@@ -38,7 +38,7 @@ export async function GET(_request: NextRequest, context: RouteContext) {
 
   if (!prediction) return NextResponse.json({ error: 'Not found' }, { status: 404 });
 
-  const [groupsRes, knockoutRes, bundlesRes] = await Promise.all([
+  const [groupsRes, knockoutRes, advancersRes] = await Promise.all([
     ctx.supabase
       .from('group_predictions')
       .select('group_id, first_team_id, second_team_id, third_team_id, fourth_team_id')
@@ -48,8 +48,8 @@ export async function GET(_request: NextRequest, context: RouteContext) {
       .select('match_id, winner_team_id')
       .eq('prediction_id', predictionId),
     ctx.supabase
-      .from('third_place_bundle_predictions')
-      .select('slot_index, group_letter')
+      .from('advancer_predictions')
+      .select('rank, team_id')
       .eq('prediction_id', predictionId),
   ]);
 
@@ -85,9 +85,9 @@ export async function GET(_request: NextRequest, context: RouteContext) {
       matchId: k.match_id,
       winner: k.winner_team_id,
     })),
-    bundles: (bundlesRes.data ?? []).map((b) => ({
-      slotIndex: b.slot_index as number,
-      groupLetter: b.group_letter as string,
+    advancers: (advancersRes.data ?? []).map((a) => ({
+      rank: a.rank as number,
+      teamId: a.team_id as string,
     })),
   });
 }
@@ -136,9 +136,9 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
       match_id: k.matchId,
       winner: k.winner,
     })),
-    bundles: (body.bundles ?? []).map((b) => ({
-      slot_index: b.slotIndex,
-      group_letter: b.groupLetter,
+    advancers: (body.advancers ?? []).map((a) => ({
+      rank: a.rank,
+      team_id: a.teamId,
     })),
   };
 
@@ -151,7 +151,8 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
     let status = 400;
     if (msg.includes('not found')) status = 404;
     else if (msg.includes('name taken')) status = 409;
-    else if (msg.includes('bundle')) status = 400;
+    else if (msg.includes('duplicate advancer')) status = 409;
+    else if (msg.includes('advancer')) status = 400;
     return NextResponse.json({ error: safeMessage(error) }, { status });
   }
   return NextResponse.json({ predictionId: data });

@@ -57,7 +57,9 @@ insert into public.teams (id, name, code, group_id) values
 
 insert into public.knockout_matches (id, stage, team1_source, team2_source, point_value, match_order) values
     -- R32 (FIFA 2026 layout): 8 winner-vs-runner-up matches + 8 with a
-    -- best-3rd-of-bundle slot (`'3-XXXXX'` references third_place_bundles).
+    -- 3rd-place slot. The `'3-XXXXX'` source strings are decorative in the
+    -- v2 model — admins assign the actual advancer to each 3rd-place slot
+    -- via r32_bracket_assignments once FIFA publishes the bracket.
     ('M1',  'round_of_32',  '2A',  '2B',      2,  1),
     ('M2',  'round_of_32',  '1E',  '3-ABCDF', 2,  2),
     ('M3',  'round_of_32',  '1F',  '2C',      2,  3),

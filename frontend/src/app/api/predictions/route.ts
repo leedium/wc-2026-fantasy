@@ -16,7 +16,7 @@ interface SubmitPayload {
     fourth: string | null;
   }>;
   knockout?: Array<{ matchId: string; winner: string | null }>;
-  bundles?: Array<{ slotIndex: number; groupLetter: string }>;
+  advancers?: Array<{ rank: number; teamId: string }>;
 }
 
 export async function GET() {
@@ -47,7 +47,7 @@ export async function GET() {
 
   const ids = (predictions ?? []).map((p) => p.id);
 
-  const [groupsRes, knockoutRes, bundlesRes] = await Promise.all([
+  const [groupsRes, knockoutRes, advancersRes] = await Promise.all([
     ids.length
       ? supabase
           .from('group_predictions')
@@ -64,8 +64,8 @@ export async function GET() {
       : Promise.resolve({ data: [] as never[] }),
     ids.length
       ? supabase
-          .from('third_place_bundle_predictions')
-          .select('prediction_id, slot_index, group_letter')
+          .from('advancer_predictions')
+          .select('prediction_id, rank, team_id')
           .in('prediction_id', ids)
       : Promise.resolve({ data: [] as never[] }),
   ]);
@@ -84,10 +84,10 @@ export async function GET() {
     winner_team_id: string | null;
   };
 
-  type BundleRow = {
+  type AdvancerRow = {
     prediction_id: string;
-    slot_index: number;
-    group_letter: string;
+    rank: number;
+    team_id: string;
   };
 
   const groupsByPrediction = new Map<string, GroupRow[]>();
@@ -102,11 +102,11 @@ export async function GET() {
     list.push(k);
     knockoutByPrediction.set(k.prediction_id, list);
   }
-  const bundlesByPrediction = new Map<string, BundleRow[]>();
-  for (const b of (bundlesRes.data ?? []) as BundleRow[]) {
-    const list = bundlesByPrediction.get(b.prediction_id) ?? [];
-    list.push(b);
-    bundlesByPrediction.set(b.prediction_id, list);
+  const advancersByPrediction = new Map<string, AdvancerRow[]>();
+  for (const a of (advancersRes.data ?? []) as AdvancerRow[]) {
+    const list = advancersByPrediction.get(a.prediction_id) ?? [];
+    list.push(a);
+    advancersByPrediction.set(a.prediction_id, list);
   }
 
   type Payment = { paid_at: string | null };
@@ -146,9 +146,9 @@ export async function GET() {
           matchId: k.match_id,
           winner: k.winner_team_id,
         })),
-        bundles: (bundlesByPrediction.get(p.id) ?? []).map((b) => ({
-          slotIndex: b.slot_index,
-          groupLetter: b.group_letter,
+        advancers: (advancersByPrediction.get(p.id) ?? []).map((a) => ({
+          rank: a.rank,
+          teamId: a.team_id,
         })),
       };
     }),
@@ -197,9 +197,9 @@ export async function POST(request: NextRequest) {
       match_id: k.matchId,
       winner: k.winner,
     })),
-    bundles: (body.bundles ?? []).map((b) => ({
-      slot_index: b.slotIndex,
-      group_letter: b.groupLetter,
+    advancers: (body.advancers ?? []).map((a) => ({
+      rank: a.rank,
+      team_id: a.teamId,
     })),
   };
 
@@ -209,7 +209,8 @@ export async function POST(request: NextRequest) {
     let status = 400;
     if (msg.includes('locked')) status = 403;
     else if (msg.includes('limit reached') || msg.includes('name taken')) status = 409;
-    else if (msg.includes('bundle')) status = 400;
+    else if (msg.includes('duplicate advancer')) status = 409;
+    else if (msg.includes('advancer')) status = 400;
     return NextResponse.json({ error: safeMessage(error) }, { status });
   }
 

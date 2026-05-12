@@ -51,15 +51,26 @@ export interface KnockoutMatchPrediction {
   winnerId: string | null;
 }
 
-export interface BundlePrediction {
-  slotIndex: number;
-  groupLetter: string;
+export interface AdvancerPrediction {
+  rank: number;
+  teamId: string;
+}
+
+export interface TournamentAdvancer {
+  rank: number;
+  teamId: string;
+}
+
+export interface R32BracketAssignment {
+  matchId: string;
+  slot: 1 | 2;
+  teamId: string;
 }
 
 export interface Predictions {
   groups: GroupPrediction[];
   knockout: KnockoutMatchPrediction[];
-  bundles: BundlePrediction[];
+  advancers: AdvancerPrediction[];
   totalGoals: number | null;
 }
 
@@ -85,7 +96,7 @@ export interface LeaderboardEntry {
   points: number;
   change: number;
   groupPoints: number;
-  bundlePoints: number;
+  advancerPoints: number;
   knockoutPoints: number;
 }
 

@@ -16,10 +16,10 @@ import { Badge } from '@/components/ui/badge';
 import { TeamFlag } from '@/components/shared/TeamFlag';
 import { resolveTeamSource } from '@/lib/knockoutResolver';
 import type {
-  BundlePrediction,
   GroupPrediction,
   KnockoutMatch,
   KnockoutMatchPrediction,
+  R32BracketAssignment,
   Team,
 } from '@/types/tournament';
 
@@ -38,9 +38,9 @@ interface GroupStandingRow {
   fourth_team_id: string | null;
 }
 
-interface AdvancersResponse {
+interface BracketAssignmentsResponse {
   tournamentId: string;
-  advancers: Array<{ slotIndex: number; groupLetter: string }>;
+  assignments: Array<{ matchId: string; slot: 1 | 2; teamId: string }>;
 }
 
 const STAGE_LABELS: Record<KnockoutMatch['stage'], string> = {
@@ -90,12 +90,12 @@ export function KnockoutResultsEditor({
     initialData: [],
   });
 
-  const advancers = useQuery<AdvancersResponse>({
-    queryKey: ['admin-advancers'],
+  const bracket = useQuery<BracketAssignmentsResponse>({
+    queryKey: ['admin-r32-bracket'],
     queryFn: async () => {
-      const res = await fetch('/api/admin/third-place-advancers').catch(() => null);
+      const res = await fetch('/api/admin/r32-bracket').catch(() => null);
       if (res && res.ok) return res.json();
-      return { tournamentId, advancers: [] };
+      return { tournamentId, assignments: [] };
     },
   });
 
@@ -129,9 +129,9 @@ export function KnockoutResultsEditor({
     [results.data]
   );
 
-  const bundlePredictions: BundlePrediction[] = React.useMemo(
-    () => advancers.data?.advancers ?? [],
-    [advancers.data]
+  const bracketAssignments: R32BracketAssignment[] = React.useMemo(
+    () => bracket.data?.assignments ?? [],
+    [bracket.data]
   );
 
   const teamById = React.useMemo(() => {
@@ -150,19 +150,19 @@ export function KnockoutResultsEditor({
           matches,
           groupPredictions,
           knockoutPredictions,
-          bundlePredictions
+          bracketAssignments
         ),
         team2Id: resolveTeamSource(
           m.team2Source,
           matches,
           groupPredictions,
           knockoutPredictions,
-          bundlePredictions
+          bracketAssignments
         ),
       });
     }
     return map;
-  }, [matches, groupPredictions, knockoutPredictions, bundlePredictions]);
+  }, [matches, groupPredictions, knockoutPredictions, bracketAssignments]);
 
   const [picks, setPicks] = React.useState<Record<string, string>>({});
   const [savingId, setSavingId] = React.useState<string | null>(null);

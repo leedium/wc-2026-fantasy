@@ -35,7 +35,7 @@ export async function GET(request: NextRequest) {
     username: string;
     points: number | string;
     group_points: number;
-    bundle_points: number | string;
+    advancer_points: number | string;
     knockout_points: number;
     total_goals: number | null;
     total_count: number;
@@ -50,7 +50,7 @@ export async function GET(request: NextRequest) {
       points: Number(row.points),
       change: 0,
       groupPoints: row.group_points,
-      bundlePoints: Number(row.bundle_points),
+      advancerPoints: Number(row.advancer_points),
       knockoutPoints: row.knockout_points,
     })),
     total: Number(rows[0]?.total_count ?? 0),

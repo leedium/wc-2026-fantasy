@@ -1,23 +1,22 @@
-import { BUNDLE_SLOTS } from '@/lib/constants';
 import type {
-  BundlePrediction,
   GroupPrediction,
   KnockoutMatch,
   KnockoutMatchPrediction,
+  R32BracketAssignment,
 } from '@/types/tournament';
 
 /**
  * Resolves a `team1_source` / `team2_source` reference (e.g. `"1A"`, `"M5"`,
- * `"L-M29"`, `"3-ABCDF"`) to the predicted team id, given a user's group +
- * bundle + knockout picks. Returns null when the picks for the source
- * aren't filled in yet.
+ * `"L-M29"`, `"3-ABCDF"`) to the predicted team id, given the user's group +
+ * knockout picks and the admin-set R32 bracket assignments. Returns null
+ * when the picks (or admin assignment) for the source aren't filled in yet.
  */
 export function resolveTeamSource(
   source: string,
   matches: KnockoutMatch[],
   groupPredictions: GroupPrediction[],
   knockoutPredictions: KnockoutMatchPrediction[],
-  bundlePredictions: BundlePrediction[] = []
+  bracketAssignments: R32BracketAssignment[] = []
 ): string | null {
   // Group position source: '1A' = 1st in Group A, '2B' = 2nd in Group B, etc.
   const groupMatch = source.match(/^([123])([A-L])$/);
@@ -37,17 +36,20 @@ export function resolveTeamSource(
     }
   }
 
-  // Best-3rd-of-bundle source: '3-ABCDF' = whichever group's 3rd-place team
-  // the user predicted to advance from the 5-group bundle.
-  const bundleMatch = source.match(/^3-([A-L]{5})$/);
-  if (bundleMatch) {
-    const bundleKey = bundleMatch[1];
-    const slot = BUNDLE_SLOTS.find((s) => s.bundleKey === bundleKey);
-    if (!slot) return null;
-    const pick = bundlePredictions.find((b) => b.slotIndex === slot.slotIndex);
-    if (!pick?.groupLetter) return null;
-    const groupPrediction = groupPredictions.find((p) => p.groupId === pick.groupLetter);
-    return groupPrediction?.positions.third ?? null;
+  // Best-3rd-of-bundle source: '3-ABCDF' etc. In the new model these strings
+  // are decorative — FIFA decides which advancer fills each slot. The admin
+  // records the assignment in r32_bracket_assignments and we look it up by
+  // the (matchId, slot) tuple that owns this source string.
+  if (/^3-[A-L]{5}$/.test(source)) {
+    const match = matches.find(
+      (m) => m.team1Source === source || m.team2Source === source
+    );
+    if (!match) return null;
+    const slot: 1 | 2 = match.team1Source === source ? 1 : 2;
+    const assignment = bracketAssignments.find(
+      (a) => a.matchId === match.id && a.slot === slot
+    );
+    return assignment?.teamId ?? null;
   }
 
   // Match winner source: 'M1' = the predicted winner of M1.
@@ -70,14 +72,14 @@ export function resolveTeamSource(
       matches,
       groupPredictions,
       knockoutPredictions,
-      bundlePredictions
+      bracketAssignments
     );
     const team2Id = resolveTeamSource(
       match.team2Source,
       matches,
       groupPredictions,
       knockoutPredictions,
-      bundlePredictions
+      bracketAssignments
     );
 
     if (matchPrediction.winnerId === team1Id) return team2Id;

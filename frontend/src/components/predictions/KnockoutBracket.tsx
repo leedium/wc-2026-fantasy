@@ -10,11 +10,11 @@ import { TeamFlag } from '@/components/shared/TeamFlag';
 import { resolveTeamSource } from '@/lib/knockoutResolver';
 import { cn } from '@/lib/utils';
 import type {
-  BundlePrediction,
   GroupPrediction,
   KnockoutMatch,
   KnockoutMatchPrediction,
   KnockoutStage,
+  R32BracketAssignment,
   Team,
 } from '@/types/tournament';
 
@@ -81,7 +81,7 @@ interface KnockoutBracketProps {
   teams: Team[];
   groupPredictions: GroupPrediction[];
   knockoutPredictions: KnockoutMatchPrediction[];
-  bundlePredictions?: BundlePrediction[];
+  bracketAssignments?: R32BracketAssignment[];
   onPredictionChange: (matchId: string, winnerId: string | null) => void;
   disabled?: boolean;
   stage: KnockoutStage;
@@ -100,12 +100,12 @@ function getTeamDisplay(
   return { name: team.name, code: team.code };
 }
 
-// Friendly placeholder for an unresolved team source. Bundle sources
-// ("3-ABCDF") read as "Best 3rd of A/B/C/D/F"; group/match sources fall back
-// to the raw source string.
+// Friendly placeholder for an unresolved team source. 3rd-place slots
+// (legacy "3-XXXXX" strings) read as "3rd-place team (TBD)" since FIFA
+// decides bracket placement after group stage; group/match sources fall
+// back to the raw source string.
 function describeSource(source: string): string {
-  const bundle = source.match(/^3-([A-L]{5})$/);
-  if (bundle) return `Best 3rd of ${bundle[1].split('').join('/')}`;
+  if (/^3-[A-L]{5}$/.test(source)) return '3rd-place team (TBD)';
   return source;
 }
 
@@ -214,7 +214,7 @@ function StageSection({
   teams,
   groupPredictions,
   knockoutPredictions,
-  bundlePredictions,
+  bracketAssignments,
   onPredictionChange,
   disabled,
 }: {
@@ -224,7 +224,7 @@ function StageSection({
   teams: Team[];
   groupPredictions: GroupPrediction[];
   knockoutPredictions: KnockoutMatchPrediction[];
-  bundlePredictions: BundlePrediction[];
+  bracketAssignments: R32BracketAssignment[];
   onPredictionChange: (matchId: string, winnerId: string | null) => void;
   disabled?: boolean;
 }) {
@@ -278,14 +278,14 @@ function StageSection({
             allMatches,
             groupPredictions,
             knockoutPredictions,
-            bundlePredictions
+            bracketAssignments
           );
           const team2Id = resolveTeamSource(
             match.team2Source,
             allMatches,
             groupPredictions,
             knockoutPredictions,
-            bundlePredictions
+            bracketAssignments
           );
           const prediction = knockoutPredictions.find((p) => p.matchId === match.id);
           const selectedWinnerId = prediction?.winnerId ?? null;
@@ -313,7 +313,7 @@ export function KnockoutBracket({
   teams,
   groupPredictions,
   knockoutPredictions,
-  bundlePredictions = [],
+  bracketAssignments = [],
   onPredictionChange,
   disabled = false,
   stage,
@@ -390,7 +390,7 @@ export function KnockoutBracket({
         teams={teams}
         groupPredictions={groupPredictions}
         knockoutPredictions={knockoutPredictions}
-        bundlePredictions={bundlePredictions}
+        bracketAssignments={bracketAssignments}
         onPredictionChange={onPredictionChange}
         disabled={disabled}
       />

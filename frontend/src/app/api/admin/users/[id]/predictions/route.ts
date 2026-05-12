@@ -16,7 +16,7 @@ interface SubmitPayload {
     fourth: string | null;
   }>;
   knockout?: Array<{ matchId: string; winner: string | null }>;
-  bundles?: Array<{ slotIndex: number; groupLetter: string }>;
+  advancers?: Array<{ rank: number; teamId: string }>;
 }
 
 export async function GET(
@@ -124,9 +124,9 @@ export async function POST(
       match_id: k.matchId,
       winner: k.winner,
     })),
-    bundles: (body.bundles ?? []).map((b) => ({
-      slot_index: b.slotIndex,
-      group_letter: b.groupLetter,
+    advancers: (body.advancers ?? []).map((a) => ({
+      rank: a.rank,
+      team_id: a.teamId,
     })),
   };
 
@@ -138,7 +138,8 @@ export async function POST(
     const msg = error.message ?? '';
     let status = 400;
     if (msg.includes('limit reached') || msg.includes('name taken')) status = 409;
-    else if (msg.includes('bundle')) status = 400;
+    else if (msg.includes('duplicate advancer')) status = 409;
+    else if (msg.includes('advancer')) status = 400;
     return NextResponse.json({ error: safeMessage(error) }, { status });
   }
   return NextResponse.json({ predictionId: data });
