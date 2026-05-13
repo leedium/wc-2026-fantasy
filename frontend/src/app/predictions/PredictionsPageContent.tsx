@@ -29,18 +29,19 @@ import {
 import { PREDICTION_NAME_MAX, PREDICTION_NAME_REGEX, ROUTES } from '@/lib/constants';
 import { cn } from '@/lib/utils';
 import type {
-  BundlePrediction,
+  AdvancerPrediction,
   Group,
   GroupPrediction,
   KnockoutMatch,
   KnockoutMatchPrediction,
   KnockoutStage,
+  R32BracketAssignment,
   Team,
   TournamentInfo,
 } from '@/types/tournament';
-import { BUNDLE_SLOTS } from '@/lib/constants';
+import { ADVANCER_COUNT } from '@/lib/constants';
 import { applyGroupPositionChange } from '@/lib/groupSwap';
-import { BestThirdBundleForm } from '@/components/predictions/BestThirdBundleForm';
+import { AdvancersForm } from '@/components/predictions/AdvancersForm';
 
 type PositionKey = 'first' | 'second' | 'third' | 'fourth';
 
@@ -133,14 +134,14 @@ export interface InitialPrediction {
     fourth: string | null;
   }>;
   knockout: Array<{ matchId: string; winner: string | null }>;
-  bundles?: Array<{ slotIndex: number; groupLetter: string }>;
+  advancers?: Array<{ rank: number; teamId: string }>;
 }
 
 interface DraftData {
   predictionName: string;
   groupPredictions: GroupPrediction[];
   knockoutPredictions: KnockoutMatchPrediction[];
-  bundlePredictions: BundlePrediction[];
+  advancerPredictions: AdvancerPrediction[];
   totalGoals: number | null;
 }
 
@@ -294,6 +295,12 @@ export function PredictionsPageContent({
     queryFn: () => fetchJSON('/api/knockout-matches'),
   });
 
+  const bracketQuery = useQuery<{ assignments: R32BracketAssignment[] }>({
+    queryKey: ['r32-bracket'],
+    queryFn: () => fetchJSON('/api/r32-bracket'),
+  });
+  const bracketAssignments = bracketQuery.data?.assignments ?? [];
+
   const [predictionName, setPredictionName] = React.useState(initial?.name ?? '');
   const [predictionNameTouched, setPredictionNameTouched] = React.useState(false);
   const [serverNameError, setServerNameError] = React.useState<string | null>(null);
@@ -301,11 +308,11 @@ export function PredictionsPageContent({
   const [knockoutPredictions, setKnockoutPredictions] = React.useState<KnockoutMatchPrediction[]>(
     []
   );
-  const [bundlePredictions, setBundlePredictions] = React.useState<BundlePrediction[]>(
+  const [advancerPredictions, setAdvancerPredictions] = React.useState<AdvancerPrediction[]>(
     () =>
-      (initial?.bundles ?? []).map((b) => ({
-        slotIndex: b.slotIndex,
-        groupLetter: b.groupLetter,
+      (initial?.advancers ?? []).map((a) => ({
+        rank: a.rank,
+        teamId: a.teamId,
       }))
   );
   const [totalGoals, setTotalGoals] = React.useState<number | null>(initial?.totalGoals ?? null);
@@ -358,14 +365,14 @@ export function PredictionsPageContent({
         })
       : baseKnockout;
 
-    const seedBundles: BundlePrediction[] = (initial?.bundles ?? []).map((b) => ({
-      slotIndex: b.slotIndex,
-      groupLetter: b.groupLetter,
+    const seedAdvancers: AdvancerPrediction[] = (initial?.advancers ?? []).map((a) => ({
+      rank: a.rank,
+      teamId: a.teamId,
     }));
 
     let groupSeed = seedGroups;
     let knockoutSeed = seedKnockout;
-    let bundleSeed = seedBundles;
+    let advancerSeed = seedAdvancers;
     let nameSeed = initial?.name ?? '';
     let totalGoalsSeed = initial?.totalGoals ?? null;
     let restoredFromDraft = false;
@@ -386,7 +393,7 @@ export function PredictionsPageContent({
           const match = draft.data.knockoutPredictions.find((s) => s.matchId === m.matchId);
           return match ? { matchId: m.matchId, winnerId: match.winnerId } : m;
         });
-        bundleSeed = draft.data.bundlePredictions ?? [];
+        advancerSeed = draft.data.advancerPredictions ?? [];
         nameSeed = draft.data.predictionName ?? nameSeed;
         totalGoalsSeed = draft.data.totalGoals;
         restoredFromDraft = true;
@@ -395,7 +402,7 @@ export function PredictionsPageContent({
 
     setGroupPredictions(groupSeed);
     setKnockoutPredictions(knockoutSeed);
-    setBundlePredictions(bundleSeed);
+    setAdvancerPredictions(advancerSeed);
     setTotalGoals(totalGoalsSeed);
     setPredictionName(nameSeed);
     setHydrated(true);
@@ -408,7 +415,7 @@ export function PredictionsPageContent({
             clearDraft();
             setGroupPredictions(seedGroups);
             setKnockoutPredictions(seedKnockout);
-            setBundlePredictions(seedBundles);
+            setAdvancerPredictions(seedAdvancers);
             setTotalGoals(initial?.totalGoals ?? null);
             setPredictionName(initial?.name ?? '');
           },
@@ -435,18 +442,18 @@ export function PredictionsPageContent({
     (p) => Object.values(p.positions).filter((v) => v !== null).length === 4
   ).length;
   const completedKnockoutMatches = knockoutPredictions.filter((p) => p.winnerId !== null).length;
-  const completedBundles = bundlePredictions.filter((b) => !!b.groupLetter).length;
+  const completedAdvancers = advancerPredictions.filter((a) => !!a.teamId).length;
   const tiebreakerSlots = 1;
   const filledTiebreaker = totalGoals !== null ? 1 : 0;
 
   const totalSlots =
-    totalGroupSlots + BUNDLE_SLOTS.length + totalKnockoutMatches + tiebreakerSlots;
+    totalGroupSlots + ADVANCER_COUNT + totalKnockoutMatches + tiebreakerSlots;
   const filledSlots =
-    filledGroupSlots + completedBundles + completedKnockoutMatches + filledTiebreaker;
+    filledGroupSlots + completedAdvancers + completedKnockoutMatches + filledTiebreaker;
   const overallPercent = totalSlots > 0 ? Math.round((filledSlots / totalSlots) * 100) : 0;
 
   const isGroupsComplete = totalGroupsCount > 0 && completedGroups === totalGroupsCount;
-  const isBundlesComplete = completedBundles === BUNDLE_SLOTS.length;
+  const isAdvancersComplete = completedAdvancers === ADVANCER_COUNT;
   const isBracketComplete =
     totalKnockoutMatches > 0 && completedKnockoutMatches === totalKnockoutMatches;
   const isTiebreakerComplete = totalGoals !== null;
@@ -461,10 +468,10 @@ export function PredictionsPageContent({
   // everything filled to count as complete.
   const usesAdminRoute = effectiveApiBasePath.startsWith('/api/admin/');
   const isPredictionsComplete = usesAdminRoute
-    ? isGroupsComplete && isBundlesComplete && isBracketComplete && isTiebreakerComplete
+    ? isGroupsComplete && isAdvancersComplete && isBracketComplete && isTiebreakerComplete
     : phase === 'phase2_open'
       ? isBracketComplete && isTiebreakerComplete
-      : isGroupsComplete && isBundlesComplete;
+      : isGroupsComplete && isAdvancersComplete;
 
   const trimmedName = predictionName.trim();
   const nameError =
@@ -477,6 +484,16 @@ export function PredictionsPageContent({
           : null;
   const showNameError = serverNameError ?? (predictionNameTouched ? nameError : null);
   const isReadyToSubmit = isPredictionsComplete && !nameError;
+
+  const advancerCandidatePool = React.useMemo(() => {
+    if (!teams) return [];
+    const thirdIds = new Set(
+      groupPredictions
+        .map((g) => g.positions.third)
+        .filter((id): id is string => id !== null)
+    );
+    return teams.filter((t) => thirdIds.has(t.id));
+  }, [groupPredictions, teams]);
 
   const matchesByStage = React.useMemo(() => {
     const grouped: Record<KnockoutStage, KnockoutMatch[]> = {
@@ -510,7 +527,7 @@ export function PredictionsPageContent({
 
   const stepStatus: Record<Step, boolean> = {
     groups: isGroupsComplete,
-    best_thirds: isBundlesComplete,
+    best_thirds: isAdvancersComplete,
     round_of_32: stageCompletion.round_of_32,
     round_of_16: stageCompletion.round_of_16,
     quarter_finals: stageCompletion.quarter_finals,
@@ -538,7 +555,7 @@ export function PredictionsPageContent({
     } else if (value === 'groups') {
       status = isGroupsComplete ? 'done' : 'upcoming';
     } else if (value === 'best_thirds') {
-      status = isBundlesComplete ? 'done' : 'upcoming';
+      status = isAdvancersComplete ? 'done' : 'upcoming';
     } else if (value === 'knockout') {
       status = isBracketComplete ? 'done' : 'upcoming';
     } else {
@@ -561,7 +578,7 @@ export function PredictionsPageContent({
           next.predictionName !== undefined ? next.predictionName : predictionName,
         groupPredictions: next.groupPredictions ?? groupPredictions,
         knockoutPredictions: next.knockoutPredictions ?? knockoutPredictions,
-        bundlePredictions: next.bundlePredictions ?? bundlePredictions,
+        advancerPredictions: next.advancerPredictions ?? advancerPredictions,
         totalGoals: next.totalGoals !== undefined ? next.totalGoals : totalGoals,
       });
     },
@@ -572,7 +589,7 @@ export function PredictionsPageContent({
       predictionName,
       groupPredictions,
       knockoutPredictions,
-      bundlePredictions,
+      advancerPredictions,
       totalGoals,
     ]
   );
@@ -612,12 +629,12 @@ export function PredictionsPageContent({
     persistDraft({ totalGoals: value });
   };
 
-  const handleBundleChange = (slotIndex: number, groupLetter: string | null) => {
-    setBundlePredictions((prev) => {
-      const others = prev.filter((b) => b.slotIndex !== slotIndex);
-      const next = groupLetter ? [...others, { slotIndex, groupLetter }] : others;
-      next.sort((a, b) => a.slotIndex - b.slotIndex);
-      persistDraft({ bundlePredictions: next });
+  const handleAdvancerRankChange = (rank: number, teamId: string | null) => {
+    setAdvancerPredictions((prev) => {
+      const others = prev.filter((a) => a.rank !== rank);
+      const next = teamId ? [...others, { rank, teamId }] : others;
+      next.sort((a, b) => a.rank - b.rank);
+      persistDraft({ advancerPredictions: next });
       return next;
     });
   };
@@ -709,10 +726,10 @@ export function PredictionsPageContent({
               winner: k.winnerId,
             }))
           : [],
-        bundles: sendPhase1Fields
-          ? bundlePredictions.map((b) => ({
-              slotIndex: b.slotIndex,
-              groupLetter: b.groupLetter,
+        advancers: sendPhase1Fields
+          ? advancerPredictions.map((a) => ({
+              rank: a.rank,
+              teamId: a.teamId,
             }))
           : [],
       };
@@ -897,11 +914,11 @@ export function PredictionsPageContent({
           )}
 
           {currentStep === 'best_thirds' && (
-            <BestThirdBundleForm
-              teams={teams}
-              groupPredictions={groupPredictions}
-              bundlePredictions={bundlePredictions}
-              onBundleChange={handleBundleChange}
+            <AdvancersForm
+              variant="predict"
+              candidatePool={advancerCandidatePool}
+              value={advancerPredictions}
+              onRankChange={handleAdvancerRankChange}
               disabled={!phase1Editable}
             />
           )}
@@ -912,7 +929,7 @@ export function PredictionsPageContent({
               teams={teams}
               groupPredictions={groupPredictions}
               knockoutPredictions={knockoutPredictions}
-              bundlePredictions={bundlePredictions}
+              bracketAssignments={bracketAssignments}
               onPredictionChange={handleKnockoutPredictionChange}
               disabled={!phase2Editable}
               stage={currentStep}

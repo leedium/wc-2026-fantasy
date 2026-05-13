@@ -11,6 +11,7 @@ import type {
   KnockoutMatch,
   KnockoutMatchPrediction,
   KnockoutStage,
+  R32BracketAssignment,
   Team,
 } from '@/types/tournament';
 
@@ -19,6 +20,7 @@ interface BracketViewProps {
   teams: Team[];
   groupPredictions: GroupPrediction[];
   knockoutPredictions: KnockoutMatchPrediction[];
+  bracketAssignments?: R32BracketAssignment[];
 }
 
 const COLUMN_STAGES: Array<{ stage: KnockoutStage; label: string }> = [
@@ -47,15 +49,29 @@ function MatchNode({
   teams,
   groupPredictions,
   knockoutPredictions,
+  bracketAssignments,
 }: {
   match: KnockoutMatch;
   matches: KnockoutMatch[];
   teams: Team[];
   groupPredictions: GroupPrediction[];
   knockoutPredictions: KnockoutMatchPrediction[];
+  bracketAssignments: R32BracketAssignment[];
 }) {
-  const team1Id = resolveTeamSource(match.team1Source, matches, groupPredictions, knockoutPredictions);
-  const team2Id = resolveTeamSource(match.team2Source, matches, groupPredictions, knockoutPredictions);
+  const team1Id = resolveTeamSource(
+    match.team1Source,
+    matches,
+    groupPredictions,
+    knockoutPredictions,
+    bracketAssignments
+  );
+  const team2Id = resolveTeamSource(
+    match.team2Source,
+    matches,
+    groupPredictions,
+    knockoutPredictions,
+    bracketAssignments
+  );
   const winnerId =
     knockoutPredictions.find((p) => p.matchId === match.id)?.winnerId ?? null;
 
@@ -106,6 +122,7 @@ export function BracketView({
   teams,
   groupPredictions,
   knockoutPredictions,
+  bracketAssignments = [],
 }: BracketViewProps) {
   const matchesByStage = React.useMemo(() => {
     const grouped: Record<KnockoutStage, KnockoutMatch[]> = {
@@ -149,6 +166,7 @@ export function BracketView({
                     teams={teams}
                     groupPredictions={groupPredictions}
                     knockoutPredictions={knockoutPredictions}
+                    bracketAssignments={bracketAssignments}
                   />
                 ))}
               </div>
@@ -169,6 +187,7 @@ export function BracketView({
               teams={teams}
               groupPredictions={groupPredictions}
               knockoutPredictions={knockoutPredictions}
+              bracketAssignments={bracketAssignments}
             />
           </div>
         </div>

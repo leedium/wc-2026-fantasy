@@ -2,9 +2,10 @@
 
 import * as React from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { CheckCircle2, Lock, Unlock } from 'lucide-react';
+import { Lock, Unlock } from 'lucide-react';
 import { toast } from 'sonner';
 
+import { AdvancersForm as RankPicker } from '@/components/predictions/AdvancersForm';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -19,16 +20,22 @@ import {
 } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
 import { TeamFlag } from '@/components/shared/TeamFlag';
-import { BUNDLE_SLOTS } from '@/lib/constants';
-import type { Team } from '@/types/tournament';
+import type {
+  AdvancerPrediction,
+  KnockoutMatch,
+  R32BracketAssignment,
+  Team,
+} from '@/types/tournament';
 
-interface AdvancersResponse {
+interface TournamentAdvancersResponse {
   tournamentId: string;
-  advancers: Array<{ slotIndex: number; groupLetter: string }>;
+  advancers: Array<{ rank: number; teamId: string }>;
 }
 
-// Sentinel for the admin-only "(none)" SelectItem (Radix forbids empty values).
-const CLEAR_VALUE = '__CLEAR__';
+interface BracketResponse {
+  tournamentId: string;
+  assignments: Array<{ matchId: string; slot: 1 | 2; teamId: string }>;
+}
 
 interface TournamentResponse {
   id: string;
@@ -41,6 +48,8 @@ interface GroupStandingRow {
   group_id: string;
   third_team_id: string | null;
 }
+
+const CLEAR_VALUE = '__CLEAR__';
 
 async function fetchJSON<T>(url: string): Promise<T> {
   const res = await fetch(url);
@@ -57,13 +66,33 @@ function toLocalDatetimeInput(iso: string | null): string {
 
 export function AdvancersForm() {
   const queryClient = useQueryClient();
-  const advancersQuery = useQuery<AdvancersResponse>({
+  const advancersQuery = useQuery<TournamentAdvancersResponse>({
     queryKey: ['admin-advancers'],
     queryFn: () => fetchJSON('/api/admin/third-place-advancers'),
+  });
+  const bracketQuery = useQuery<BracketResponse>({
+    queryKey: ['admin-r32-bracket'],
+    queryFn: () => fetchJSON('/api/admin/r32-bracket'),
   });
   const tournamentQuery = useQuery<TournamentResponse>({
     queryKey: ['tournament'],
     queryFn: () => fetchJSON('/api/tournament'),
+  });
+  const teamsQuery = useQuery<Team[]>({
+    queryKey: ['teams'],
+    queryFn: () => fetchJSON('/api/teams'),
+  });
+  const matchesQuery = useQuery<KnockoutMatch[]>({
+    queryKey: ['knockout-matches'],
+    queryFn: () => fetchJSON('/api/knockout-matches'),
+  });
+
+  const tournamentId = advancersQuery.data?.tournamentId ?? null;
+
+  const standingsQuery = useQuery<GroupStandingRow[]>({
+    queryKey: ['admin-group-standings', tournamentId],
+    queryFn: () => fetchJSON(`/api/admin/group-standings?tournamentId=${tournamentId}`),
+    enabled: !!tournamentId,
   });
 
   const [phaseTwoLockInput, setPhaseTwoLockInput] = React.useState<string>('');
@@ -73,23 +102,9 @@ export function AdvancersForm() {
     setPhaseTwoLockInput(toLocalDatetimeInput(tournamentQuery.data?.knockoutLockTime ?? null));
   }, [tournamentQuery.data?.knockoutLockTime]);
 
-  const advancers = advancersQuery.data?.advancers ?? [];
-  const tournamentId = advancersQuery.data?.tournamentId ?? null;
-  const completedCount = advancers.length;
-  const allEight = completedCount === 8;
+  const advancers: AdvancerPrediction[] = advancersQuery.data?.advancers ?? [];
+  const assignments: R32BracketAssignment[] = bracketQuery.data?.assignments ?? [];
   const knockoutUnlocked = tournamentQuery.data?.knockoutUnlocked ?? false;
-
-  // Look up the actual 3rd-place team per group from admin-entered standings
-  // so the group-letter dropdowns can preview the country if it's known.
-  const standingsQuery = useQuery<GroupStandingRow[]>({
-    queryKey: ['admin-group-standings', tournamentId],
-    queryFn: () => fetchJSON(`/api/admin/group-standings?tournamentId=${tournamentId}`),
-    enabled: !!tournamentId,
-  });
-  const teamsQuery = useQuery<Team[]>({
-    queryKey: ['teams'],
-    queryFn: () => fetchJSON('/api/teams'),
-  });
 
   const teamById = React.useMemo(() => {
     const map = new Map<string, Team>();
@@ -97,47 +112,106 @@ export function AdvancersForm() {
     return map;
   }, [teamsQuery.data]);
 
-  const thirdByGroup = React.useMemo(() => {
-    const map = new Map<string, Team>();
-    for (const row of standingsQuery.data ?? []) {
-      if (!row.third_team_id) continue;
-      const team = teamById.get(row.third_team_id);
-      if (team) map.set(row.group_id, team);
-    }
-    return map;
+  // Candidate pool: the 12 teams admin has entered as 3rd-place in
+  // group_standings. Missing standings → smaller pool, but the API still
+  // validates against the same set.
+  const candidatePool: Team[] = React.useMemo(() => {
+    const ids = new Set(
+      (standingsQuery.data ?? [])
+        .map((s) => s.third_team_id)
+        .filter((id): id is string => !!id)
+    );
+    return Array.from(ids)
+      .map((id) => teamById.get(id))
+      .filter((t): t is Team => !!t);
   }, [standingsQuery.data, teamById]);
 
-  const setSlot = async (slotIndex: number, groupLetter: string) => {
+  // The 3rd-place R32 slots, discovered by scanning seed sources. Source of
+  // truth for the count is the same as in admin_set_phase_two.
+  const thirdPlaceSlots = React.useMemo(() => {
+    const out: Array<{ matchId: string; slot: 1 | 2; sourceLabel: string }> = [];
+    for (const m of matchesQuery.data ?? []) {
+      if (m.stage !== 'round_of_32') continue;
+      if (m.team1Source.startsWith('3-')) {
+        out.push({ matchId: m.id, slot: 1, sourceLabel: m.team1Source });
+      }
+      if (m.team2Source.startsWith('3-')) {
+        out.push({ matchId: m.id, slot: 2, sourceLabel: m.team2Source });
+      }
+    }
+    return out;
+  }, [matchesQuery.data]);
+
+  const completedAdvancers = advancers.length;
+  const completedAssignments = assignments.length;
+  const allAdvancersSet = completedAdvancers === 8;
+  const allAssignmentsSet = completedAssignments === thirdPlaceSlots.length;
+  const canOpenPhaseTwo = allAdvancersSet && allAssignmentsSet;
+
+  const handleRankChange = async (rank: number, teamId: string | null) => {
     if (!tournamentId) return;
     try {
-      const res = await fetch('/api/admin/third-place-advancers', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ tournamentId, slotIndex, groupLetter }),
-      });
-      if (!res.ok) {
-        const body = await res.json().catch(() => ({}));
-        throw new Error(String(body.error ?? 'Failed'));
+      if (teamId === null) {
+        const res = await fetch('/api/admin/third-place-advancers', {
+          method: 'DELETE',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ tournamentId, rank }),
+        });
+        if (!res.ok) {
+          const body = await res.json().catch(() => ({}));
+          throw new Error(String(body.error ?? 'Failed'));
+        }
+      } else {
+        const res = await fetch('/api/admin/third-place-advancers', {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ tournamentId, rank, teamId }),
+        });
+        if (!res.ok) {
+          const body = await res.json().catch(() => ({}));
+          throw new Error(String(body.error ?? 'Failed'));
+        }
       }
-      await queryClient.invalidateQueries({ queryKey: ['admin-advancers'] });
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['admin-advancers'] }),
+        queryClient.invalidateQueries({ queryKey: ['admin-r32-bracket'] }),
+      ]);
     } catch (e) {
       toast.error(e instanceof Error ? e.message : 'Failed');
     }
   };
 
-  const clearSlot = async (slotIndex: number) => {
+  const setAssignment = async (matchId: string, slot: 1 | 2, teamId: string) => {
     if (!tournamentId) return;
     try {
-      const res = await fetch('/api/admin/third-place-advancers', {
-        method: 'DELETE',
+      const res = await fetch('/api/admin/r32-bracket', {
+        method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ tournamentId, slotIndex }),
+        body: JSON.stringify({ tournamentId, matchId, slot, teamId }),
       });
       if (!res.ok) {
         const body = await res.json().catch(() => ({}));
         throw new Error(String(body.error ?? 'Failed'));
       }
-      await queryClient.invalidateQueries({ queryKey: ['admin-advancers'] });
+      await queryClient.invalidateQueries({ queryKey: ['admin-r32-bracket'] });
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Failed');
+    }
+  };
+
+  const clearAssignment = async (matchId: string, slot: 1 | 2) => {
+    if (!tournamentId) return;
+    try {
+      const res = await fetch('/api/admin/r32-bracket', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tournamentId, matchId, slot }),
+      });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(String(body.error ?? 'Failed'));
+      }
+      await queryClient.invalidateQueries({ queryKey: ['admin-r32-bracket'] });
     } catch (e) {
       toast.error(e instanceof Error ? e.message : 'Failed');
     }
@@ -174,105 +248,139 @@ export function AdvancersForm() {
     }
   };
 
-  return (
-    <div>
-      <div className="mb-6">
-        <h2 className="text-xl font-semibold">Best-3rd advancers</h2>
-        <p className="text-muted-foreground text-sm">
-          Pick the group whose 3rd-place team actually advanced for each of FIFA&apos;s 8
-          R32 bundle slots. Phase 2 (knockout predictions) opens once all 8 are set.
-        </p>
-      </div>
+  const loading =
+    advancersQuery.isLoading ||
+    tournamentQuery.isLoading ||
+    teamsQuery.isLoading ||
+    matchesQuery.isLoading;
 
-      {advancersQuery.isLoading ? (
-        <div className="space-y-3">
-          {Array.from({ length: 8 }).map((_, i) => (
-            <Skeleton key={i} className="h-20 w-full" />
-          ))}
+  return (
+    <div className="space-y-10">
+      <section>
+        <div className="mb-4">
+          <h2 className="text-xl font-semibold">Top-8 advancers</h2>
+          <p className="text-muted-foreground text-sm">
+            Rank the 8 best 3rd-place teams in descending order. Choices are the 12 teams
+            you&apos;ve entered as 3rd-place in group standings.
+          </p>
         </div>
-      ) : (
+        {loading ? (
+          <div className="space-y-3">
+            {Array.from({ length: 8 }).map((_, i) => (
+              <Skeleton key={i} className="h-20 w-full" />
+            ))}
+          </div>
+        ) : (
+          <RankPicker
+            variant="admin"
+            candidatePool={candidatePool}
+            value={advancers}
+            onRankChange={handleRankChange}
+          />
+        )}
+      </section>
+
+      <section>
+        <div className="mb-4">
+          <h2 className="text-xl font-semibold">FIFA R32 bracket assignment</h2>
+          <p className="text-muted-foreground text-sm">
+            For each R32 3rd-place slot, pick which of the 8 advancers FIFA placed there.
+            Available once all 8 advancers are set.
+          </p>
+        </div>
         <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-          {BUNDLE_SLOTS.map((slot) => {
-            const pick = advancers.find((a) => a.slotIndex === slot.slotIndex);
+          {thirdPlaceSlots.map(({ matchId, slot, sourceLabel }) => {
+            const current = assignments.find((a) => a.matchId === matchId && a.slot === slot);
+            const currentTeam = current ? teamById.get(current.teamId) : null;
+
             return (
               <Card
-                key={slot.slotIndex}
-                className={pick ? 'border-green-500/40' : ''}
-                data-testid={`advancer-slot-${slot.slotIndex}`}
+                key={`${matchId}-${slot}`}
+                className={current ? 'border-green-500/40' : ''}
+                data-testid={`r32-slot-${matchId}-${slot}`}
               >
                 <CardHeader className="pb-2">
                   <div className="flex items-center justify-between">
-                    <CardTitle className="text-base">
-                      Best 3rd of {slot.allowedLetters.join('/')}
-                    </CardTitle>
-                    {pick ? (
-                      <Badge variant="default" className="bg-green-600 gap-1">
-                        <CheckCircle2 className="h-3 w-3" />
-                        Set
-                      </Badge>
+                    <CardTitle className="text-base font-mono">{matchId} · slot {slot}</CardTitle>
+                    {current ? (
+                      <Badge variant="default" className="bg-green-600">Set</Badge>
                     ) : (
                       <Badge variant="outline">Unset</Badge>
                     )}
                   </div>
                   <p className="text-muted-foreground text-xs">
-                    Feeds R32 match {slot.r32MatchId}
+                    Legacy source: {sourceLabel}
                   </p>
                 </CardHeader>
                 <CardContent>
                   <Select
-                    value={pick?.groupLetter ?? ''}
+                    value={current?.teamId ?? ''}
                     onValueChange={(v) => {
                       if (v === CLEAR_VALUE) {
-                        void clearSlot(slot.slotIndex);
+                        void clearAssignment(matchId, slot);
                         return;
                       }
-                      void setSlot(slot.slotIndex, v);
+                      void setAssignment(matchId, slot, v);
                     }}
+                    disabled={!allAdvancersSet}
                   >
                     <SelectTrigger>
-                      <SelectValue placeholder="Pick a group" />
+                      <SelectValue
+                        placeholder={
+                          allAdvancersSet
+                            ? 'Pick an advancer'
+                            : 'Set all 8 advancers first'
+                        }
+                      />
                     </SelectTrigger>
                     <SelectContent>
-                      {pick ? (
+                      {current ? (
                         <SelectItem value={CLEAR_VALUE}>
                           <span className="text-muted-foreground">(none)</span>
                         </SelectItem>
                       ) : null}
-                      {slot.allowedLetters.map((letter) => {
-                        const team = thirdByGroup.get(letter);
+                      {advancers.map((a) => {
+                        const team = teamById.get(a.teamId);
+                        if (!team) return null;
                         return (
-                          <SelectItem key={letter} value={letter}>
-                            {team ? (
-                              <span className="flex items-center gap-2">
-                                <TeamFlag code={team.code} />
-                                <span className="text-muted-foreground font-mono text-xs">
-                                  {letter}
-                                </span>
-                                <span>{team.name}</span>
+                          <SelectItem key={a.rank} value={team.id}>
+                            <span className="flex items-center gap-2">
+                              <TeamFlag code={team.code} />
+                              <span className="text-muted-foreground font-mono text-xs">
+                                #{a.rank}
                               </span>
-                            ) : (
-                              <>Group {letter}</>
-                            )}
+                              <span>{team.name}</span>
+                            </span>
                           </SelectItem>
                         );
                       })}
                     </SelectContent>
                   </Select>
+                  {currentTeam && (
+                    <p className="text-muted-foreground mt-2 text-xs">
+                      Currently assigned: <span className="text-foreground">{currentTeam.name}</span>
+                    </p>
+                  )}
                 </CardContent>
               </Card>
             );
           })}
         </div>
-      )}
+        <p className="text-muted-foreground mt-3 text-xs">
+          {completedAssignments} / {thirdPlaceSlots.length} bracket slots assigned.
+        </p>
+      </section>
 
-      <Card className="mt-8">
+      <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             {knockoutUnlocked ? <Unlock className="h-5 w-5" /> : <Lock className="h-5 w-5" />}
             Phase 2 (knockout predictions)
           </CardTitle>
           <p className="text-muted-foreground text-sm">
-            Currently {knockoutUnlocked ? 'open' : 'closed'}. {completedCount}/8 advancers set.
+            Currently {knockoutUnlocked ? 'open' : 'closed'}.{' '}
+            {completedAdvancers}/8 advancers set ·{' '}
+            {completedAssignments}/{thirdPlaceSlots.length} bracket slots assigned.
           </p>
         </CardHeader>
         <CardContent className="space-y-3">
@@ -290,8 +398,14 @@ export function AdvancersForm() {
           <div className="flex flex-wrap gap-2">
             <Button
               onClick={() => togglePhaseTwo(true)}
-              disabled={busy || !allEight || knockoutUnlocked}
-              title={!allEight ? 'Set all 8 advancers first' : undefined}
+              disabled={busy || !canOpenPhaseTwo || knockoutUnlocked}
+              title={
+                !allAdvancersSet
+                  ? 'Set all 8 advancers first'
+                  : !allAssignmentsSet
+                    ? 'Assign every R32 3rd-place slot first'
+                    : undefined
+              }
             >
               Open Phase 2
             </Button>

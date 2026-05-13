@@ -32,7 +32,7 @@ export interface TournamentLockState {
    * `phase1_locked` (waiting for admin to open phase 2) or `phase2_locked`.
    */
   isLocked: boolean;
-  /** True iff phase 1 is currently accepting writes (groups + bundles). */
+  /** True iff phase 1 is currently accepting writes (groups + advancers). */
   isPhase1Open: boolean;
   /** True iff phase 2 is currently accepting writes (knockout + tiebreaker). */
   isPhase2Open: boolean;

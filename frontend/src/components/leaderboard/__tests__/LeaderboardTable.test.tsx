@@ -11,7 +11,7 @@ const entries: LeaderboardEntry[] = [
     points: 200,
     change: 2,
     groupPoints: 90,
-    bundlePoints: 0,
+    advancerPoints: 0,
     knockoutPoints: 110,
   },
   {
@@ -22,7 +22,7 @@ const entries: LeaderboardEntry[] = [
     points: 180,
     change: 0,
     groupPoints: 80,
-    bundlePoints: 0,
+    advancerPoints: 0,
     knockoutPoints: 100,
   },
   {
@@ -33,7 +33,7 @@ const entries: LeaderboardEntry[] = [
     points: 170,
     change: -1,
     groupPoints: 75,
-    bundlePoints: 0,
+    advancerPoints: 0,
     knockoutPoints: 95,
   },
 ];

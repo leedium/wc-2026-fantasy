@@ -3,6 +3,7 @@ import type {
   GroupPrediction,
   KnockoutMatch,
   KnockoutMatchPrediction,
+  R32BracketAssignment,
 } from '@/types/tournament';
 
 const groupPredictions: GroupPrediction[] = [
@@ -18,7 +19,7 @@ const groupPredictions: GroupPrediction[] = [
 
 const matches: KnockoutMatch[] = [
   { id: 'M1', stage: 'round_of_32', team1Source: '1A', team2Source: '2B', pointValue: 2 },
-  { id: 'M2', stage: 'round_of_32', team1Source: '1B', team2Source: '2A', pointValue: 2 },
+  { id: 'M2', stage: 'round_of_32', team1Source: '1E', team2Source: '3-ABCDF', pointValue: 2 },
   { id: 'M17', stage: 'round_of_16', team1Source: 'M1', team2Source: 'M2', pointValue: 4 },
   { id: 'M29', stage: 'semi_finals', team1Source: 'M25', team2Source: 'M26', pointValue: 15 },
   { id: 'M31', stage: 'third_place', team1Source: 'L-M29', team2Source: 'L-M30', pointValue: 10 },
@@ -71,25 +72,29 @@ describe('resolveTeamSource', () => {
     expect(resolveTeamSource('garbage', matches, groupPredictions, [])).toBeNull();
   });
 
-  describe('best-3rd-of-bundle source', () => {
-    // Slot 0 (bundle ABCDF) feeds match M2 per BUNDLE_SLOTS. Picking 'A' for
-    // slot 0 should resolve '3-ABCDF' to whichever team the user predicted as
-    // 3rd in Group A.
-    it('resolves to the predicted 3rd of the picked group', () => {
-      const bundlePredictions = [{ slotIndex: 0, groupLetter: 'A' }];
+  describe('3rd-place R32 slot source', () => {
+    // In the v2 model, '3-XXXXX' sources resolve via the admin-set
+    // r32_bracket_assignments. The 5-letter token is decorative — the
+    // resolver looks up (matchId, slot) tuple that owns the source.
+    it('resolves to the admin-assigned team for the slot', () => {
+      const assignments: R32BracketAssignment[] = [
+        { matchId: 'M2', slot: 2, teamId: 'rsa' },
+      ];
       expect(
-        resolveTeamSource('3-ABCDF', matches, groupPredictions, [], bundlePredictions)
+        resolveTeamSource('3-ABCDF', matches, groupPredictions, [], assignments)
       ).toBe('rsa');
     });
 
-    it('returns null when the user has no bundle pick yet', () => {
+    it('returns null when no bracket assignment is set yet', () => {
       expect(resolveTeamSource('3-ABCDF', matches, groupPredictions, [], [])).toBeNull();
     });
 
-    it('returns null when the bundle key is unknown', () => {
-      const bundlePredictions = [{ slotIndex: 0, groupLetter: 'A' }];
+    it('returns null when no match owns the source string', () => {
+      const assignments: R32BracketAssignment[] = [
+        { matchId: 'M2', slot: 2, teamId: 'rsa' },
+      ];
       expect(
-        resolveTeamSource('3-XXXXX', matches, groupPredictions, [], bundlePredictions)
+        resolveTeamSource('3-XXXXX', matches, groupPredictions, [], assignments)
       ).toBeNull();
     });
   });

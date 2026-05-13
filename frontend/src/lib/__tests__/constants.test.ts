@@ -18,9 +18,9 @@ describe('USERNAME_REGEX', () => {
 });
 
 describe('SCORING / TOURNAMENT_CONFIG', () => {
-  it('max total points = group + bundle + knockout', () => {
+  it('max total points = group + advancer + knockout', () => {
     expect(
-      SCORING.maxGroupPoints + SCORING.maxBundlePoints + SCORING.maxKnockoutPoints
+      SCORING.maxGroupPoints + SCORING.maxAdvancerPoints + SCORING.maxKnockoutPoints
     ).toBe(SCORING.maxTotalPoints);
   });
 

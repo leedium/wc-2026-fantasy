@@ -127,21 +127,21 @@ jest.mock('@/components/predictions/TiebreakerInput', () => ({
   ),
 }));
 
-interface BestThirdBundleFormProps {
-  bundlePredictions: Array<{ slotIndex: number; groupLetter: string }>;
-  onBundleChange: (slotIndex: number, groupLetter: string | null) => void;
+interface AdvancersFormProps {
+  value: Array<{ rank: number; teamId: string }>;
+  onRankChange: (rank: number, teamId: string | null) => void;
 }
-jest.mock('@/components/predictions/BestThirdBundleForm', () => ({
-  BestThirdBundleForm: ({ onBundleChange }: BestThirdBundleFormProps) => (
-    <div data-testid="best-third-bundle-form">
+jest.mock('@/components/predictions/AdvancersForm', () => ({
+  AdvancersForm: ({ onRankChange }: AdvancersFormProps) => (
+    <div data-testid="advancers-form">
       <button
         type="button"
         data-testid="fill-all-bundles"
         onClick={() => {
-          // The wizard awaits 8 distinct slots; the actual letter doesn't
-          // matter for navigation tests since BUNDLE_SLOTS validation lives
-          // in the real component / RPC.
-          for (let i = 0; i < 8; i++) onBundleChange(i, 'A');
+          // The wizard awaits 8 distinct ranks; the actual team id doesn't
+          // matter for navigation tests — the real component + RPC validate
+          // team_id is in the prediction's own 3rd-place picks.
+          for (let i = 1; i <= 8; i++) onRankChange(i, `team-${i}`);
         }}
       />
     </div>
@@ -252,7 +252,7 @@ describe('PredictionsPageContent — stepper navigation', () => {
     await user.click(await screen.findByTestId('fill-all-groups'));
     await user.click(screen.getByRole('button', { name: /Continue to Best 3rds/ }));
     // Best 3rds step active.
-    expect(screen.getByTestId('best-third-bundle-form')).toBeInTheDocument();
+    expect(screen.getByTestId('advancers-form')).toBeInTheDocument();
 
     await user.click(screen.getByTestId('fill-all-bundles'));
     await user.click(screen.getByRole('button', { name: /Continue to Round of 32/ }));

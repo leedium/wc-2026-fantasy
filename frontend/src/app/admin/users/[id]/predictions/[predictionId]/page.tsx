@@ -30,7 +30,7 @@ export default async function AdminEditPredictionPage({
 
   if (!prediction) notFound();
 
-  const [groupsRes, knockoutRes] = await Promise.all([
+  const [groupsRes, knockoutRes, advancersRes] = await Promise.all([
     supabase
       .from('group_predictions')
       .select('group_id, first_team_id, second_team_id, third_team_id, fourth_team_id')
@@ -38,6 +38,10 @@ export default async function AdminEditPredictionPage({
     supabase
       .from('knockout_predictions')
       .select('match_id, winner_team_id')
+      .eq('prediction_id', predictionId),
+    supabase
+      .from('advancer_predictions')
+      .select('rank, team_id')
       .eq('prediction_id', predictionId),
   ]);
 
@@ -64,6 +68,10 @@ export default async function AdminEditPredictionPage({
     knockout: (knockoutRes.data ?? []).map((k) => ({
       matchId: k.match_id,
       winner: k.winner_team_id,
+    })),
+    advancers: (advancersRes.data ?? []).map((a) => ({
+      rank: a.rank as number,
+      teamId: a.team_id as string,
     })),
   };
 
