@@ -13,7 +13,12 @@ import {
 } from '@/components/ui/dialog';
 import { Skeleton } from '@/components/ui/skeleton';
 import { BracketView } from '@/components/predictions/BracketView';
-import type { Group, KnockoutMatch, Team } from '@/types/tournament';
+import type {
+  Group,
+  KnockoutMatch,
+  R32BracketAssignment,
+  Team,
+} from '@/types/tournament';
 
 interface PredictionDetail {
   id: string;
@@ -76,6 +81,13 @@ export function BracketPreviewDialog({
     queryFn: () => fetchJSON('/api/groups'),
   });
 
+  const bracketQuery = useQuery<{ assignments: R32BracketAssignment[] }>({
+    queryKey: ['r32-bracket'],
+    enabled: open,
+    queryFn: () => fetchJSON('/api/r32-bracket'),
+  });
+  const bracketAssignments = bracketQuery.data?.assignments ?? [];
+
   const ready =
     predictionQuery.data && matchesQuery.data && teamsQuery.data && groupsQuery.data;
 
@@ -132,6 +144,7 @@ export function BracketPreviewDialog({
               matchId: k.matchId,
               winnerId: k.winner,
             }))}
+            bracketAssignments={bracketAssignments}
           />
         )}
       </DialogContent>
