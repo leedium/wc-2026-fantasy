@@ -179,6 +179,7 @@ export function LeaderboardPageContent() {
               entries={entries}
               currentUsername={currentUsername}
               highlightedRank={highlightedRank}
+              enablePreview={!!user}
             />
           )}
         </CardContent>
