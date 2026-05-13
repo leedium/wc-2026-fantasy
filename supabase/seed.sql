@@ -141,13 +141,20 @@ on conflict (provider, provider_id) do nothing;
 
 -- handle_new_user trigger created the profile row above with the username
 -- from raw_user_meta_data. Now flip is_admin/is_super_admin — we have to
--- temporarily disable prevent_super_admin_change (which always blocks
--- is_super_admin transitions from app context) to do it.
+-- temporarily disable both row-update triggers on profiles:
+--   * profiles_block_super_admin_change blocks is_super_admin transitions
+--     from app context.
+--   * profiles_block_admin_self_elevation raises 'cannot modify is_admin'
+--     whenever is_admin changes and the caller isn't already admin. Seed
+--     runs as the `postgres` role with no auth.uid(), so is_admin() returns
+--     false and the trigger fires — which would roll back the whole seed.
 alter table public.profiles disable trigger profiles_block_super_admin_change;
+alter table public.profiles disable trigger profiles_block_admin_self_elevation;
 
 update public.profiles
    set is_admin = true,
        is_super_admin = true
  where id = '0b42c609-f4e3-493e-bb06-162aa57318e7';
 
+alter table public.profiles enable trigger profiles_block_admin_self_elevation;
 alter table public.profiles enable trigger profiles_block_super_admin_change;
