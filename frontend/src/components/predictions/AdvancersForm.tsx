@@ -36,6 +36,10 @@ export interface AdvancersFormProps {
 
 const RANKS = Array.from({ length: ADVANCER_COUNT }, (_, i) => i + 1);
 
+// Sentinel for the "(none)" entry so admins/users can clear a rank.
+// Radix Select forbids empty string values, so a non-empty marker is needed.
+const CLEAR_VALUE = '__CLEAR__';
+
 export function AdvancersForm({
   variant,
   candidatePool,
@@ -130,13 +134,24 @@ export function AdvancersForm({
               <CardContent className="space-y-3">
                 <Select
                   value={pick?.teamId ?? ''}
-                  onValueChange={(value) => onRankChange(rank, value || null)}
+                  onValueChange={(value) => {
+                    if (value === CLEAR_VALUE) {
+                      onRankChange(rank, null);
+                      return;
+                    }
+                    onRankChange(rank, value || null);
+                  }}
                   disabled={disabled}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Pick a team" />
                   </SelectTrigger>
                   <SelectContent>
+                    {filled && (
+                      <SelectItem value={CLEAR_VALUE}>
+                        <span className="text-muted-foreground">(none)</span>
+                      </SelectItem>
+                    )}
                     {candidatePool.map((team) => {
                       const isOwnPick = pick?.teamId === team.id;
                       const isUsedElsewhere = !isOwnPick && pickedTeamIds.has(team.id);
