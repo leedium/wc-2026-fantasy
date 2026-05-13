@@ -22,7 +22,7 @@ export default async function AdminEditPredictionPage({
   const { data: prediction } = await supabase
     .from('predictions')
     .select(
-      'id, prediction_name, total_goals, submitted_at, tournament_payments(paid_at)'
+      'id, prediction_name, total_goals, submitted_at, tournament_payments!prediction_id(paid_at)'
     )
     .eq('id', predictionId)
     .eq('user_id', id)
@@ -45,11 +45,20 @@ export default async function AdminEditPredictionPage({
       .eq('prediction_id', predictionId),
   ]);
 
+  // PostgREST returns a single object (not an array) when the embedded
+  // relation has a unique FK target — `tournament_payments.prediction_id`
+  // is UNIQUE, so it's 1:1. Handle both shapes to be safe.
+  type Payment = { paid_at: string | null };
   type Pred = typeof prediction & {
-    tournament_payments: Array<{ paid_at: string | null }> | null;
+    tournament_payments: Payment | Payment[] | null;
   };
   const p = prediction as Pred;
-  const payment = p.tournament_payments?.[0] ?? null;
+  const rawPayment = p.tournament_payments;
+  const payment: Payment | null = !rawPayment
+    ? null
+    : Array.isArray(rawPayment)
+      ? (rawPayment[0] ?? null)
+      : rawPayment;
 
   const initial: InitialPrediction = {
     id: p.id,
