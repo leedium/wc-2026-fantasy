@@ -68,18 +68,54 @@ export function GroupStandingsEditor({
     emptyPredictions(groups)
   );
   const [savingId, setSavingId] = React.useState<string | null>(null);
+  // Tracks groups the admin has edited locally but hasn't saved. Hydration
+  // from server data skips these so a refetch triggered by saving one group
+  // can't wipe in-progress edits on another. Saving (or reverting via the
+  // "(none)" sentinel) clears the flag.
+  const [dirtyGroups, setDirtyGroups] = React.useState<Set<string>>(new Set());
 
-  // Hydrate predictions from server-submitted rows whenever they change.
+  const markDirty = React.useCallback((groupId: string) => {
+    setDirtyGroups((prev) => {
+      if (prev.has(groupId)) return prev;
+      const next = new Set(prev);
+      next.add(groupId);
+      return next;
+    });
+  }, []);
+
+  const markClean = React.useCallback((groupId: string) => {
+    setDirtyGroups((prev) => {
+      if (!prev.has(groupId)) return prev;
+      const next = new Set(prev);
+      next.delete(groupId);
+      return next;
+    });
+  }, []);
+
+  // Hydrate predictions from server-submitted rows. Skip groups with
+  // unsaved local edits (dirtyGroups) so saving one group doesn't clobber
+  // another that's mid-edit.
   React.useEffect(() => {
-    setPredictions(
+    setPredictions((prev) =>
       groups.map((g) => {
+        if (dirtyGroups.has(g.id)) {
+          return (
+            prev.find((p) => p.groupId === g.id) ?? {
+              groupId: g.id,
+              positions: { first: null, second: null, third: null, fourth: null },
+            }
+          );
+        }
         const row = submittedById.get(g.id);
         return row
           ? { groupId: g.id, positions: rowToPositions(row) }
-          : { groupId: g.id, positions: { first: null, second: null, third: null, fourth: null } };
+          : {
+              groupId: g.id,
+              positions: { first: null, second: null, third: null, fourth: null },
+            };
       })
     );
-  }, [groups, submittedById]);
+  }, [groups, submittedById, dirtyGroups]);
 
   const handlePositionChange = (
     groupId: string,
@@ -88,7 +124,6 @@ export function GroupStandingsEditor({
   ) => {
     if (teamId === null) {
       // Admin picked the "(none)" entry — revert the whole group standing.
-      // No-op for groups that were never saved.
       if (submittedById.has(groupId)) {
         void clearGroup(groupId);
       } else {
@@ -99,10 +134,12 @@ export function GroupStandingsEditor({
               : p
           )
         );
+        markClean(groupId);
       }
       return;
     }
     setPredictions((prev) => applyGroupPositionChange(prev, groupId, position, teamId));
+    markDirty(groupId);
   };
 
   const clearGroup = async (groupId: string) => {
@@ -117,6 +154,7 @@ export function GroupStandingsEditor({
         throw new Error(body.error ?? 'Failed to clear');
       }
       toast.success(`Group ${groupId} cleared`);
+      markClean(groupId);
       await queryClient.invalidateQueries({ queryKey: ['group-standings', tournamentId] });
       await queryClient.invalidateQueries({ queryKey: ['leaderboard', 1] });
     } catch (e) {
@@ -150,6 +188,7 @@ export function GroupStandingsEditor({
         throw new Error(body.error ?? 'Failed to save');
       }
       toast.success(`Group ${groupId} saved`);
+      markClean(groupId);
       await queryClient.invalidateQueries({ queryKey: ['group-standings', tournamentId] });
       await queryClient.invalidateQueries({ queryKey: ['leaderboard', 1] });
     } catch (e) {
@@ -167,13 +206,18 @@ export function GroupStandingsEditor({
       variant="admin"
       extraPerCard={(groupId) => {
         const submitted = submittedById.has(groupId);
+        const dirty = dirtyGroups.has(groupId);
         const group = predictions.find((p) => p.groupId === groupId);
         const slots = group?.positions;
         const allFilled =
           !!slots && !!slots.first && !!slots.second && !!slots.third && !!slots.fourth;
         return (
           <div className="flex items-center gap-2">
-            {submitted ? (
+            {dirty ? (
+              <Badge variant="default" className="bg-amber-500 text-amber-950">
+                unsaved
+              </Badge>
+            ) : submitted ? (
               <Badge>submitted</Badge>
             ) : (
               <Badge variant="outline">pending</Badge>
