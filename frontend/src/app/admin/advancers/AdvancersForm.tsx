@@ -292,6 +292,14 @@ export function AdvancersForm() {
           {thirdPlaceSlots.map(({ matchId, slot, sourceLabel }) => {
             const current = assignments.find((a) => a.matchId === matchId && a.slot === slot);
             const currentTeam = current ? teamById.get(current.teamId) : null;
+            // Teams already assigned to a different slot — disable them so
+            // the admin can't accidentally double-assign and hit the
+            // `unique (tournament_id, team_id)` constraint error.
+            const assignedElsewhere = new Set(
+              assignments
+                .filter((a) => !(a.matchId === matchId && a.slot === slot))
+                .map((a) => a.teamId)
+            );
 
             return (
               <Card
@@ -342,14 +350,24 @@ export function AdvancersForm() {
                       {advancers.map((a) => {
                         const team = teamById.get(a.teamId);
                         if (!team) return null;
+                        const usedElsewhere = assignedElsewhere.has(team.id);
                         return (
-                          <SelectItem key={a.rank} value={team.id}>
+                          <SelectItem
+                            key={a.rank}
+                            value={team.id}
+                            disabled={usedElsewhere}
+                          >
                             <span className="flex items-center gap-2">
                               <TeamFlag code={team.code} />
                               <span className="text-muted-foreground font-mono text-xs">
                                 #{a.rank}
                               </span>
                               <span>{team.name}</span>
+                              {usedElsewhere && (
+                                <span className="text-muted-foreground ml-1 text-xs italic">
+                                  (assigned elsewhere)
+                                </span>
+                              )}
                             </span>
                           </SelectItem>
                         );
