@@ -27,7 +27,7 @@ function dismissKey(tournamentId: string, phase: string): string {
 }
 
 export function LockStatusBanner() {
-  const { tournamentId, lockTime, isLoading, phase, remainingMs, clockSuspect } =
+  const { tournamentId, lockTime, isLoading, phase, remainingMs, clockSuspect, advancersSet } =
     useTournamentLock();
   const { profile } = useAuth();
   const [dismissed, setDismissed] = React.useState(false);
@@ -89,12 +89,14 @@ export function LockStatusBanner() {
           <span className="font-medium">
             {phase === 'phase1' &&
               `You have ${formatRemaining(remainingMs)} left to choose your group + best-3rd picks before the tournament starts! Don't miss out!`}
-            {phase === 'phase1_locked' &&
+            {phase === 'phase1_locked' && !advancersSet &&
               'Group stage in progress. Knockout predictions will open once the admin posts the best-3rd advancers.'}
+            {phase === 'phase1_locked' && advancersSet &&
+              'Knockout predictions are paused. The admin will reopen them shortly.'}
             {phase === 'phase2_open' &&
               `You have ${formatRemaining(remainingMs)} left to make your knockout picks!`}
             {phase === 'phase2_locked' &&
-              'Tournament in progress. All predictions locked.'}
+              'Knockout predictions closed. The tournament is underway.'}
           </span>
           {(phase === 'phase1_locked' || phase === 'phase2_locked') && isSuperAdmin && (
             <span className="rounded-md bg-white/15 px-2 py-0.5 text-xs font-medium">
