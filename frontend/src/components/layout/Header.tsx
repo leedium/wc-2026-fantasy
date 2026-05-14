@@ -9,6 +9,7 @@ import { ROUTES } from '@/lib/constants';
 import { AuthMenu } from '@/components/layout/AuthMenu';
 import { ThemeToggle } from '@/components/shared/ThemeToggle';
 import { useAuthContext } from '@/providers/AuthProvider';
+import { useMounted } from '@/hooks/useMounted';
 import {
   NavigationMenu,
   NavigationMenuList,
@@ -28,6 +29,7 @@ const baseNavLinks = [
 export function Header() {
   const pathname = usePathname();
   const { profile } = useAuthContext();
+  const mounted = useMounted();
   const navLinks = profile?.isAdmin
     ? [...baseNavLinks, { label: 'Admin', href: ROUTES.admin }]
     : baseNavLinks;
@@ -73,40 +75,49 @@ export function Header() {
 
         <div className="flex items-center gap-2 md:hidden">
           <AuthMenu />
-          <Sheet>
-            <SheetTrigger asChild>
-              <Button variant="ghost" size="icon" aria-label="Open menu">
-                <Menu className="h-5 w-5" />
-              </Button>
-            </SheetTrigger>
-            <SheetContent side="right">
-              <SheetHeader>
-                <SheetTitle>Navigation</SheetTitle>
-              </SheetHeader>
-              <nav className="mt-6 flex flex-col space-y-4">
-                {navLinks.map((link) => (
-                  <Link
-                    key={link.href}
-                    href={link.href}
-                    className={cn(
-                      'hover:text-foreground rounded-md px-3 py-2 text-lg transition-colors',
-                      isActive(link.href)
-                        ? 'bg-accent text-accent-foreground font-semibold'
-                        : 'text-muted-foreground'
-                    )}
-                  >
-                    {link.label}
-                  </Link>
-                ))}
-              </nav>
-              <div className="mt-6 flex flex-col gap-4 border-t pt-6">
-                <div className="flex items-center gap-2">
-                  <span className="text-muted-foreground text-sm">Theme:</span>
-                  <ThemeToggle />
+          {/* Same hydration-mismatch dodge as AuthMenu: defer the Radix
+              Sheet until after mount so its useId-driven aria-controls
+              doesn't drift between SSR and client. */}
+          {mounted ? (
+            <Sheet>
+              <SheetTrigger asChild>
+                <Button variant="ghost" size="icon" aria-label="Open menu">
+                  <Menu className="h-5 w-5" />
+                </Button>
+              </SheetTrigger>
+              <SheetContent side="right">
+                <SheetHeader>
+                  <SheetTitle>Navigation</SheetTitle>
+                </SheetHeader>
+                <nav className="mt-6 flex flex-col space-y-4">
+                  {navLinks.map((link) => (
+                    <Link
+                      key={link.href}
+                      href={link.href}
+                      className={cn(
+                        'hover:text-foreground rounded-md px-3 py-2 text-lg transition-colors',
+                        isActive(link.href)
+                          ? 'bg-accent text-accent-foreground font-semibold'
+                          : 'text-muted-foreground'
+                      )}
+                    >
+                      {link.label}
+                    </Link>
+                  ))}
+                </nav>
+                <div className="mt-6 flex flex-col gap-4 border-t pt-6">
+                  <div className="flex items-center gap-2">
+                    <span className="text-muted-foreground text-sm">Theme:</span>
+                    <ThemeToggle />
+                  </div>
                 </div>
-              </div>
-            </SheetContent>
-          </Sheet>
+              </SheetContent>
+            </Sheet>
+          ) : (
+            <Button variant="ghost" size="icon" aria-label="Open menu" disabled>
+              <Menu className="h-5 w-5" />
+            </Button>
+          )}
         </div>
       </div>
     </header>
