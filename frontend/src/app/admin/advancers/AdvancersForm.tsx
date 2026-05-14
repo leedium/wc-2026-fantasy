@@ -104,7 +104,7 @@ export function AdvancersForm() {
 
   const advancers: AdvancerPrediction[] = advancersQuery.data?.advancers ?? [];
   const assignments: R32BracketAssignment[] = bracketQuery.data?.assignments ?? [];
-  const knockoutUnlocked = tournamentQuery.data?.knockoutUnlocked ?? false;
+  const phase = tournamentQuery.data?.phase ?? 'phase1';
 
   const teamById = React.useMemo(() => {
     const map = new Map<string, Team>();
@@ -392,12 +392,17 @@ export function AdvancersForm() {
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            {knockoutUnlocked ? <Unlock className="h-5 w-5" /> : <Lock className="h-5 w-5" />}
+            {phase === 'phase2_open' ? <Unlock className="h-5 w-5" /> : <Lock className="h-5 w-5" />}
             Phase 2 (knockout predictions)
           </CardTitle>
           <p className="text-muted-foreground text-sm">
-            Currently {knockoutUnlocked ? 'open' : 'closed'}.{' '}
-            {completedAdvancers}/8 advancers set ·{' '}
+            Currently{' '}
+            {phase === 'phase2_open'
+              ? 'open'
+              : phase === 'phase2_locked'
+                ? 'closed (lock time has passed — set a new lock time to reopen)'
+                : 'closed'}
+            . {completedAdvancers}/8 advancers set ·{' '}
             {completedAssignments}/{thirdPlaceSlots.length} bracket slots assigned.
           </p>
         </CardHeader>
@@ -416,21 +421,23 @@ export function AdvancersForm() {
           <div className="flex flex-wrap gap-2">
             <Button
               onClick={() => togglePhaseTwo(true)}
-              disabled={busy || !canOpenPhaseTwo || knockoutUnlocked}
+              disabled={busy || !canOpenPhaseTwo || phase === 'phase2_open'}
               title={
                 !allAdvancersSet
                   ? 'Set all 8 advancers first'
                   : !allAssignmentsSet
                     ? 'Assign every R32 3rd-place slot first'
-                    : undefined
+                    : phase === 'phase2_locked'
+                      ? 'Phase 2 lock time has passed — set a new lock time above and click to reopen'
+                      : undefined
               }
             >
-              Open Phase 2
+              {phase === 'phase2_locked' ? 'Reopen Phase 2' : 'Open Phase 2'}
             </Button>
             <Button
               variant="outline"
               onClick={() => togglePhaseTwo(false)}
-              disabled={busy || !knockoutUnlocked}
+              disabled={busy || phase !== 'phase2_open'}
             >
               Close Phase 2
             </Button>
