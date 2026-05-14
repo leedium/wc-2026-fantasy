@@ -91,12 +91,13 @@ describe('LockStatusBanner', () => {
     expect(screen.getByRole('status').className).toContain('bg-slate-600');
   });
 
-  it('renders the paused message when phase 2 was opened and then closed by admin', async () => {
+  it('renders the knockout-stage message when phase 2 was opened and then closed by admin', async () => {
     mockTournament({ lockOffsetMs: -60_000, phase: 'phase1_locked', advancersSet: true });
     render(wrap(<LockStatusBanner />));
     await waitFor(() => expect(screen.getByRole('status')).toBeInTheDocument());
-    expect(screen.getByRole('status')).toHaveTextContent(/Knockout predictions are paused/i);
+    expect(screen.getByRole('status')).toHaveTextContent(/knockout stage has begun/i);
     expect(screen.getByRole('status')).not.toHaveTextContent(/Group stage in progress/i);
+    expect(screen.getByRole('status').className).toContain('bg-red-600');
   });
 
   it('renders the fully locked state when phase 2 has closed', async () => {
