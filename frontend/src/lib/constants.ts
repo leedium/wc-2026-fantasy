@@ -10,14 +10,14 @@ export const TOURNAMENT_CONFIG = {
 } as const;
 
 // Group stage: 11 standard groups × 6 (exact-order top-2) + Group I "Group of Death" exact-order = 8.
-// Advancers: 8 ranked 3rd-place picks × 0.5 (correct team + correct rank) = 4 max.
+// Advancers: 8 ranked 3rd-place picks × 1.25 (set + rank) = 10 max.
 // Knockout: per-team correct-side maxes — R16 16×5 + QF 8×6 + SF 4×8 + Final 2×10 = 180 — plus
 // flat bonuses (champion 15, 3rd-place winner 5) = 200.
 export const SCORING = {
   maxGroupPoints: 74,
-  maxAdvancerPoints: 4,
+  maxAdvancerPoints: 10,
   maxKnockoutPoints: 200,
-  maxTotalPoints: 278,
+  maxTotalPoints: 284,
 } as const;
 
 /**

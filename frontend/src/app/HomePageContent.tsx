@@ -359,7 +359,7 @@ export function HomePageContent() {
                 <span className="text-muted-foreground">
                   Team in the actual top 8 (any rank)
                 </span>
-                <span className="font-semibold">+0.25 pts</span>
+                <span className="font-semibold">+1 pt</span>
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-muted-foreground">Team at the exact correct rank</span>
@@ -369,7 +369,7 @@ export function HomePageContent() {
                 <span className="font-semibold">Bonuses stack:</span>{' '}
                 <span className="text-muted-foreground">
                   a team in the correct rank earns the full <span className="font-semibold">
-                    +0.5
+                    +1.25
                   </span>{' '}
                   (set + rank).
                 </span>
