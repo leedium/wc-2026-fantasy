@@ -103,7 +103,7 @@ describe('LockStatusBanner', () => {
     mockTournament({ lockOffsetMs: -60_000, phase: 'phase2_locked' });
     render(wrap(<LockStatusBanner />));
     await waitFor(() => expect(screen.getByRole('status')).toBeInTheDocument());
-    expect(screen.getByRole('status')).toHaveTextContent(/Knockout predictions closed/i);
+    expect(screen.getByRole('status')).toHaveTextContent(/knockout stage has begun/i);
     expect(screen.getByRole('status').className).toContain('bg-red-600');
   });
 

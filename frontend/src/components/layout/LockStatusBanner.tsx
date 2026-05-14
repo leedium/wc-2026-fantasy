@@ -96,7 +96,7 @@ export function LockStatusBanner() {
             {phase === 'phase2_open' &&
               `You have ${formatRemaining(remainingMs)} left to make your knockout picks!`}
             {phase === 'phase2_locked' &&
-              'Knockout predictions closed. The tournament is underway.'}
+              'The knockout stage has begun. Predictions are locked.'}
           </span>
           {(phase === 'phase1_locked' || phase === 'phase2_locked') && isSuperAdmin && (
             <span className="rounded-md bg-white/15 px-2 py-0.5 text-xs font-medium">

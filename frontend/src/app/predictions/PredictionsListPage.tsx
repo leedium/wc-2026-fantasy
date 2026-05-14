@@ -181,11 +181,18 @@ export function PredictionsListPage() {
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
-                  <Button asChild variant="outline" size="sm">
-                    <Link href={`${ROUTES.predictions}/${encodeURIComponent(p.id)}`}>
-                      {isLocked && !isSuperAdmin ? 'View' : 'Edit'}
-                    </Link>
-                  </Button>
+                  {/* Once phase 2 closes the knockout stage is underway and
+                      there's nothing the user can edit. Hide the link —
+                      the Preview button (eye icon) still gives them a
+                      read-only view. Super admins keep the Edit button via
+                      the admin route. */}
+                  {!(phase === 'phase2_locked' && !isSuperAdmin) && (
+                    <Button asChild variant="outline" size="sm">
+                      <Link href={`${ROUTES.predictions}/${encodeURIComponent(p.id)}`}>
+                        {isLocked && !isSuperAdmin ? 'View' : 'Edit'}
+                      </Link>
+                    </Button>
+                  )}
                   <Button
                     variant="outline"
                     size="sm"
