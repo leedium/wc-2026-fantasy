@@ -702,7 +702,14 @@ export function PredictionsPageContent({
     });
   };
 
-  const persist = async ({ markSubmitted }: { markSubmitted: boolean }) => {
+  const persist = async ({
+    markSubmitted,
+    redirectTo,
+  }: {
+    markSubmitted: boolean;
+    /** Override navigation after a successful save-progress (not Submit). */
+    redirectTo?: string;
+  }) => {
     if (!tournament) return;
     setPredictionNameTouched(true);
     if (nameError) {
@@ -791,6 +798,8 @@ export function PredictionsPageContent({
 
       if (markSubmitted) {
         router.push(redirectAfterSave ?? ROUTES.predictions);
+      } else if (redirectTo) {
+        router.push(redirectTo);
       } else if (mode === 'create' && newId) {
         // Stay on the wizard but transition to edit-mode URL so subsequent
         // saves update the same draft instead of creating new ones.
@@ -805,6 +814,8 @@ export function PredictionsPageContent({
   };
 
   const handleSubmit = () => persist({ markSubmitted: true });
+  const handleSavePhase1 = () =>
+    persist({ markSubmitted: false, redirectTo: redirectAfterSave ?? ROUTES.predictions });
   const handleSaveProgress = () => persist({ markSubmitted: false });
 
   if (isLoading || !tournament || !groups || !teams || !matches) {
@@ -982,7 +993,7 @@ export function PredictionsPageContent({
           {isPhase1EndStep ? (
             <Button
               type="button"
-              onClick={handleSaveProgress}
+              onClick={handleSavePhase1}
               disabled={
                 !currentStepComplete ||
                 isLocked ||
