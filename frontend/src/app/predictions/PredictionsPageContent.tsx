@@ -322,7 +322,21 @@ export function PredictionsPageContent({
   const [currentStep, setCurrentStep] = React.useState<Step>('groups');
   const tabsContentRef = React.useRef<HTMLDivElement | null>(null);
   const userInteractedRef = React.useRef(false);
+  const initialStepSet = React.useRef(false);
   const nameRef = React.useRef<HTMLInputElement>(null);
+
+  // Once we know the phase and have hydrated, jump straight to Round of 32
+  // when phase 2 is open — group + advancer picks are frozen at that point
+  // so the user's only remaining work is the knockout bracket. Runs once;
+  // later navigation is up to the user.
+  React.useEffect(() => {
+    if (initialStepSet.current) return;
+    if (!hydrated) return;
+    initialStepSet.current = true;
+    if (phase === 'phase2_open') {
+      setCurrentStep('round_of_32');
+    }
+  }, [hydrated, phase]);
 
   const groups = groupsQuery.data;
   const teams = teamsQuery.data;
