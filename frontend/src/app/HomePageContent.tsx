@@ -1,5 +1,6 @@
 'use client';
 
+import Image from 'next/image';
 import Link from 'next/link';
 import { useQuery } from '@tanstack/react-query';
 import { Clock, Trophy, Users, UserPlus, Target, Award, ChevronRight } from 'lucide-react';
@@ -64,29 +65,43 @@ export function HomePageContent() {
 
   return (
     <PageLayout>
-      <section className="py-12 text-center md:py-20">
-        <Badge variant="outline" className="mb-4">
-          FIFA World Cup 2026
-        </Badge>
-        <h1 className="mb-4 text-4xl font-bold tracking-tight md:text-6xl">
-          World Cup 2026
-          <br />
-          <span className="text-primary">Prediction Game</span>
-        </h1>
-        <p className="text-muted-foreground mx-auto mb-8 max-w-2xl text-lg md:text-xl">
-          Submit your bracket predictions, earn points for correct picks, and climb the leaderboard.
-          Free to play — all you need is a username.
-        </p>
-        <div className="flex flex-col items-center justify-center gap-4 sm:flex-row">
-          <Button asChild size="lg" className="min-w-[200px]">
-            <Link href={ROUTES.register}>
-              Create an account
-              <ChevronRight className="ml-2 h-4 w-4" />
-            </Link>
-          </Button>
-          <Button asChild variant="outline" size="lg" className="min-w-[200px]">
-            <Link href={ROUTES.leaderboard}>View Leaderboard</Link>
-          </Button>
+      <section className="relative my-8 flex min-h-[480px] items-center justify-center overflow-hidden rounded-2xl md:min-h-[560px]">
+        <Image
+          src="/hero.jpg"
+          alt="World Cup 2026 stadium filled with cheering fans under floodlights"
+          fill
+          priority
+          sizes="(min-width: 1280px) 1248px, 100vw"
+          className="object-cover"
+        />
+        <div
+          aria-hidden
+          className="absolute inset-0 bg-gradient-to-t from-black/50 via-black/20 to-black/30"
+        />
+        <div className="bg-background/80 dark:bg-background/70 relative z-10 mx-4 max-w-2xl rounded-2xl p-8 text-center shadow-xl backdrop-blur-md md:p-12">
+          <Badge variant="outline" className="mb-4">
+            FIFA World Cup 2026
+          </Badge>
+          <h1 className="mb-4 text-4xl font-bold tracking-tight md:text-6xl">
+            World Cup 2026
+            <br />
+            <span className="text-primary">Prediction Game</span>
+          </h1>
+          <p className="text-muted-foreground mb-8 text-lg md:text-xl">
+            Submit your bracket predictions, earn points for correct picks, and climb the
+            leaderboard. Free to play — all you need is a username.
+          </p>
+          <div className="flex flex-col items-center justify-center gap-4 sm:flex-row">
+            <Button asChild size="lg" className="min-w-[200px]">
+              <Link href={ROUTES.register}>
+                Create an account
+                <ChevronRight className="ml-2 h-4 w-4" />
+              </Link>
+            </Button>
+            <Button asChild variant="outline" size="lg" className="min-w-[200px]">
+              <Link href={ROUTES.leaderboard}>View Leaderboard</Link>
+            </Button>
+          </div>
         </div>
       </section>
 
