@@ -166,6 +166,7 @@ interface QueryConfig {
   }>;
   storedKnockout?: Array<{ matchId: string; winner: string | null }>;
   storedTotalGoals?: number | null;
+  phase?: 'phase1' | 'phase1_locked' | 'phase2_open' | 'phase2_locked';
 }
 
 function configureQueries({
@@ -174,6 +175,7 @@ function configureQueries({
   storedGroups = [],
   storedKnockout = [],
   storedTotalGoals = null,
+  phase,
 }: QueryConfig = {}) {
   mockUseQuery.mockImplementation(({ queryKey }: { queryKey: ReadonlyArray<unknown> }) => {
     const key = queryKey[0];
@@ -187,8 +189,10 @@ function configureQueries({
             status: 'upcoming',
             lockTime: tournamentLockTime,
             knockoutLockTime: null,
-            knockoutUnlocked: false,
-            phase: new Date(tournamentLockTime) > new Date() ? 'phase1' : 'phase1_locked',
+            knockoutUnlocked: phase === 'phase2_open' || phase === 'phase2_locked',
+            phase:
+              phase ??
+              (new Date(tournamentLockTime) > new Date() ? 'phase1' : 'phase1_locked'),
             totalEntries: 0,
             serverTime: new Date().toISOString(),
           },
@@ -244,11 +248,14 @@ describe('PredictionsPageContent — stepper navigation', () => {
     expect(screen.getByRole('button', { name: /Continue to Best 3rds/ })).toBeEnabled();
   });
 
-  it('advances Groups → Best 3rds → Round of 32 via Continue', async () => {
-    configureQueries();
+  it('advances Groups → Best 3rds → Round of 32 via Continue (phase 2 open)', async () => {
+    configureQueries({ phase: 'phase2_open' });
     const user = userEvent.setup();
     render(<PredictionsPageContent mode="create" />);
 
+    // In phase 2 the wizard auto-starts on Round of 32; navigate back to
+    // Group Stage via the stepper tab to exercise the full Continue chain.
+    await user.click(await screen.findByRole('tab', { name: /Group Stage/ }));
     await user.click(await screen.findByTestId('fill-all-groups'));
     await user.click(screen.getByRole('button', { name: /Continue to Best 3rds/ }));
     // Best 3rds step active.
@@ -266,11 +273,34 @@ describe('PredictionsPageContent — stepper navigation', () => {
     expect(screen.getByRole('tab', { name: /R32/ })).toHaveAttribute('aria-selected', 'true');
   });
 
-  it('walks through every step with Continue and reaches the tiebreaker', async () => {
-    configureQueries();
+  it('shows Save Phase 1 Picks instead of Continue on Best 3rds in phase 1', async () => {
+    configureQueries(); // phase 1 default
     const user = userEvent.setup();
     render(<PredictionsPageContent mode="create" />);
 
+    await user.click(await screen.findByTestId('fill-all-groups'));
+    await user.click(screen.getByRole('button', { name: /Continue to Best 3rds/ }));
+    await user.click(screen.getByTestId('fill-all-bundles'));
+
+    // No "Continue to Round of 32" in phase 1.
+    expect(
+      screen.queryByRole('button', { name: /Continue to Round of 32/ })
+    ).not.toBeInTheDocument();
+    // The Phase 1 end-of-flow button is shown in its place.
+    expect(screen.getByRole('button', { name: /Save Phase 1 Picks/ })).toBeInTheDocument();
+    // The Knockout + Tiebreaker top tabs are locked (disabled).
+    expect(screen.getByRole('tab', { name: /Knockout/ })).toBeDisabled();
+    expect(screen.getByRole('tab', { name: /Tiebreaker/ })).toBeDisabled();
+  });
+
+  it('walks through every step with Continue and reaches the tiebreaker (phase 2 open)', async () => {
+    configureQueries({ phase: 'phase2_open' });
+    const user = userEvent.setup();
+    render(<PredictionsPageContent mode="create" />);
+
+    // In phase 2 the wizard auto-starts on Round of 32; navigate back to
+    // Group Stage so we can exercise the full Continue chain.
+    await user.click(await screen.findByRole('tab', { name: /Group Stage/ }));
     await user.click(await screen.findByTestId('fill-all-groups'));
     await user.click(screen.getByRole('button', { name: /Continue to Best 3rds/ }));
     await user.click(screen.getByTestId('fill-all-bundles'));
@@ -428,7 +458,9 @@ describe('PredictionsPageContent — autosave', () => {
   });
 
   it('clears the draft after a successful submit', async () => {
-    configureQueries();
+    // Phase 2 open so Submit is reachable — regular users can't submit in
+    // phase 1 (Continue → R32 is replaced by Save Phase 1 Picks).
+    configureQueries({ phase: 'phase2_open' });
     (global.fetch as jest.Mock).mockResolvedValue({
       ok: true,
       json: async () => ({ predictionId: 'pred-1' }),
@@ -438,6 +470,8 @@ describe('PredictionsPageContent — autosave', () => {
 
     render(<PredictionsPageContent mode="create" />);
 
+    // Wizard starts at Round of 32 in phase 2; navigate to Group Stage first.
+    await user.click(await screen.findByRole('tab', { name: /Group Stage/ }));
     await user.click(await screen.findByTestId('fill-all-groups'));
     await user.click(screen.getByRole('button', { name: /Continue to Best 3rds/ }));
     await user.click(screen.getByTestId('fill-all-bundles'));

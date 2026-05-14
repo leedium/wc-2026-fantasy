@@ -555,9 +555,16 @@ export function PredictionsPageContent({
 
   const topValue: TopStep = topOf(currentStep);
 
+  // In Phase 1 regular users can't edit Phase 2 fields, so the Knockout
+  // and Tiebreaker tabs are visually locked. Super admin can edit any
+  // field in any phase, so they keep full access.
+  const phase2TabsLocked = phase === 'phase1' && !isSuperAdmin;
+
   const topSteps: StepperStep[] = TOP_STEPS.map((value) => {
     let status: StepperStep['status'];
     if (isLocked) {
+      status = 'locked';
+    } else if (phase2TabsLocked && (value === 'knockout' || value === 'tiebreaker')) {
       status = 'locked';
     } else if (value === topValue) {
       status = 'current';
@@ -695,7 +702,14 @@ export function PredictionsPageContent({
     });
   };
 
-  const persist = async ({ markSubmitted }: { markSubmitted: boolean }) => {
+  const persist = async ({
+    markSubmitted,
+    redirectTo,
+  }: {
+    markSubmitted: boolean;
+    /** Override navigation after a successful save-progress (not Submit). */
+    redirectTo?: string;
+  }) => {
     if (!tournament) return;
     setPredictionNameTouched(true);
     if (nameError) {
@@ -784,6 +798,8 @@ export function PredictionsPageContent({
 
       if (markSubmitted) {
         router.push(redirectAfterSave ?? ROUTES.predictions);
+      } else if (redirectTo) {
+        router.push(redirectTo);
       } else if (mode === 'create' && newId) {
         // Stay on the wizard but transition to edit-mode URL so subsequent
         // saves update the same draft instead of creating new ones.
@@ -798,6 +814,8 @@ export function PredictionsPageContent({
   };
 
   const handleSubmit = () => persist({ markSubmitted: true });
+  const handleSavePhase1 = () =>
+    persist({ markSubmitted: false, redirectTo: redirectAfterSave ?? ROUTES.predictions });
   const handleSaveProgress = () => persist({ markSubmitted: false });
 
   if (isLoading || !tournament || !groups || !teams || !matches) {
@@ -818,6 +836,13 @@ export function PredictionsPageContent({
   const currentStepComplete = stepStatus[currentStep];
   const nextStepLabel = !isLastStep ? STEP_LABELS[STEP_ORDER[stepIndex + 1]] : null;
   const previousStepLabel = !isFirstStep ? STEP_LABELS[STEP_ORDER[stepIndex - 1]] : null;
+  // In Phase 1, regular users have no knockout step to "Continue to" — the
+  // bracket is read-only. Replace the bottom nav with a "Save Phase 1 Picks"
+  // button on the last Phase 1 step (Best 3rds) so the user has a clear
+  // end-of-Phase-1 commit action instead of being dumped into disabled
+  // knockout screens. Super admin keeps Continue (god-mode editing).
+  const isPhase1EndStep =
+    phase === 'phase1' && !isSuperAdmin && currentStep === 'best_thirds';
 
   return (
     <PageLayout>
@@ -965,7 +990,23 @@ export function PredictionsPageContent({
             <ArrowLeft className="mr-2 h-4 w-4" />
             {previousStepLabel ? `Back: ${previousStepLabel}` : 'Back'}
           </Button>
-          {isLastStep ? (
+          {isPhase1EndStep ? (
+            <Button
+              type="button"
+              onClick={handleSavePhase1}
+              disabled={
+                !currentStepComplete ||
+                isLocked ||
+                isSavingProgress ||
+                isSubmitting ||
+                !!nameError
+              }
+              className="sm:w-auto"
+            >
+              {isSavingProgress ? 'Saving…' : 'Save Phase 1 Picks'}
+              <ArrowRight className="ml-2 h-4 w-4" />
+            </Button>
+          ) : isLastStep ? (
             <Button
               type="button"
               onClick={focusSubmit}
