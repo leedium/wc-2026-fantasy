@@ -472,20 +472,15 @@ export function PredictionsPageContent({
     totalKnockoutMatches > 0 && completedKnockoutMatches === totalKnockoutMatches;
   const isTiebreakerComplete = totalGoals !== null;
 
-  // Which fields the current submit can actually accept depends on phase. The
-  // server-side RPC (submit_predictions in 0022) raises 'phase 1 only fields
-  // allowed' if a phase-1 payload includes knockout or total_goals, and
-  // 'phase 1 ended; group + bundle picks are frozen' on the inverse — so the
-  // wizard has to gate completeness on the same partition. Routes that go
-  // through admin_submit_predictions (super admin editing themselves in non-
-  // phase-1 phases, or any admin editing a user) bypass the guard and need
-  // everything filled to count as complete.
   const usesAdminRoute = effectiveApiBasePath.startsWith('/api/admin/');
-  const isPredictionsComplete = usesAdminRoute
-    ? isGroupsComplete && isAdvancersComplete && isBracketComplete && isTiebreakerComplete
-    : phase === 'phase2_open'
-      ? isBracketComplete && isTiebreakerComplete
-      : isGroupsComplete && isAdvancersComplete;
+  // Submit ("mark this prediction submitted") requires the bracket to be
+  // fully built — i.e. every section, across both phases, complete. Save
+  // Progress doesn't use this gate; users save partial drafts in either
+  // phase. In Phase 1 the knockout UI is read-only for regular users so
+  // isBracketComplete is naturally false and Submit stays disabled until
+  // Phase 2 opens.
+  const isPredictionsComplete =
+    isGroupsComplete && isAdvancersComplete && isBracketComplete && isTiebreakerComplete;
 
   const trimmedName = predictionName.trim();
   const nameError =
@@ -1001,7 +996,9 @@ export function PredictionsPageContent({
             <p className="text-muted-foreground text-sm">
               {isPredictionsComplete
                 ? 'Submit puts this bracket on the leaderboard once an admin marks it paid.'
-                : 'Save progress to keep working — or complete every pick to submit.'}
+                : phase === 'phase1'
+                  ? 'Save progress to keep working. You can submit once Phase 2 opens and the knockout bracket is complete.'
+                  : 'Save progress to keep working — or complete every pick to submit.'}
             </p>
           </div>
           <div className="flex flex-col gap-2 sm:flex-row">
