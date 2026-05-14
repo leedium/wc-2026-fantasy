@@ -2,15 +2,11 @@
 
 import * as React from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Lock, Unlock } from 'lucide-react';
 import { toast } from 'sonner';
 
 import { AdvancersForm as RankPicker } from '@/components/predictions/AdvancersForm';
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import {
   Select,
   SelectContent,
@@ -37,13 +33,6 @@ interface BracketResponse {
   assignments: Array<{ matchId: string; slot: 1 | 2; teamId: string }>;
 }
 
-interface TournamentResponse {
-  id: string;
-  knockoutUnlocked: boolean;
-  knockoutLockTime: string | null;
-  phase: 'phase1' | 'phase1_locked' | 'phase2_open' | 'phase2_locked';
-}
-
 interface GroupStandingRow {
   group_id: string;
   third_team_id: string | null;
@@ -57,13 +46,6 @@ async function fetchJSON<T>(url: string): Promise<T> {
   return res.json();
 }
 
-function toLocalDatetimeInput(iso: string | null): string {
-  if (!iso) return '';
-  const d = new Date(iso);
-  const pad = (n: number) => String(n).padStart(2, '0');
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
-}
-
 export function AdvancersForm() {
   const queryClient = useQueryClient();
   const advancersQuery = useQuery<TournamentAdvancersResponse>({
@@ -73,10 +55,6 @@ export function AdvancersForm() {
   const bracketQuery = useQuery<BracketResponse>({
     queryKey: ['admin-r32-bracket'],
     queryFn: () => fetchJSON('/api/admin/r32-bracket'),
-  });
-  const tournamentQuery = useQuery<TournamentResponse>({
-    queryKey: ['tournament'],
-    queryFn: () => fetchJSON('/api/tournament'),
   });
   const teamsQuery = useQuery<Team[]>({
     queryKey: ['teams'],
@@ -95,16 +73,8 @@ export function AdvancersForm() {
     enabled: !!tournamentId,
   });
 
-  const [phaseTwoLockInput, setPhaseTwoLockInput] = React.useState<string>('');
-  const [busy, setBusy] = React.useState(false);
-
-  React.useEffect(() => {
-    setPhaseTwoLockInput(toLocalDatetimeInput(tournamentQuery.data?.knockoutLockTime ?? null));
-  }, [tournamentQuery.data?.knockoutLockTime]);
-
   const advancers: AdvancerPrediction[] = advancersQuery.data?.advancers ?? [];
   const assignments: R32BracketAssignment[] = bracketQuery.data?.assignments ?? [];
-  const phase = tournamentQuery.data?.phase ?? 'phase1';
 
   const teamById = React.useMemo(() => {
     const map = new Map<string, Team>();
@@ -145,8 +115,6 @@ export function AdvancersForm() {
   const completedAdvancers = advancers.length;
   const completedAssignments = assignments.length;
   const allAdvancersSet = completedAdvancers === 8;
-  const allAssignmentsSet = completedAssignments === thirdPlaceSlots.length;
-  const canOpenPhaseTwo = allAdvancersSet && allAssignmentsSet;
 
   const handleRankChange = async (rank: number, teamId: string | null) => {
     if (!tournamentId) return;
@@ -217,42 +185,8 @@ export function AdvancersForm() {
     }
   };
 
-  const togglePhaseTwo = async (unlock: boolean) => {
-    if (!tournamentId) return;
-    setBusy(true);
-    try {
-      const res = await fetch('/api/admin/tournament', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          id: tournamentId,
-          knockoutUnlocked: unlock,
-          knockoutLockTime: unlock && phaseTwoLockInput
-            ? new Date(phaseTwoLockInput).toISOString()
-            : null,
-        }),
-      });
-      if (!res.ok) {
-        const body = await res.json().catch(() => ({}));
-        throw new Error(String(body.error ?? 'Failed'));
-      }
-      toast.success(unlock ? 'Phase 2 opened' : 'Phase 2 closed');
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ['tournament'] }),
-        queryClient.invalidateQueries({ queryKey: ['admin-advancers'] }),
-      ]);
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'Failed');
-    } finally {
-      setBusy(false);
-    }
-  };
-
   const loading =
-    advancersQuery.isLoading ||
-    tournamentQuery.isLoading ||
-    teamsQuery.isLoading ||
-    matchesQuery.isLoading;
+    advancersQuery.isLoading || teamsQuery.isLoading || matchesQuery.isLoading;
 
   return (
     <div className="space-y-10">
@@ -261,7 +195,8 @@ export function AdvancersForm() {
           <h2 className="text-xl font-semibold">Top-8 advancers</h2>
           <p className="text-muted-foreground text-sm">
             Rank the 8 best 3rd-place teams in descending order. Choices are the 12 teams
-            you&apos;ve entered as 3rd-place in group standings.
+            you&apos;ve entered as 3rd-place in group standings. Phase 2 controls live on the{' '}
+            <span className="font-mono">Tournament</span> tab.
           </p>
         </div>
         {loading ? (
@@ -388,62 +323,6 @@ export function AdvancersForm() {
           {completedAssignments} / {thirdPlaceSlots.length} bracket slots assigned.
         </p>
       </section>
-
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            {phase === 'phase2_open' ? <Unlock className="h-5 w-5" /> : <Lock className="h-5 w-5" />}
-            Phase 2 (knockout predictions)
-          </CardTitle>
-          <p className="text-muted-foreground text-sm">
-            Currently{' '}
-            {phase === 'phase2_open'
-              ? 'open'
-              : phase === 'phase2_locked'
-                ? 'closed (lock time has passed — set a new lock time to reopen)'
-                : 'closed'}
-            . {completedAdvancers}/8 advancers set ·{' '}
-            {completedAssignments}/{thirdPlaceSlots.length} bracket slots assigned.
-          </p>
-        </CardHeader>
-        <CardContent className="space-y-3">
-          <div className="space-y-1">
-            <Label htmlFor="phase2-lock">Knockout lock time (when phase 2 closes)</Label>
-            <Input
-              id="phase2-lock"
-              type="datetime-local"
-              value={phaseTwoLockInput}
-              onChange={(e) => setPhaseTwoLockInput(e.target.value)}
-              className="max-w-sm"
-              disabled={busy}
-            />
-          </div>
-          <div className="flex flex-wrap gap-2">
-            <Button
-              onClick={() => togglePhaseTwo(true)}
-              disabled={busy || !canOpenPhaseTwo || phase === 'phase2_open'}
-              title={
-                !allAdvancersSet
-                  ? 'Set all 8 advancers first'
-                  : !allAssignmentsSet
-                    ? 'Assign every R32 3rd-place slot first'
-                    : phase === 'phase2_locked'
-                      ? 'Phase 2 lock time has passed — set a new lock time above and click to reopen'
-                      : undefined
-              }
-            >
-              {phase === 'phase2_locked' ? 'Reopen Phase 2' : 'Open Phase 2'}
-            </Button>
-            <Button
-              variant="outline"
-              onClick={() => togglePhaseTwo(false)}
-              disabled={busy || phase !== 'phase2_open'}
-            >
-              Close Phase 2
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
     </div>
   );
 }
