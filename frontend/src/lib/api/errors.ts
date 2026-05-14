@@ -31,11 +31,22 @@ const KNOWN_ERROR_FRAGMENTS = [
   'prediction name taken',
   'prediction not found',
   'could not generate unique username',
-  'invalid bundle group letter',
-  'unknown bundle slot',
   'phase 1 ended',
   'phase 1 only fields allowed',
+  // Advancers v2 (migrations 0025-0028)
   'all 8 advancers must be set',
+  'advancer rank must be',
+  'duplicate advancer rank',
+  'duplicate advancer team',
+  'advancer team',
+  'advancer rank set must be',
+  'not a 3rd-place team',
+  'team is already assigned to',
+  // R32 bracket assignment (migration 0026)
+  'is not in the top-8 advancers',
+  'is not a 3rd-place slot',
+  'unknown r32 match',
+  'all r32 3rd-place bracket slots',
 ] as const;
 
 export function safeMessage(
