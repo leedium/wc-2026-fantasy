@@ -9,11 +9,13 @@ import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { useAuth } from '@/hooks/useAuth';
+import { useMounted } from '@/hooks/useMounted';
 import { ROUTES } from '@/lib/constants';
 
 export function AuthMenu() {
   const { user, profile, signOut } = useAuth();
   const router = useRouter();
+  const mounted = useMounted();
   const [isSigningOut, setIsSigningOut] = React.useState(false);
 
   const handleSignOut = async () => {
@@ -53,6 +55,20 @@ export function AuthMenu() {
   }
 
   const displayName = profile?.displayName || profile?.username || user.email;
+
+  // Defer the Radix Popover until after hydration. Radix uses useId()
+  // internally, and its IDs shift between SSR and client when other
+  // mount-gated components (ThemeToggle, etc.) re-render — producing a
+  // confusing aria-controls hydration mismatch. Rendering a plain
+  // (non-Radix) placeholder for the first paint sidesteps the issue.
+  if (!mounted) {
+    return (
+      <Button variant="outline" size="sm" className="gap-2" disabled>
+        <UserIcon className="h-4 w-4" />
+        <span className="max-w-[120px] truncate">{displayName}</span>
+      </Button>
+    );
+  }
 
   return (
     <Popover>
