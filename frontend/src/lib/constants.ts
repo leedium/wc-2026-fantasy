@@ -47,6 +47,10 @@ export const ROUTES = {
   resetPassword: '/reset-password',
   admin: '/admin',
   account: '/account',
+  about: '/about',
+  rules: '/rules',
+  terms: '/terms',
+  privacy: '/privacy',
 } as const;
 
 export const API_ENDPOINTS = {

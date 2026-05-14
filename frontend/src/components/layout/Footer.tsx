@@ -2,12 +2,13 @@
 
 import Link from 'next/link';
 import { Separator } from '@/components/ui/separator';
+import { ROUTES } from '@/lib/constants';
 
 const footerLinks = [
-  { label: 'About', href: '/about' },
-  { label: 'Rules', href: '/rules' },
-  { label: 'Terms', href: '/terms' },
-  { label: 'Privacy', href: '/privacy' },
+  { label: 'About', href: ROUTES.about },
+  { label: 'Rules', href: ROUTES.rules },
+  { label: 'Terms', href: ROUTES.terms },
+  { label: 'Privacy', href: ROUTES.privacy },
 ];
 
 export function Footer() {

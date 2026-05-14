@@ -24,6 +24,8 @@ const baseNavLinks = [
   { label: 'Home', href: ROUTES.home },
   { label: 'Predictions', href: ROUTES.predictions },
   { label: 'Leaderboard', href: ROUTES.leaderboard },
+  { label: 'Rules', href: ROUTES.rules },
+  { label: 'About', href: ROUTES.about },
 ];
 
 export function Header() {
