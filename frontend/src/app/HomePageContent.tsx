@@ -177,7 +177,7 @@ export function HomePageContent() {
             <CardContent>
               <p className="text-muted-foreground">
                 Predict group stage standings (1st–4th) for all {TOURNAMENT_CONFIG.totalGroups}{' '}
-                groups and complete the knockout bracket.
+                groups, rank the best 8 third-place teams, then complete the knockout bracket.
               </p>
             </CardContent>
           </Card>
@@ -341,6 +341,48 @@ export function HomePageContent() {
             </CardContent>
           </Card>
         </div>
+
+        <Card className="mt-6">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Target className="text-primary h-5 w-5" />
+              Best 3rd-Place Advancers
+            </CardTitle>
+            <CardDescription>
+              FIFA 2026 advances 8 of the 12 group third-place teams to the Round of 32. Pick
+              8 teams from your group-stage 3rd-place predictions and rank them — best first.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="text-muted-foreground">
+                  Team in the actual top 8 (any rank)
+                </span>
+                <span className="font-semibold">+0.25 pts</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-muted-foreground">Team at the exact correct rank</span>
+                <span className="font-semibold">+0.25 pts</span>
+              </div>
+              <div className="bg-muted/50 rounded-md p-3 text-xs">
+                <span className="font-semibold">Bonuses stack:</span>{' '}
+                <span className="text-muted-foreground">
+                  a team in the correct rank earns the full <span className="font-semibold">
+                    +0.5
+                  </span>{' '}
+                  (set + rank).
+                </span>
+              </div>
+              <div className="border-t pt-3">
+                <div className="flex items-center justify-between font-semibold">
+                  <span>Maximum Advancer Points</span>
+                  <span className="text-primary">{SCORING.maxAdvancerPoints} pts</span>
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
 
         <Card className="mt-6">
           <CardContent className="flex flex-col items-center justify-between gap-4 py-6 sm:flex-row">
