@@ -13,6 +13,7 @@ interface TournamentResponse {
   lockTime: string;
   knockoutLockTime: string | null;
   knockoutUnlocked: boolean;
+  advancersSet: boolean;
   phase: Phase;
   totalEntries: number;
   serverTime: string;
@@ -23,6 +24,8 @@ export interface TournamentLockState {
   lockTime: Date | null;
   knockoutLockTime: Date | null;
   knockoutUnlocked: boolean;
+  /** True when all 8 ranked 3rd-place advancers have been set by the admin. */
+  advancersSet: boolean;
   phase: Phase;
   isLoading: boolean;
   /** Server-time minus client-time, in ms. 0 if data not loaded. */
@@ -81,6 +84,7 @@ export function useTournamentLock(): TournamentLockState {
 
   const phase: Phase = data?.phase ?? 'phase1';
   const knockoutUnlocked = data?.knockoutUnlocked ?? false;
+  const advancersSet = data?.advancersSet ?? false;
 
   // The relevant deadline for "remainingMs" depends on phase:
   //   phase1 → lockTime
@@ -105,6 +109,7 @@ export function useTournamentLock(): TournamentLockState {
     lockTime,
     knockoutLockTime,
     knockoutUnlocked,
+    advancersSet,
     phase,
     isLoading: query.isLoading,
     skewMs,

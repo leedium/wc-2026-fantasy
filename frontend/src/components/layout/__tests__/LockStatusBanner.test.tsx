@@ -31,10 +31,12 @@ function mockTournament({
   lockOffsetMs,
   serverOffsetMs = 0,
   phase,
+  advancersSet = false,
 }: {
   lockOffsetMs: number;
   serverOffsetMs?: number;
   phase?: 'phase1' | 'phase1_locked' | 'phase2_open' | 'phase2_locked';
+  advancersSet?: boolean;
 }) {
   const lockTime = new Date(Date.now() + lockOffsetMs).toISOString();
   const serverTime = new Date(Date.now() + serverOffsetMs).toISOString();
@@ -51,6 +53,7 @@ function mockTournament({
       lockTime,
       knockoutLockTime: null,
       knockoutUnlocked: false,
+      advancersSet,
       phase: phase ?? inferredPhase,
       totalEntries: 0,
       serverTime,
@@ -80,7 +83,7 @@ describe('LockStatusBanner', () => {
     expect(screen.getByRole('status').className).toContain('bg-amber-600');
   });
 
-  it('renders the between-phases state when phase 1 has ended', async () => {
+  it('renders the between-phases state when phase 1 has ended and advancers not yet posted', async () => {
     mockTournament({ lockOffsetMs: -60_000 });
     render(wrap(<LockStatusBanner />));
     await waitFor(() => expect(screen.getByRole('status')).toBeInTheDocument());
@@ -88,11 +91,20 @@ describe('LockStatusBanner', () => {
     expect(screen.getByRole('status').className).toContain('bg-slate-600');
   });
 
+  it('renders the knockout-stage message when phase 2 was opened and then closed by admin', async () => {
+    mockTournament({ lockOffsetMs: -60_000, phase: 'phase1_locked', advancersSet: true });
+    render(wrap(<LockStatusBanner />));
+    await waitFor(() => expect(screen.getByRole('status')).toBeInTheDocument());
+    expect(screen.getByRole('status')).toHaveTextContent(/knockout stage has begun/i);
+    expect(screen.getByRole('status')).not.toHaveTextContent(/Group stage in progress/i);
+    expect(screen.getByRole('status').className).toContain('bg-red-600');
+  });
+
   it('renders the fully locked state when phase 2 has closed', async () => {
     mockTournament({ lockOffsetMs: -60_000, phase: 'phase2_locked' });
     render(wrap(<LockStatusBanner />));
     await waitFor(() => expect(screen.getByRole('status')).toBeInTheDocument());
-    expect(screen.getByRole('status')).toHaveTextContent(/All predictions locked/i);
+    expect(screen.getByRole('status')).toHaveTextContent(/knockout stage has begun/i);
     expect(screen.getByRole('status').className).toContain('bg-red-600');
   });
 

@@ -68,8 +68,13 @@ export function PredictionsListPage() {
 
   // Skew-adjusted phase state — robust to client clock manipulation. The
   // server-side RPC enforces the actual write boundary; this is purely UX.
-  const { isLocked, phase } = useTournamentLock();
+  const { isLocked, phase, advancersSet } = useTournamentLock();
   const isSuperAdmin = profile?.isSuperAdmin === true;
+  // Once the knockout stage has begun (phase2 closed naturally, or admin
+  // closed phase2 after posting advancers) there's nothing for a regular
+  // user to edit. The Preview button still covers viewing the bracket.
+  const knockoutStageLocked =
+    phase === 'phase2_locked' || (phase === 'phase1_locked' && advancersSet);
 
   const predictions = query.data?.predictions ?? [];
   const cap = query.data?.cap ?? PREDICTION_CAP;
@@ -181,11 +186,17 @@ export function PredictionsListPage() {
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
-                  <Button asChild variant="outline" size="sm">
-                    <Link href={`${ROUTES.predictions}/${encodeURIComponent(p.id)}`}>
-                      {isLocked && !isSuperAdmin ? 'View' : 'Edit'}
-                    </Link>
-                  </Button>
+                  {/* Once the knockout stage has begun the user can't edit
+                      anything. Hide the link — the Preview button (eye
+                      icon) still gives them a read-only view. Super admins
+                      keep the Edit button via the admin route. */}
+                  {!(knockoutStageLocked && !isSuperAdmin) && (
+                    <Button asChild variant="outline" size="sm">
+                      <Link href={`${ROUTES.predictions}/${encodeURIComponent(p.id)}`}>
+                        {isLocked && !isSuperAdmin ? 'View' : 'Edit'}
+                      </Link>
+                    </Button>
+                  )}
                   <Button
                     variant="outline"
                     size="sm"

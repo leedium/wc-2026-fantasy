@@ -27,7 +27,7 @@ function dismissKey(tournamentId: string, phase: string): string {
 }
 
 export function LockStatusBanner() {
-  const { tournamentId, lockTime, isLoading, phase, remainingMs, clockSuspect } =
+  const { tournamentId, lockTime, isLoading, phase, remainingMs, clockSuspect, advancersSet } =
     useTournamentLock();
   const { profile } = useAuth();
   const [dismissed, setDismissed] = React.useState(false);
@@ -63,10 +63,16 @@ export function LockStatusBanner() {
   const urgent =
     (phase === 'phase1' || phase === 'phase2_open') && remainingMs <= ONE_DAY_MS;
 
+  // Once advancers are posted, phase1_locked means the admin opened and
+  // then closed phase 2 (or hasn't reopened it yet). The knockout stage is
+  // now underway either way, so we display it the same as phase2_locked.
+  const knockoutLocked =
+    phase === 'phase2_locked' || (phase === 'phase1_locked' && advancersSet);
+
   // Tone + icon per phase.
   let tone: 'open' | 'urgent' | 'between' | 'locked' = 'open';
-  if (phase === 'phase1_locked') tone = 'between';
-  else if (phase === 'phase2_locked') tone = 'locked';
+  if (knockoutLocked) tone = 'locked';
+  else if (phase === 'phase1_locked') tone = 'between';
   else if (urgent) tone = 'urgent';
 
   const toneClasses = {
@@ -89,12 +95,12 @@ export function LockStatusBanner() {
           <span className="font-medium">
             {phase === 'phase1' &&
               `You have ${formatRemaining(remainingMs)} left to choose your group + best-3rd picks before the tournament starts! Don't miss out!`}
-            {phase === 'phase1_locked' &&
+            {phase === 'phase1_locked' && !advancersSet &&
               'Group stage in progress. Knockout predictions will open once the admin posts the best-3rd advancers.'}
             {phase === 'phase2_open' &&
               `You have ${formatRemaining(remainingMs)} left to make your knockout picks!`}
-            {phase === 'phase2_locked' &&
-              'Tournament in progress. All predictions locked.'}
+            {knockoutLocked &&
+              'The knockout stage has begun. Predictions are locked.'}
           </span>
           {(phase === 'phase1_locked' || phase === 'phase2_locked') && isSuperAdmin && (
             <span className="rounded-md bg-white/15 px-2 py-0.5 text-xs font-medium">

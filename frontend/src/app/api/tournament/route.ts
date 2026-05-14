@@ -21,6 +21,18 @@ export async function GET() {
     return NextResponse.json({ error: 'No active tournament' }, { status: 404 });
   }
 
+  // Whether the admin has finished posting the 8 ranked 3rd-place
+  // advancers. Used by the banner to differentiate phase1_locked states:
+  //   * advancers not yet set → "Waiting for admin to post the advancers"
+  //   * advancers set + phase 2 closed → "Knockout predictions paused"
+  // tournament_advancers has a public SELECT policy so this works for
+  // unauthenticated visitors too.
+  const advancersCountRes = await supabase
+    .from('tournament_advancers')
+    .select('rank', { count: 'exact', head: true })
+    .eq('tournament_id', tournamentRes.data.id);
+  const advancersSet = (advancersCountRes.count ?? 0) === 8;
+
   const data = tournamentRes.data as {
     id: string;
     slug: string;
@@ -60,6 +72,7 @@ export async function GET() {
     lockTime: data.lock_time,
     knockoutLockTime: data.knockout_lock_time,
     knockoutUnlocked: data.knockout_unlocked,
+    advancersSet,
     phase,
     totalEntries: data.total_entries,
     championTotalGoals: data.champion_total_goals,
