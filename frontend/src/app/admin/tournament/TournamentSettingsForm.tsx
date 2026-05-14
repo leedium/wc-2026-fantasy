@@ -84,7 +84,8 @@ export function TournamentSettingsForm() {
   const [lockTime, setLockTime] = React.useState('');
   const [phaseTwoLockInput, setPhaseTwoLockInput] = React.useState('');
   const [championGoals, setChampionGoals] = React.useState('');
-  const [saving, setSaving] = React.useState(false);
+  const [savingSettings, setSavingSettings] = React.useState(false);
+  const [savingPhase1, setSavingPhase1] = React.useState(false);
   const [busyPhase2, setBusyPhase2] = React.useState(false);
 
   React.useEffect(() => {
@@ -97,7 +98,7 @@ export function TournamentSettingsForm() {
     );
   }, [tournament.data]);
 
-  const handleSave = async () => {
+  const handleSaveSettings = async () => {
     if (!tournament.data) return;
 
     let championTotalGoals: number | null | undefined;
@@ -112,7 +113,7 @@ export function TournamentSettingsForm() {
       championTotalGoals = parsed;
     }
 
-    setSaving(true);
+    setSavingSettings(true);
     try {
       const res = await fetch('/api/admin/tournament', {
         method: 'PATCH',
@@ -120,7 +121,6 @@ export function TournamentSettingsForm() {
         body: JSON.stringify({
           id: tournament.data.id,
           status,
-          lockTime: new Date(lockTime).toISOString(),
           championTotalGoals,
         }),
       });
@@ -128,12 +128,41 @@ export function TournamentSettingsForm() {
         const body = await res.json().catch(() => ({}));
         throw new Error(body.error ?? 'Failed to save');
       }
-      toast.success('Tournament updated');
+      toast.success('Tournament settings updated');
       await queryClient.invalidateQueries({ queryKey: ['tournament'] });
     } catch (e) {
       toast.error(e instanceof Error ? e.message : 'Failed to save');
     } finally {
-      setSaving(false);
+      setSavingSettings(false);
+    }
+  };
+
+  const handleSavePhase1Lock = async () => {
+    if (!tournament.data) return;
+    if (!lockTime) {
+      toast.error('Pick a Phase 1 lock time first');
+      return;
+    }
+    setSavingPhase1(true);
+    try {
+      const res = await fetch('/api/admin/tournament', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id: tournament.data.id,
+          lockTime: new Date(lockTime).toISOString(),
+        }),
+      });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body.error ?? 'Failed to save');
+      }
+      toast.success('Phase 1 lock time updated');
+      await queryClient.invalidateQueries({ queryKey: ['tournament'] });
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Failed to save');
+    } finally {
+      setSavingPhase1(false);
     }
   };
 
@@ -224,19 +253,6 @@ export function TournamentSettingsForm() {
                   </Select>
                 </div>
                 <div className="space-y-1">
-                  <Label htmlFor="lockTime">Phase 1 lock time</Label>
-                  <Input
-                    id="lockTime"
-                    type="datetime-local"
-                    value={lockTime}
-                    onChange={(e) => setLockTime(e.target.value)}
-                  />
-                  <p className="text-muted-foreground text-xs">
-                    When group + advancer picks freeze. Tournament-wide cutoff for new
-                    predictions.
-                  </p>
-                </div>
-                <div className="space-y-1">
                   <Label htmlFor="championGoals">Champion&apos;s total goals (tiebreaker)</Label>
                   <Input
                     id="championGoals"
@@ -255,11 +271,47 @@ export function TournamentSettingsForm() {
                     tournament is complete.
                   </p>
                 </div>
-                <Button onClick={handleSave} disabled={saving}>
-                  {saving ? 'Saving…' : 'Save changes'}
+                <Button onClick={handleSaveSettings} disabled={savingSettings}>
+                  {savingSettings ? 'Saving…' : 'Save changes'}
                 </Button>
               </>
             )}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              {phase === 'phase1' ? <Unlock className="h-5 w-5" /> : <Lock className="h-5 w-5" />}
+              Phase 1 (group + advancer predictions)
+            </CardTitle>
+            <p className="text-muted-foreground text-sm">
+              Currently{' '}
+              {phase === 'phase1'
+                ? 'open — users can edit groups + advancers'
+                : 'closed — group + advancer picks are frozen'}
+              .
+            </p>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <div className="space-y-1">
+              <Label htmlFor="lockTime">Phase 1 lock time</Label>
+              <Input
+                id="lockTime"
+                type="datetime-local"
+                value={lockTime}
+                onChange={(e) => setLockTime(e.target.value)}
+                className="max-w-sm"
+                disabled={savingPhase1}
+              />
+              <p className="text-muted-foreground text-xs">
+                When group + advancer picks freeze. Tournament-wide cutoff for new
+                predictions.
+              </p>
+            </div>
+            <Button onClick={handleSavePhase1Lock} disabled={savingPhase1}>
+              {savingPhase1 ? 'Saving…' : 'Save Phase 1 lock time'}
+            </Button>
           </CardContent>
         </Card>
 
