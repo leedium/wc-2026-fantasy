@@ -1,0 +1,150 @@
+-- supabase/tests/_fixtures.sql
+--
+-- Shared pgTAP fixture helpers for the scoring suite. NOT a test file — has no
+-- plan/finish. Each scoring_*.test.sql includes this with `\ir _fixtures.sql`
+-- at the top of its transaction so the temporary helpers are defined for the
+-- session and rolled back at the end. Bypasses every admin RPC by inserting
+-- straight into the underlying tables — these tests lock down the scoring
+-- math, not the validation paths.
+
+-- ----- ID registry: lets multi-statement tests refer back to inserted rows.
+create temp table if not exists test_ids (key text primary key, val uuid);
+
+create or replace function pg_temp.tid(k text) returns uuid
+language sql stable as $$
+  select val from test_ids where key = k
+$$;
+
+create or replace function pg_temp.put_id(k text, v uuid) returns uuid
+language sql as $$
+  insert into test_ids (key, val) values (k, v) returning val
+$$;
+
+-- ----- Fixture builders.
+
+create or replace function pg_temp.mk_user(uname text) returns uuid
+language plpgsql as $$
+declare
+  uid uuid := gen_random_uuid();
+begin
+  insert into auth.users (
+    id, instance_id, aud, role,
+    email, encrypted_password, email_confirmed_at,
+    raw_app_meta_data, raw_user_meta_data,
+    created_at, updated_at,
+    confirmation_token, recovery_token, email_change_token_new, email_change
+  )
+  values (
+    uid, '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated',
+    uname || '@scoring-test.local', '', now(),
+    '{}'::jsonb, jsonb_build_object('username', uname),
+    now(), now(),
+    '', '', '', ''
+  );
+  return uid;
+end $$;
+
+create or replace function pg_temp.mk_tournament(
+  p_name text,
+  p_lock_after interval default interval '7 days',
+  p_champ_goals int default null
+) returns uuid
+language plpgsql as $$
+declare
+  tid uuid := gen_random_uuid();
+begin
+  -- get_leaderboard is called with an explicit tournament_id, so the test
+  -- tournament does not need to be the singleton-active one. Leaving
+  -- is_active = false avoids contending with seed.sql's active row across
+  -- parallel test files via the partial unique index.
+  insert into public.tournaments (
+    id, slug, name, status, lock_time, is_active, champion_total_goals
+  )
+  values (
+    tid, 'scoring-test-' || tid::text, p_name,
+    'group_stage', now() + p_lock_after, false, p_champ_goals
+  );
+  return tid;
+end $$;
+
+create or replace function pg_temp.mk_prediction(
+  p_tournament uuid,
+  p_user uuid,
+  p_name text,
+  p_total_goals int default null,
+  p_submitted_at timestamptz default now(),
+  p_paid boolean default true,
+  p_paid_at timestamptz default null
+) returns uuid
+language plpgsql as $$
+declare
+  pid uuid := gen_random_uuid();
+  t_lock timestamptz;
+begin
+  insert into public.predictions (
+    id, user_id, tournament_id, prediction_name, total_goals, submitted_at
+  )
+  values (pid, p_user, p_tournament, p_name, p_total_goals, p_submitted_at);
+
+  if p_paid then
+    select lock_time into t_lock from public.tournaments where id = p_tournament;
+    insert into public.tournament_payments (
+      user_id, tournament_id, marked_by, prediction_id, paid_at
+    )
+    values (
+      p_user, p_tournament, p_user, pid,
+      coalesce(p_paid_at, t_lock - interval '1 hour')
+    );
+  end if;
+
+  return pid;
+end $$;
+
+-- Stable team lookup: Nth team (0-indexed) in a group, ordered by id.
+create or replace function pg_temp.team_at(g text, n int) returns text
+language sql stable as $$
+  select id from public.teams where group_id = g order by id offset n limit 1
+$$;
+
+-- Total points for a prediction on the leaderboard (or null if filtered out).
+create or replace function pg_temp.lb_points(p_tournament uuid, p_prediction uuid)
+returns numeric
+language sql stable as $$
+  select points from public.get_leaderboard(p_tournament, 1, 100)
+   where prediction_id = p_prediction
+$$;
+
+create or replace function pg_temp.lb_group(p_tournament uuid, p_prediction uuid)
+returns int
+language sql stable as $$
+  select group_points from public.get_leaderboard(p_tournament, 1, 100)
+   where prediction_id = p_prediction
+$$;
+
+create or replace function pg_temp.lb_knockout(p_tournament uuid, p_prediction uuid)
+returns int
+language sql stable as $$
+  select knockout_points from public.get_leaderboard(p_tournament, 1, 100)
+   where prediction_id = p_prediction
+$$;
+
+create or replace function pg_temp.lb_advancers(p_tournament uuid, p_prediction uuid)
+returns numeric
+language sql stable as $$
+  select advancer_points from public.get_leaderboard(p_tournament, 1, 100)
+   where prediction_id = p_prediction
+$$;
+
+create or replace function pg_temp.lb_rank(p_tournament uuid, p_prediction uuid)
+returns int
+language sql stable as $$
+  select rank from public.get_leaderboard(p_tournament, 1, 100)
+   where prediction_id = p_prediction
+$$;
+
+create or replace function pg_temp.lb_total_count(p_tournament uuid)
+returns bigint
+language sql stable as $$
+  select coalesce(max(total_count), 0)
+    from public.get_leaderboard(p_tournament, 1, 100)
+$$;
