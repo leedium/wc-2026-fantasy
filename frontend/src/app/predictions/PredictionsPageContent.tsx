@@ -267,6 +267,12 @@ export function PredictionsPageContent({
   // Per-phase editability for the user-side forms. Super admin bypasses both.
   const phase1Editable = phase === 'phase1' || isSuperAdmin;
   const phase2Editable = phase === 'phase2_open' || isSuperAdmin;
+  // Super admin can keep navigating between steps after the tournament
+  // locks (they're the only role whose forms remain editable through
+  // locks — phase1Editable/phase2Editable above). Without this bypass
+  // the Continue button + step tabs get force-disabled by isLocked,
+  // stranding super admin on the Groups step in the admin editor.
+  const bypassLockNav = isSuperAdmin;
 
   const tournamentQuery = useQuery<{
     id: string;
@@ -547,7 +553,7 @@ export function PredictionsPageContent({
   };
 
   const stepperStatus = (value: Step): StepperStep['status'] => {
-    if (isLocked) return 'locked';
+    if (isLocked && !bypassLockNav) return 'locked';
     if (stepStatus[value]) return 'done';
     if (value === currentStep) return 'current';
     return 'upcoming';
@@ -562,7 +568,7 @@ export function PredictionsPageContent({
 
   const topSteps: StepperStep[] = TOP_STEPS.map((value) => {
     let status: StepperStep['status'];
-    if (isLocked) {
+    if (isLocked && !bypassLockNav) {
       status = 'locked';
     } else if (phase2TabsLocked && (value === 'knockout' || value === 'tiebreaker')) {
       status = 'locked';
@@ -1020,7 +1026,7 @@ export function PredictionsPageContent({
             <Button
               type="button"
               onClick={goToNextStep}
-              disabled={!currentStepComplete || isLocked}
+              disabled={!currentStepComplete || (isLocked && !bypassLockNav)}
               className="sm:w-auto"
             >
               {nextStepLabel ? `Continue to ${nextStepLabel}` : 'Continue'}
