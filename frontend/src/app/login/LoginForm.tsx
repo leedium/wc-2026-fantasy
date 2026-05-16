@@ -2,7 +2,7 @@
 
 import * as React from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { toast } from 'sonner';
 
 import { Button } from '@/components/ui/button';
@@ -21,6 +21,15 @@ type FieldName = 'email' | 'password';
 
 export function LoginForm({ redirectTo }: LoginFormProps) {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const resetToastShown = React.useRef(false);
+  React.useEffect(() => {
+    if (resetToastShown.current) return;
+    if (searchParams.get('reset') === 'success') {
+      resetToastShown.current = true;
+      toast.success('Password updated. Please sign in with your new password.');
+    }
+  }, [searchParams]);
   const [email, setEmail] = React.useState('');
   const [password, setPassword] = React.useState('');
   const [touched, setTouched] = React.useState<Record<FieldName, boolean>>({

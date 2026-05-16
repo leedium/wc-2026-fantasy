@@ -43,7 +43,7 @@ describe('ResetPasswordForm', () => {
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
-  it('posts password and redirects to predictions on success', async () => {
+  it('posts password and redirects to login on success', async () => {
     fetchMock.mockResolvedValue({ ok: true } as Response);
     const user = userEvent.setup();
     render(<ResetPasswordForm />);
@@ -60,8 +60,8 @@ describe('ResetPasswordForm', () => {
       })
     );
     await screen.findByRole('button', { name: /Updating…|Update password/i });
-    expect(toastSuccessMock).toHaveBeenCalled();
-    expect(mockPush).toHaveBeenCalledWith('/predictions');
+    expect(toastSuccessMock).not.toHaveBeenCalled();
+    expect(mockPush).toHaveBeenCalledWith('/login?reset=success');
   });
 
   it('surfaces server errors', async () => {
