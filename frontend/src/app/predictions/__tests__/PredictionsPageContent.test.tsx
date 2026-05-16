@@ -15,6 +15,11 @@ const toastSuccess = jest.fn();
 const toastError = jest.fn();
 const toastInfo = jest.fn();
 
+// Per-test override for the AuthProvider mock. Defaults to a logged-in
+// non-admin user; individual tests flip isSuperAdmin to exercise the
+// super-admin lock bypass on the wizard's navigation.
+let mockAuthProfile: { isSuperAdmin?: boolean } | null = null;
+
 jest.mock('@tanstack/react-query', () => {
   const actual = jest.requireActual('@tanstack/react-query');
   return {
@@ -27,7 +32,7 @@ jest.mock('@tanstack/react-query', () => {
 jest.mock('@/providers/AuthProvider', () => ({
   useAuthContext: () => ({
     user: { id: 'user-1' },
-    profile: null,
+    profile: mockAuthProfile,
     loading: false,
     signOut: jest.fn(),
     refreshProfile: jest.fn(),
@@ -228,6 +233,7 @@ beforeEach(() => {
   toastSuccess.mockReset();
   toastError.mockReset();
   toastInfo.mockReset();
+  mockAuthProfile = null;
   global.fetch = jest.fn();
 });
 
@@ -331,6 +337,34 @@ describe('PredictionsPageContent — stepper navigation', () => {
     // Only the top row is rendered when not on a knockout step; assert all top tabs are disabled.
     const tabs = screen.getAllByRole('tab');
     tabs.forEach((tab) => expect(tab).toBeDisabled());
+  });
+
+  it('lets a super admin advance past Groups when the tournament is locked', async () => {
+    // Super admin keeps full write access through phase1_locked (admin
+    // RPC bypasses the lock check). The wizard nav must follow suit so
+    // they can actually reach Best 3rds + the knockout sub-steps when
+    // editing a user's bracket post-lock.
+    mockAuthProfile = { isSuperAdmin: true };
+    configureQueries({
+      tournamentLockTime: new Date(Date.now() - 1000).toISOString(),
+      phase: 'phase1_locked',
+    });
+    const user = userEvent.setup();
+    render(<PredictionsPageContent mode="create" />);
+
+    // Wait for the wizard to hydrate past the skeleton; the badge text
+    // still says "Predictions Locked" on the Submit button so the admin
+    // knows the tournament state, even though nav is unlocked for them.
+    await screen.findByText('Predictions Locked');
+    expect(screen.getByRole('tab', { name: /Group Stage/ })).not.toBeDisabled();
+    expect(screen.getByRole('tab', { name: /Best 3rds/ })).not.toBeDisabled();
+
+    await user.click(screen.getByTestId('fill-all-groups'));
+
+    const continueBtn = screen.getByRole('button', { name: /Continue to Best 3rds/ });
+    expect(continueBtn).toBeEnabled();
+    await user.click(continueBtn);
+    expect(screen.getByTestId('advancers-form')).toBeInTheDocument();
   });
 });
 
