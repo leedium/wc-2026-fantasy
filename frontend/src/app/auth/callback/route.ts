@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from 'next/server';
 import type { EmailOtpType } from '@supabase/supabase-js';
 import { getServerSupabase } from '@/lib/supabase/server';
 import { ROUTES } from '@/lib/constants';
+import { signResetIntent } from '@/lib/auth/reset-intent';
 
 const OTP_TYPES: EmailOtpType[] = ['signup', 'invite', 'magiclink', 'recovery', 'email_change', 'email'];
 
@@ -15,12 +16,17 @@ export async function GET(request: NextRequest) {
   const supabase = await getServerSupabase();
 
   if (tokenHash && rawType && (OTP_TYPES as string[]).includes(rawType)) {
-    const { error } = await supabase.auth.verifyOtp({
+    const { data, error } = await supabase.auth.verifyOtp({
       token_hash: tokenHash,
       type: rawType as EmailOtpType,
     });
     if (!error) {
-      return NextResponse.redirect(`${origin}${next}`);
+      const response = NextResponse.redirect(`${origin}${next}`);
+      if (rawType === 'recovery' && data.user) {
+        const intent = signResetIntent(data.user.id);
+        response.cookies.set(intent.name, intent.value, intent.options);
+      }
+      return response;
     }
   }
 

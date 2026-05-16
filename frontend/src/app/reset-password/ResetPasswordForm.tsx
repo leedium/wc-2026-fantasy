@@ -2,7 +2,6 @@
 
 import * as React from 'react';
 import { useRouter } from 'next/navigation';
-import { toast } from 'sonner';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -77,8 +76,7 @@ export function ResetPasswordForm() {
       return;
     }
 
-    toast.success('Password updated');
-    router.push(ROUTES.predictions);
+    router.push(`${ROUTES.login}?reset=success`);
     router.refresh();
   };
 
