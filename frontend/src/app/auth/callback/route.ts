@@ -31,9 +31,19 @@ export async function GET(request: NextRequest) {
   }
 
   if (code) {
-    const { error } = await supabase.auth.exchangeCodeForSession(code);
+    const { data, error } = await supabase.auth.exchangeCodeForSession(code);
     if (!error) {
-      return NextResponse.redirect(`${origin}${next}`);
+      const response = NextResponse.redirect(`${origin}${next}`);
+      // Supabase Cloud's default recovery email routes through GoTrue's
+      // /verify endpoint, which lands here with `code=...` instead of the
+      // `token_hash`/`type=recovery` pair the local custom template uses.
+      // Identify the recovery case by `next` so the reset-intent cookie
+      // gets set in both flows.
+      if (next === '/reset-password' && data.user) {
+        const intent = signResetIntent(data.user.id);
+        response.cookies.set(intent.name, intent.value, intent.options);
+      }
+      return response;
     }
   }
 
