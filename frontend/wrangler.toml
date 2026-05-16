@@ -8,7 +8,7 @@ directory = ".open-next/assets"
 binding = "ASSETS"
 
 [secrets]
-required = ["SUPABASE_SERVICE_ROLE_KEY"]
+required = ["SUPABASE_SERVICE_ROLE_KEY","RESET_INTENT_SECRET"]
 
 
 # Environment variables are set via the Cloudflare dashboard or `wrangler secret put`.
