@@ -839,13 +839,21 @@ export function PredictionsPageContent({
   const currentStepComplete = stepStatus[currentStep];
   const nextStepLabel = !isLastStep ? STEP_LABELS[STEP_ORDER[stepIndex + 1]] : null;
   const previousStepLabel = !isFirstStep ? STEP_LABELS[STEP_ORDER[stepIndex - 1]] : null;
-  // In Phase 1, regular users have no knockout step to "Continue to" — the
-  // bracket is read-only. Replace the bottom nav with a "Save Phase 1 Picks"
-  // button on the last Phase 1 step (Best 3rds) so the user has a clear
-  // end-of-Phase-1 commit action instead of being dumped into disabled
-  // knockout screens. Super admin keeps Continue (god-mode editing).
-  const isPhase1EndStep =
-    phase === 'phase1' && !isSuperAdmin && currentStep === 'best_thirds';
+  // Bottom-nav action layout for the Best 3rds step in Phase 1:
+  //   - Regular users: "Save Phase 1 Picks" only. Knockout steps are
+  //     read-only in phase 1, so a Continue button would dump them on
+  //     disabled screens.
+  //   - Super admin (god-mode + may also be participating): BOTH buttons.
+  //     "Save Phase 1 Picks" gives them the same end-of-phase-1 commit a
+  //     regular participant gets; "Continue to Round 32" keeps the wizard
+  //     flow into the knockout bracket (which they can edit thanks to
+  //     phase2Editable).
+  const isPhase1BestThirds =
+    phase === 'phase1' && currentStep === 'best_thirds';
+  const showSavePhase1 = isPhase1BestThirds;
+  const showReviewSubmit = isLastStep;
+  const showContinue =
+    !isLastStep && (!isPhase1BestThirds || isSuperAdmin);
 
   return (
     <PageLayout>
@@ -993,43 +1001,48 @@ export function PredictionsPageContent({
             <ArrowLeft className="mr-2 h-4 w-4" />
             {previousStepLabel ? `Back: ${previousStepLabel}` : 'Back'}
           </Button>
-          {isPhase1EndStep ? (
-            <Button
-              type="button"
-              onClick={handleSavePhase1}
-              disabled={
-                !currentStepComplete ||
-                isLocked ||
-                isSavingProgress ||
-                isSubmitting ||
-                !!nameError
-              }
-              className="sm:w-auto"
-            >
-              {isSavingProgress ? 'Saving…' : 'Save Phase 1 Picks'}
-              <ArrowRight className="ml-2 h-4 w-4" />
-            </Button>
-          ) : isLastStep ? (
-            <Button
-              type="button"
-              onClick={focusSubmit}
-              disabled={!currentStepComplete}
-              className="sm:w-auto"
-            >
-              Review & submit
-              <ArrowRight className="ml-2 h-4 w-4" />
-            </Button>
-          ) : (
-            <Button
-              type="button"
-              onClick={goToNextStep}
-              disabled={!currentStepComplete || (isLocked && !bypassLockNav)}
-              className="sm:w-auto"
-            >
-              {nextStepLabel ? `Continue to ${nextStepLabel}` : 'Continue'}
-              <ArrowRight className="ml-2 h-4 w-4" />
-            </Button>
-          )}
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+            {showSavePhase1 && (
+              <Button
+                type="button"
+                onClick={handleSavePhase1}
+                disabled={
+                  !currentStepComplete ||
+                  isLocked ||
+                  isSavingProgress ||
+                  isSubmitting ||
+                  !!nameError
+                }
+                className="sm:w-auto"
+              >
+                {isSavingProgress ? 'Saving…' : 'Save Phase 1 Picks'}
+                <ArrowRight className="ml-2 h-4 w-4" />
+              </Button>
+            )}
+            {showReviewSubmit && (
+              <Button
+                type="button"
+                onClick={focusSubmit}
+                disabled={!currentStepComplete}
+                className="sm:w-auto"
+              >
+                Review & submit
+                <ArrowRight className="ml-2 h-4 w-4" />
+              </Button>
+            )}
+            {showContinue && (
+              <Button
+                type="button"
+                variant={showSavePhase1 ? 'outline' : 'default'}
+                onClick={goToNextStep}
+                disabled={!currentStepComplete || (isLocked && !bypassLockNav)}
+                className="sm:w-auto"
+              >
+                {nextStepLabel ? `Continue to ${nextStepLabel}` : 'Continue'}
+                <ArrowRight className="ml-2 h-4 w-4" />
+              </Button>
+            )}
+          </div>
         </div>
       </div>
 
