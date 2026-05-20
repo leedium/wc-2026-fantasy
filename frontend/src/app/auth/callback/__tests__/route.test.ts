@@ -9,6 +9,7 @@ const supabaseMock = {
   auth: {
     verifyOtp: jest.fn(),
     exchangeCodeForSession: jest.fn(),
+    signOut: jest.fn(),
   },
 };
 
@@ -29,6 +30,8 @@ describe('GET /auth/callback', () => {
   beforeEach(() => {
     supabaseMock.auth.verifyOtp.mockReset();
     supabaseMock.auth.exchangeCodeForSession.mockReset();
+    supabaseMock.auth.signOut.mockReset();
+    supabaseMock.auth.signOut.mockResolvedValue({ error: null });
   });
 
   it('sets reset_intent cookie when verifyOtp succeeds for type=recovery', async () => {
@@ -48,7 +51,7 @@ describe('GET /auth/callback', () => {
     expect(setCookie.toLowerCase()).toContain('samesite=strict');
   });
 
-  it('does NOT set reset_intent cookie when verifyOtp succeeds for type=signup', async () => {
+  it('signs out and redirects to /login?confirmed=1 when verifyOtp succeeds for type=signup', async () => {
     supabaseMock.auth.verifyOtp.mockResolvedValue({
       data: { user: { id: 'user-1' } },
       error: null,
@@ -59,6 +62,8 @@ describe('GET /auth/callback', () => {
       )
     );
     expect(res.status).toBe(307);
+    expect(res.headers.get('location')).toBe('http://localhost:3000/login?confirmed=1');
+    expect(supabaseMock.auth.signOut).toHaveBeenCalledTimes(1);
     expect(res.headers.get('set-cookie') ?? '').not.toContain(RESET_INTENT_COOKIE);
   });
 
