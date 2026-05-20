@@ -783,9 +783,6 @@ export function PredictionsPageContent({
           nameRef.current?.focus();
           throw new Error('Pick a different prediction name.');
         }
-        if (msg.includes('limit reached')) {
-          throw new Error('You have reached the prediction limit.');
-        }
         throw new Error(msg);
       }
 

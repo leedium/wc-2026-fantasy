@@ -85,7 +85,6 @@ describe('GET /api/predictions', () => {
     const body = await res.json();
     expect(body).toMatchObject({
       tournament: { id: 't1' },
-      cap: 5,
       predictions: [],
     });
   });
@@ -133,16 +132,6 @@ describe('POST /api/predictions', () => {
     });
     const res = await POST(postRequest(basePostBody()));
     expect(res.status).toBe(403);
-  });
-
-  it('returns 409 when rpc reports limit reached', async () => {
-    supabaseMock.auth.getUser.mockResolvedValue({ data: { user: { id: 'u1' } } });
-    supabaseMock.rpc.mockResolvedValue({
-      data: null,
-      error: { message: 'prediction limit reached' },
-    });
-    const res = await POST(postRequest(basePostBody()));
-    expect(res.status).toBe(409);
   });
 
   it('returns 409 when rpc reports name taken', async () => {

@@ -137,7 +137,7 @@ export async function POST(
   if (error) {
     const msg = error.message ?? '';
     let status = 400;
-    if (msg.includes('limit reached') || msg.includes('name taken')) status = 409;
+    if (msg.includes('name taken')) status = 409;
     else if (msg.includes('duplicate advancer')) status = 409;
     else if (msg.includes('advancer')) status = 400;
     return NextResponse.json({ error: safeMessage(error) }, { status });
