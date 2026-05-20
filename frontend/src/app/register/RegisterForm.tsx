@@ -32,6 +32,20 @@ export function RegisterForm() {
     message: string;
   } | null>(null);
 
+  // After a successful signup that requires email confirmation, swap the
+  // form for a persistent "Check your email" view (mirrors the pattern in
+  // ForgotPasswordForm). `submittedEmail` doubles as the indicator that we
+  // are in that mode and as the address shown to the user / used by Resend.
+  const [submittedEmail, setSubmittedEmail] = React.useState<string | null>(null);
+  const [isResending, setIsResending] = React.useState(false);
+  const [resendCooldown, setResendCooldown] = React.useState(0);
+
+  React.useEffect(() => {
+    if (resendCooldown <= 0) return;
+    const id = window.setTimeout(() => setResendCooldown((s) => s - 1), 1000);
+    return () => window.clearTimeout(id);
+  }, [resendCooldown]);
+
   const emailRef = React.useRef<HTMLInputElement>(null);
   const passwordRef = React.useRef<HTMLInputElement>(null);
   const confirmPasswordRef = React.useRef<HTMLInputElement>(null);
@@ -117,8 +131,12 @@ export function RegisterForm() {
     }
 
     if (!data.session) {
+      // Email confirmation required. Keep the toast for instant feedback,
+      // but also swap the form for a persistent "Check your email" view so
+      // users can't miss the next step.
       toast.success('Account created — check your email to confirm.');
-      router.push(ROUTES.login);
+      setSubmittedEmail(email.trim());
+      setIsSubmitting(false);
       return;
     }
 
@@ -127,8 +145,86 @@ export function RegisterForm() {
     router.refresh();
   };
 
+  const handleResend = async () => {
+    if (!submittedEmail || isResending || resendCooldown > 0) return;
+    setIsResending(true);
+    const supabase = createSupabaseBrowserClient();
+    const { error } = await supabase.auth.resend({
+      type: 'signup',
+      email: submittedEmail,
+    });
+    setIsResending(false);
+    if (error) {
+      // Supabase enforces its own per-mailbox throttle; surface the message
+      // verbatim so users see "you can only request this after N seconds"
+      // rather than a generic failure.
+      toast.error(error.message);
+      return;
+    }
+    toast.success('Confirmation email resent.');
+    setResendCooldown(30);
+  };
+
+  const handleTryDifferentAddress = () => {
+    setSubmittedEmail(null);
+    setEmail('');
+    setPassword('');
+    setConfirmPassword('');
+    setTouched({ email: false, password: false, confirmPassword: false });
+    setResendCooldown(0);
+    // Focus moves on next render once the inputs are back in the DOM.
+    requestAnimationFrame(() => emailRef.current?.focus());
+  };
+
   const fieldClass = (field: FieldName) =>
     cn(showError(field) && 'border-destructive focus-visible:ring-destructive');
+
+  if (submittedEmail) {
+    return (
+      <div className="space-y-4">
+        <div role="status" aria-live="polite" className="space-y-3">
+          <p className="text-foreground text-base font-semibold">Check your email</p>
+          <p className="text-muted-foreground text-sm">
+            We sent a confirmation link to{' '}
+            <span className="text-foreground font-semibold break-all">{submittedEmail}</span>.
+            Click the link to activate your account, then sign in.
+          </p>
+          <p className="text-muted-foreground text-sm">
+            Didn&apos;t get it? Check your spam folder.
+          </p>
+        </div>
+        <div className="flex flex-col gap-2 sm:flex-row">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={handleResend}
+            disabled={isResending || resendCooldown > 0}
+            className="w-full sm:flex-1"
+          >
+            {isResending
+              ? 'Resending…'
+              : resendCooldown > 0
+                ? `Resend in ${resendCooldown}s`
+                : 'Resend confirmation email'}
+          </Button>
+          <Button asChild className="w-full sm:flex-1">
+            <Link href={ROUTES.login}>Go to sign in</Link>
+          </Button>
+        </div>
+        <p className="text-muted-foreground text-center text-sm">
+          Wrong address?{' '}
+          <button
+            type="button"
+            onClick={handleTryDifferentAddress}
+            className="text-primary hover:underline"
+          >
+            Try a different address
+          </button>
+          .
+        </p>
+      </div>
+    );
+  }
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4" noValidate>
