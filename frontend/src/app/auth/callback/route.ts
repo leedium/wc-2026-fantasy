@@ -21,6 +21,16 @@ export async function GET(request: NextRequest) {
       type: rawType as EmailOtpType,
     });
     if (!error) {
+      // verifyOtp for signup mints a session as a side effect, overwriting
+      // any existing session cookie in this browser. Email confirmation is
+      // proof of ownership, not authentication: drop the just-minted session
+      // and send the user to /login so they sign in explicitly. (Side effect:
+      // any prior user logged into this browser is signed out — unavoidable
+      // since their cookie was overwritten by verifyOtp above.)
+      if (rawType === 'signup') {
+        await supabase.auth.signOut();
+        return NextResponse.redirect(`${origin}/login?confirmed=1`);
+      }
       const response = NextResponse.redirect(`${origin}${next}`);
       if (rawType === 'recovery' && data.user) {
         const intent = signResetIntent(data.user.id);

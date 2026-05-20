@@ -23,11 +23,15 @@ export function LoginForm({ redirectTo }: LoginFormProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const resetToastShown = React.useRef(false);
+  const confirmedToastShown = React.useRef(false);
   React.useEffect(() => {
-    if (resetToastShown.current) return;
-    if (searchParams.get('reset') === 'success') {
+    if (!resetToastShown.current && searchParams.get('reset') === 'success') {
       resetToastShown.current = true;
       toast.success('Password updated. Please sign in with your new password.');
+    }
+    if (!confirmedToastShown.current && searchParams.get('confirmed') === '1') {
+      confirmedToastShown.current = true;
+      toast.success('Email confirmed. Please sign in to continue.');
     }
   }, [searchParams]);
   const [email, setEmail] = React.useState('');
