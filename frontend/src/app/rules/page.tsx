@@ -4,6 +4,7 @@ import { PageLayout } from '@/components/layout/PageLayout';
 import { ScoringBreakdown } from '@/components/marketing/ScoringBreakdown';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { PRICING } from '@/lib/constants';
 
 export const metadata: Metadata = {
   title: 'Rules | World Cup 2026',
@@ -70,15 +71,19 @@ export default function RulesPage() {
               <ul className="text-muted-foreground space-y-3 text-sm">
                 <li>
                   <span className="text-foreground font-semibold">Per-prediction entry.</span>{' '}
-                  Each paid prediction is its own entry. A single account can have multiple
-                  ranks if it has multiple paid predictions.
+                  Each prediction costs{' '}
+                  <span className="text-foreground font-semibold">
+                    ${PRICING.entryFeeCAD} {PRICING.currency}
+                  </span>{' '}
+                  and is its own entry. A single account can have multiple ranks if it has
+                  multiple paid predictions.
                 </li>
                 <li>
                   <span className="text-foreground font-semibold">
-                    Marked paid by an admin.
+                    Contact the pool organizer.
                   </span>{' '}
-                  An admin marks each prediction as paid before lock. Only paid predictions
-                  appear on the leaderboard.
+                  Reach out to arrange payment. An admin marks each prediction as paid
+                  before lock; only paid predictions appear on the leaderboard.
                 </li>
                 <li>
                   <span className="text-foreground font-semibold">Unpaid still saves.</span>{' '}

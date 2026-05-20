@@ -11,7 +11,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
-import { ROUTES, TOURNAMENT_CONFIG } from '@/lib/constants';
+import { PRICING, ROUTES, TOURNAMENT_CONFIG } from '@/lib/constants';
 import type { TournamentInfo } from '@/types/tournament';
 
 interface TournamentResponse {
@@ -89,7 +89,8 @@ export function HomePageContent() {
           </h1>
           <p className="text-muted-foreground mb-8 text-lg md:text-xl">
             Submit your bracket predictions, earn points for correct picks, and climb the
-            leaderboard. Free to play — all you need is a username.
+            leaderboard. ${PRICING.entryFeeCAD} {PRICING.currency} per prediction — sign up
+            free, pay per entry.
           </p>
           <div className="flex flex-col items-center justify-center gap-4 sm:flex-row">
             <Button asChild size="lg" className="min-w-[200px]">
