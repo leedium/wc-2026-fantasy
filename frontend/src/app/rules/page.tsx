@@ -96,6 +96,28 @@ export default function RulesPage() {
         </div>
       </section>
 
+      <section className="py-8">
+        <Card>
+          <CardHeader>
+            <CardTitle>Charity contribution</CardTitle>
+            <CardDescription>Where part of every entry goes.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <p className="text-muted-foreground text-sm">
+              <span className="text-foreground font-semibold">
+                ${PRICING.charityPortionCAD} {PRICING.currency}
+              </span>{' '}
+              from every{' '}
+              <span className="text-foreground font-semibold">
+                ${PRICING.entryFeeCAD} {PRICING.currency}
+              </span>{' '}
+              entry is set aside for charity. The pool organizer will announce the
+              chosen charity before the tournament locks.
+            </p>
+          </CardContent>
+        </Card>
+      </section>
+
       <ScoringBreakdown />
 
       <section className="py-8">
