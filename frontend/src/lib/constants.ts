@@ -89,4 +89,3 @@ export const PASSWORD_MIN_LENGTH = 8;
 
 export const PREDICTION_NAME_REGEX = /^[A-Za-z0-9 _\-.''‘’]+$/;
 export const PREDICTION_NAME_MAX = 60;
-export const PREDICTION_CAP = 5;

@@ -48,7 +48,7 @@ All schema/policies/RPCs live in `supabase/migrations/`. Run `supabase db reset`
 - `profiles` — 1:1 with `auth.users`. Holds `username` (citext, unique, 3–24 chars, `[A-Za-z0-9_]`), `display_name`, `avatar_url`, `is_admin`. Auto-created via `handle_new_user` trigger; if `raw_user_meta_data.username` is missing (default for self-signup), the trigger generates `user_<8 hex chars>` with a 10-attempt collision retry. Admin-create flows still pass an explicit username.
 - `tournaments` — single active tournament enforced by partial unique index. Holds `lock_time` (single tournament-wide deadline) and `status` (`upcoming|group_stage|knockout|completed`).
 - `groups` (12: A–L), `teams` (48, FK to groups), `knockout_matches` (31, R32 → final, with `team1_source`/`team2_source` strings like `"M1"` or `"A1"`).
-- `predictions` — **many per `(user, tournament)`**, capped at 5. Each has a unique `prediction_name` per user/tournament (case-insensitive), 1–60 chars matching `^[A-Za-z0-9 _\-.''‘’]+$`. Holds `total_goals` tiebreaker + submission timestamp.
+- `predictions` — **many per `(user, tournament)`**, no quantity limit. Each has a unique `prediction_name` per user/tournament (case-insensitive), 1–60 chars matching `^[A-Za-z0-9 _\-.''‘’]+$`. Holds `total_goals` tiebreaker + submission timestamp.
 - `group_predictions` — normalized: 12 rows per prediction with `first_team_id`/`second_team_id`/`third_team_id`/`fourth_team_id`. CHECK enforces all four are distinct. PK is `(prediction_id, group_id)`.
 - `knockout_predictions` — one per `(prediction, match)` with predicted winner.
 - `tournament_payments` — one per `prediction_id` (UNIQUE). Payment is per-prediction, not per-user. Each paid prediction is its own ranked entry on the leaderboard.
@@ -63,7 +63,7 @@ All schema/policies/RPCs live in `supabase/migrations/`. Run `supabase db reset`
 
 ### RPCs (the trust boundary)
 
-- **`submit_predictions(payload jsonb)`** — single transaction. Payload includes optional `prediction_id` (omit to create, present to update) and required-on-create `prediction_name`. Cap of 5 per `(user, tournament)` is enforced under `pg_advisory_xact_lock(hashtext(user || ':' || tournament))` to close the count-then-insert race. Raises `'predictions are locked'` (→ 403), `'prediction limit reached'` (→ 409), `'prediction name taken'` (→ 409), `'prediction name required'` (→ 400), `'prediction not found'` (→ 404).
+- **`submit_predictions(payload jsonb)`** — single transaction. Payload includes optional `prediction_id` (omit to create, present to update) and required-on-create `prediction_name`. Users can create unlimited predictions per `(user, tournament)`; `prediction_name` uniqueness is enforced by the unique index. Raises `'predictions are locked'` (→ 403), `'prediction name taken'` (→ 409), `'prediction name required'` (→ 400), `'prediction not found'` (→ 404).
 - **`admin_submit_predictions(p_user_id, payload)`** — same branching, no auth/lock check, scoped to the target user.
 - **`admin_set_prediction_payment(p_prediction_id, p_paid, p_paid_at)`** — replaces the old `admin_set_payment(user_id, tournament_id, …)`. Upserts `tournament_payments` keyed on `prediction_id`.
 - **`get_leaderboard(p_tournament_id, p_page, p_page_size)`** — paginated, SECURITY DEFINER. Returns one row per **paid prediction** with columns `rank, prediction_id, prediction_name, username, points, group_points, knockout_points, total_goals, total_count`. A user with N paid predictions occupies N rows.
@@ -102,7 +102,7 @@ Plus flat bonuses on top: champion (M32 winner) `+15`, third-place winner (M31) 
 
 - `/` — landing page
 - `/login`, `/register` — Supabase email auth (server-redirected if already signed in)
-- `/predictions` — protected list/hub: shows the user's predictions for the active tournament + a "New prediction" button (hidden when at the cap of 5 or when locked).
+- `/predictions` — protected list/hub: shows the user's predictions for the active tournament + a "New prediction" button (hidden when locked).
 - `/predictions/new` — wizard in create mode; on submit, redirects to `/predictions/[id]`.
 - `/predictions/[id]` — wizard in edit mode; server-fetches the prediction and passes as `initial` prop.
 - `/leaderboard` — public; uses `/api/leaderboard` and `/api/leaderboard/me`
@@ -136,7 +136,7 @@ Plus flat bonuses on top: champion (M32 winner) `+15`, third-place winner (M31) 
 ## Game Mechanics
 
 - 48 teams, 12 groups (A–L, 4 teams each), 104 total matches
-- Each user can create up to **5 named predictions** per tournament. Each prediction is independent (own picks, own tiebreaker, own payment).
+- Each user can create as many named predictions per tournament as they like. Each prediction is independent (own picks, own tiebreaker, own payment).
 - All predictions submitted upfront before a single tournament-wide lock time (users may edit any of their predictions until lock)
 - Payment is **per prediction**: each one must be marked paid by an admin before lock to be eligible. The leaderboard shows one row per paid prediction (a user with N paid predictions occupies N rows).
 - Group stage: predict positions 1–4 for all 12 groups; only the top 2 finishers are scored (set-based 6/4/3/2/0 with a +8 exact-order bonus for Group I, the "Group of Death")

@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { getServerSupabase } from '@/lib/supabase/server';
 import { safeMessage } from '@/lib/api/errors';
-import { PREDICTION_CAP, PREDICTION_NAME_MAX, PREDICTION_NAME_REGEX } from '@/lib/constants';
+import { PREDICTION_NAME_MAX, PREDICTION_NAME_REGEX } from '@/lib/constants';
 
 interface SubmitPayload {
   tournamentId?: string;
@@ -120,7 +120,6 @@ export async function GET() {
 
   return NextResponse.json({
     tournament: { id: tournament.id, lockTime: tournament.lock_time },
-    cap: PREDICTION_CAP,
     predictions: ((predictions ?? []) as PredictionRow[]).map((p) => {
       const raw = p.tournament_payments;
       const payment: Payment | null = !raw
@@ -208,7 +207,7 @@ export async function POST(request: NextRequest) {
     const msg = error.message ?? '';
     let status = 400;
     if (msg.includes('locked')) status = 403;
-    else if (msg.includes('limit reached') || msg.includes('name taken')) status = 409;
+    else if (msg.includes('name taken')) status = 409;
     else if (msg.includes('duplicate advancer')) status = 409;
     else if (msg.includes('advancer')) status = 400;
     return NextResponse.json({ error: safeMessage(error) }, { status });

@@ -26,7 +26,6 @@ const KNOWN_ERROR_FRAGMENTS = [
   'all four teams must be distinct',
   'does not belong to group',
   'winner and loser must differ',
-  'prediction limit reached',
   'prediction name required',
   'prediction name taken',
   'prediction not found',

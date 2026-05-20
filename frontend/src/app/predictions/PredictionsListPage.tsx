@@ -26,7 +26,7 @@ import {
 } from '@/hooks/useDraftPersistence';
 import { useTournamentLock } from '@/hooks/useTournamentLock';
 import { BracketPreviewDialog } from '@/components/predictions/BracketPreviewDialog';
-import { PREDICTION_CAP, ROUTES } from '@/lib/constants';
+import { ROUTES } from '@/lib/constants';
 
 interface ApiPrediction {
   id: string;
@@ -39,7 +39,6 @@ interface ApiPrediction {
 
 interface ApiResponse {
   tournament: { id: string; lockTime: string };
-  cap: number;
   predictions: ApiPrediction[];
 }
 
@@ -77,11 +76,9 @@ export function PredictionsListPage() {
     phase === 'phase2_locked' || (phase === 'phase1_locked' && advancersSet);
 
   const predictions = query.data?.predictions ?? [];
-  const cap = query.data?.cap ?? PREDICTION_CAP;
-  const atCap = predictions.length >= cap;
   // Late-joiner block: new predictions can only be created during phase 1.
   // Super admins bypass.
-  const canCreate = !atCap && (phase === 'phase1' || isSuperAdmin);
+  const canCreate = phase === 'phase1' || isSuperAdmin;
 
   const handleDelete = async () => {
     if (!pendingDelete) return;
@@ -113,7 +110,7 @@ export function PredictionsListPage() {
         <div>
           <h1 className="mb-2 text-3xl font-bold">Your Predictions</h1>
           <p className="text-muted-foreground">
-            Create up to {cap} brackets. Each paid bracket is ranked separately on the leaderboard.
+            Create as many brackets as you like. Each paid bracket is ranked separately on the leaderboard.
           </p>
         </div>
         <Button asChild disabled={!canCreate} size="lg">
@@ -123,11 +120,7 @@ export function PredictionsListPage() {
             }
             aria-disabled={!canCreate}
             title={
-              isLocked && !isSuperAdmin
-                ? 'Predictions are locked'
-                : atCap
-                  ? `You've reached the cap of ${cap}`
-                  : undefined
+              isLocked && !isSuperAdmin ? 'Predictions are locked' : undefined
             }
           >
             <Plus className="mr-2 h-4 w-4" /> New prediction
