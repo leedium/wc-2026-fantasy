@@ -1,6 +1,6 @@
 # CLAUDE.md
 
-> **Version:** 3.2.0
+> **Version:** 3.2.1
 > **Last Updated:** 2026-05-20
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
@@ -9,7 +9,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 World Cup 2026 prediction game. Users register with a username/password, submit bracket predictions (group stage standings + knockout bracket + total goals tiebreaker) before a single tournament-wide lock time, and earn points based on how their predictions compare to admin-submitted real-world results. A leaderboard ranks all participants.
 
-**No blockchain, no wallets** — this is a pure web app backed by Supabase Postgres + Auth. Entry is paid out-of-band ($25 CAD per prediction; an admin marks `tournament_payments` paid before lock); see `frontend/src/lib/constants.ts` (`PRICING`) and migration `0008_payments.sql`. The earlier Solana/Anchor architecture has been removed; any references to wallets, SOL, prize pools, or `@solana/*` packages are stale.
+**No blockchain, no wallets** — this is a pure web app backed by Supabase Postgres + Auth. Entry is paid out-of-band ($30 CAD per prediction; $5 of each entry is allocated to a charity the pool organizer announces before lock; an admin marks `tournament_payments` paid before lock); see `frontend/src/lib/constants.ts` (`PRICING.entryFeeCAD` + `PRICING.charityPortionCAD`) and migration `0008_payments.sql`. The earlier Solana/Anchor architecture has been removed; any references to wallets, SOL, prize pools, or `@solana/*` packages are stale.
 
 ## Tech Stack
 

@@ -23,11 +23,15 @@ export const SCORING = {
 /**
  * Per-prediction entry cost. Paid out-of-band (cash / e-transfer / etc.);
  * an admin marks each prediction as paid in `tournament_payments` before
- * lock so it's eligible for the leaderboard. Surfaced in the home hero
- * (HomePageContent) and the rules page so users see the price up front.
+ * lock so it's eligible for the leaderboard. `charityPortionCAD` is the
+ * portion of each entry set aside for a charity (selected by the pool
+ * organizer before lock). Surfaced in the home hero (HomePageContent)
+ * and the rules page so users see the price and the charity split up
+ * front.
  */
 export const PRICING = {
-  entryFeeCAD: 25,
+  entryFeeCAD: 30,
+  charityPortionCAD: 5,
   currency: 'CAD',
 } as const;
 

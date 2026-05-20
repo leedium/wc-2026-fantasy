@@ -89,8 +89,9 @@ export function HomePageContent() {
           </h1>
           <p className="text-muted-foreground mb-8 text-lg md:text-xl">
             Submit your bracket predictions, earn points for correct picks, and climb the
-            leaderboard. ${PRICING.entryFeeCAD} {PRICING.currency} per prediction — sign up
-            free, pay per entry.
+            leaderboard. ${PRICING.entryFeeCAD} {PRICING.currency} per prediction — $
+            {PRICING.charityPortionCAD} from each entry goes to a charity announced before
+            lock. Sign up free, pay per entry.
           </p>
           <div className="flex flex-col items-center justify-center gap-4 sm:flex-row">
             <Button asChild size="lg" className="min-w-[200px]">
