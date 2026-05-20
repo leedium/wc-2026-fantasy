@@ -299,6 +299,44 @@ describe('PredictionsPageContent — stepper navigation', () => {
     expect(screen.getByRole('tab', { name: /Tiebreaker/ })).toBeDisabled();
   });
 
+  it('shows BOTH Save Phase 1 Picks and Continue to Round 32 for super admin on Best 3rds in phase 1', async () => {
+    // Super admins may be playing the pool themselves, so they still need
+    // the Phase 1 commit action a regular user gets. They also retain the
+    // "Continue to Round 32" jump because their phase2 fields are editable
+    // (god-mode). Both buttons must coexist on this step.
+    mockAuthProfile = { isSuperAdmin: true };
+    configureQueries(); // phase 1 default
+    const user = userEvent.setup();
+    render(<PredictionsPageContent mode="create" />);
+
+    await user.click(await screen.findByTestId('fill-all-groups'));
+    await user.click(screen.getByRole('button', { name: /Continue to Best 3rds/ }));
+    await user.click(screen.getByTestId('fill-all-bundles'));
+
+    expect(screen.getByRole('button', { name: /Save Phase 1 Picks/ })).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: /Continue to Round of 32/ })
+    ).toBeInTheDocument();
+  });
+
+  it('surfaces why Save Phase 1 Picks is disabled when the prediction name is empty', async () => {
+    // 8/8 advancers ranked but the prediction-name field is still blank.
+    // The Save button must stay disabled AND explain why, since name
+    // validation is otherwise silent until the input is blurred.
+    configureQueries(); // phase 1
+    const user = userEvent.setup();
+    render(<PredictionsPageContent mode="create" />);
+
+    await user.click(await screen.findByTestId('fill-all-groups'));
+    await user.click(screen.getByRole('button', { name: /Continue to Best 3rds/ }));
+    await user.click(screen.getByTestId('fill-all-bundles'));
+
+    const saveBtn = screen.getByRole('button', { name: /Save Phase 1 Picks/ });
+    expect(saveBtn).toBeDisabled();
+    expect(saveBtn).toHaveAttribute('title', 'Enter a prediction name above first.');
+    expect(screen.getByText('Enter a prediction name above first.')).toBeInTheDocument();
+  });
+
   it('walks through every step with Continue and reaches the tiebreaker (phase 2 open)', async () => {
     configureQueries({ phase: 'phase2_open' });
     const user = userEvent.setup();
