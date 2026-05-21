@@ -80,8 +80,14 @@ const SelectContent = React.forwardRef<
       <SelectPrimitive.Viewport
         className={cn(
           'p-1',
+          // Radix popper mode ships with `h-[var(--radix-select-trigger-height)]`
+          // on the Viewport, which pins it to the trigger's height (~36px) and
+          // silently clips long lists — items past the first one cannot be
+          // scrolled into view. Drop the height so the Viewport sizes to its
+          // content and the Content's `max-h-[--radix-select-content-available-height]`
+          // + `overflow-y-auto` handles scrolling naturally.
           position === 'popper' &&
-            'h-[var(--radix-select-trigger-height)] w-full min-w-[var(--radix-select-trigger-width)]'
+            'w-full min-w-[var(--radix-select-trigger-width)]'
         )}
       >
         {children}
