@@ -3,7 +3,7 @@
 import * as React from 'react';
 import Link from 'next/link';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { CheckCircle2, Clock, Eye, FileEdit, Plus, Trash2 } from 'lucide-react';
+import { CheckCircle2, Clock, Eye, FileEdit, Gift, Plus, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 
 import { PageLayout } from '@/components/layout/PageLayout';
@@ -25,7 +25,12 @@ import {
   clearDraftForPrediction,
 } from '@/hooks/useDraftPersistence';
 import { useTournamentLock } from '@/hooks/useTournamentLock';
+import {
+  REFERRAL_STATUS_QUERY_KEY,
+  useReferralStatus,
+} from '@/hooks/useReferralStatus';
 import { BracketPreviewDialog } from '@/components/predictions/BracketPreviewDialog';
+import { ReferralCreditBanner } from '@/components/predictions/ReferralCreditBanner';
 import { ROUTES } from '@/lib/constants';
 
 interface ApiPrediction {
@@ -35,6 +40,7 @@ interface ApiPrediction {
   submittedAt: string | null;
   isPaid: boolean;
   paidAt: string | null;
+  isFreePaid: boolean;
 }
 
 interface ApiResponse {
@@ -59,6 +65,8 @@ export function PredictionsListPage() {
   const [pendingDelete, setPendingDelete] = React.useState<ApiPrediction | null>(null);
   const [isDeleting, setIsDeleting] = React.useState(false);
   const [previewId, setPreviewId] = React.useState<string | null>(null);
+  const [redeemingId, setRedeemingId] = React.useState<string | null>(null);
+  const { status: referralStatus } = useReferralStatus();
 
   const query = useQuery<ApiResponse>({
     queryKey: ['predictions'],
@@ -79,6 +87,30 @@ export function PredictionsListPage() {
   // Late-joiner block: new predictions can only be created during phase 1.
   // Super admins bypass.
   const canCreate = phase === 'phase1' || isSuperAdmin;
+
+  const handleRedeem = async (prediction: ApiPrediction) => {
+    if (redeemingId) return;
+    setRedeemingId(prediction.id);
+    try {
+      const res = await fetch(
+        `/api/predictions/${encodeURIComponent(prediction.id)}/redeem-credit`,
+        { method: 'POST' }
+      );
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        throw new Error(String(body.error ?? 'Failed to redeem credit'));
+      }
+      toast.success(`Free credit applied to "${prediction.name}"`);
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['predictions'] }),
+        queryClient.invalidateQueries({ queryKey: REFERRAL_STATUS_QUERY_KEY }),
+      ]);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Failed to redeem credit');
+    } finally {
+      setRedeemingId(null);
+    }
+  };
 
   const handleDelete = async () => {
     if (!pendingDelete) return;
@@ -128,6 +160,10 @@ export function PredictionsListPage() {
         </Button>
       </div>
 
+      <div className="mb-4">
+        <ReferralCreditBanner />
+      </div>
+
       {query.isLoading ? (
         <div className="space-y-3">
           {Array.from({ length: 3 }).map((_, i) => (
@@ -162,7 +198,11 @@ export function PredictionsListPage() {
                         <FileEdit className="h-3 w-3" /> Draft
                       </Badge>
                     )}
-                    {p.isPaid ? (
+                    {p.isFreePaid ? (
+                      <Badge variant="default" className="gap-1 bg-green-600 hover:bg-green-600/90">
+                        <Gift className="h-3 w-3" /> Free pick
+                      </Badge>
+                    ) : p.isPaid ? (
                       <Badge variant="default" className="gap-1">
                         <CheckCircle2 className="h-3 w-3" /> Paid
                       </Badge>
@@ -190,6 +230,25 @@ export function PredictionsListPage() {
                       </Link>
                     </Button>
                   )}
+                  {/* Redeem a referral credit on an unpaid, pre-lock,
+                      user-owned prediction. The server RPC is the source
+                      of truth — we just hide the button when none of the
+                      preconditions hold. */}
+                  {!p.isPaid &&
+                    referralStatus.availableCredits > 0 &&
+                    (!isLocked || isSuperAdmin) && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="gap-1 border-green-600/50 text-green-700 hover:text-green-800 dark:text-green-400"
+                        onClick={() => handleRedeem(p)}
+                        disabled={redeemingId === p.id}
+                        title="Apply a free pick credit"
+                      >
+                        <Gift className="h-4 w-4" />
+                        {redeemingId === p.id ? 'Applying…' : 'Use free credit'}
+                      </Button>
+                    )}
                   <Button
                     variant="outline"
                     size="sm"

@@ -66,7 +66,11 @@ export const ROUTES = {
   rules: '/rules',
   terms: '/terms',
   privacy: '/privacy',
+  referrals: '/referrals',
 } as const;
+
+/** 8 uppercase chars from a 31-symbol alphabet (no 0/O/1/I/L). */
+export const REFERRAL_CODE_REGEX = /^[ABCDEFGHJKMNPQRSTUVWXYZ23456789]{8}$/;
 
 export const API_ENDPOINTS = {
   tournament: '/api/tournament',

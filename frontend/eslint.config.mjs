@@ -15,6 +15,9 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // OpenNext Cloudflare build output (see `npm run preview` / `npm run deploy`);
+    // gitignored but eslint-config-next doesn't know about it.
+    ".open-next/**",
   ]),
 ]);
 

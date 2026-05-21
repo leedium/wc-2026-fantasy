@@ -3,20 +3,24 @@
 import * as React from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { LogOut, Settings, User as UserIcon } from 'lucide-react';
+import { Gift, LogOut, Settings, User as UserIcon } from 'lucide-react';
 import { toast } from 'sonner';
 
 import { Button } from '@/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { useAuth } from '@/hooks/useAuth';
 import { useMounted } from '@/hooks/useMounted';
+import { useReferralStatus } from '@/hooks/useReferralStatus';
 import { ROUTES } from '@/lib/constants';
+import { cn } from '@/lib/utils';
 
 export function AuthMenu() {
   const { user, profile, signOut } = useAuth();
   const router = useRouter();
   const mounted = useMounted();
   const [isSigningOut, setIsSigningOut] = React.useState(false);
+  const { status: referralStatus } = useReferralStatus();
+  const credits = referralStatus.availableCredits;
 
   const handleSignOut = async () => {
     setIsSigningOut(true);
@@ -73,17 +77,51 @@ export function AuthMenu() {
   return (
     <Popover>
       <PopoverTrigger asChild>
-        <Button variant="outline" size="sm" className="gap-2">
+        <Button variant="outline" size="sm" className="relative gap-2">
           <UserIcon className="h-4 w-4" />
           <span className="max-w-[120px] truncate">{displayName}</span>
+          {/* Unread-style indicator for available referral credits.
+              aria-hidden because the popover content surfaces the count
+              for screen readers — this dot is purely a visual hint. */}
+          {credits > 0 && (
+            <span
+              aria-hidden
+              className={cn(
+                'absolute -top-1 -right-1 inline-flex h-2.5 w-2.5 rounded-full',
+                'bg-green-500 ring-2 ring-background'
+              )}
+            />
+          )}
         </Button>
       </PopoverTrigger>
-      <PopoverContent align="end" className="w-56">
+      <PopoverContent align="end" className="w-60">
         <div className="space-y-3">
           <div>
             <p className="text-sm font-medium">{profile?.username ?? 'Account'}</p>
             <p className="text-muted-foreground truncate text-xs">{user.email}</p>
           </div>
+          <Button
+            variant="outline"
+            size="sm"
+            className="w-full justify-start gap-2"
+            asChild
+          >
+            <Link href={ROUTES.referrals}>
+              <Gift className="h-4 w-4" />
+              <span className="flex-1 text-left">Refer a friend</span>
+              {credits > 0 && (
+                <span
+                  className={cn(
+                    'inline-flex min-w-[1.25rem] items-center justify-center rounded-full',
+                    'bg-green-600 px-1.5 py-0.5 text-xs font-semibold text-white'
+                  )}
+                  aria-label={`${credits} free pick credits available`}
+                >
+                  {credits}
+                </span>
+              )}
+            </Link>
+          </Button>
           <Button
             variant="outline"
             size="sm"
