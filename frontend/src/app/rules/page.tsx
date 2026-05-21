@@ -52,6 +52,13 @@ export default function RulesPage() {
                   tournament-wide lock time.
                 </li>
                 <li>
+                  <span className="text-foreground font-semibold">Gut Feeling Champion.</span>{' '}
+                  Phase 1 ends with a single &ldquo;gut-feeling&rdquo; pick — one team you call
+                  to win the whole thing. It&apos;s required to submit, locked once Phase 1
+                  closes, and scored independently of your bracket Final pick (so both can
+                  pay out). See <span className="font-semibold">Scoring Breakdown</span> below.
+                </li>
+                <li>
                   <span className="text-foreground font-semibold">
                     Independently scored.
                   </span>{' '}

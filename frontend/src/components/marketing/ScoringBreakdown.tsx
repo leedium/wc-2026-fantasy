@@ -1,4 +1,4 @@
-import { Trophy, Users, Target } from 'lucide-react';
+import { Sparkles, Target, Trophy, Users } from 'lucide-react';
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { SCORING, TOURNAMENT_CONFIG } from '@/lib/constants';
@@ -168,6 +168,58 @@ export function ScoringBreakdown() {
               <div className="flex items-center justify-between font-semibold">
                 <span>Maximum Advancer Points</span>
                 <span className="text-primary">{SCORING.maxAdvancerPoints} pts</span>
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card className="mt-6">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Sparkles className="text-primary h-5 w-5" />
+            Gut Feeling Champion
+            <span className="bg-muted text-muted-foreground ml-2 rounded-full px-2 py-0.5 text-xs font-medium">
+              Phase 1
+            </span>
+          </CardTitle>
+          <CardDescription>
+            Lock in one team — from any of the {TOURNAMENT_CONFIG.totalTeams} — as your tournament
+            champion before Phase 1 closes.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-3">
+            <div className="flex items-center justify-between gap-4">
+              <span className="text-muted-foreground">Your pick wins the World Cup Final</span>
+              <span className="font-semibold whitespace-nowrap">
+                +{SCORING.championPickBonus} pts
+              </span>
+            </div>
+            <div className="flex items-center justify-between gap-4">
+              <span className="text-muted-foreground">Anything else</span>
+              <span className="font-semibold">+0 pts</span>
+            </div>
+            <div className="bg-muted/50 rounded-md p-3 text-xs">
+              <span className="font-semibold">Independent of your bracket.</span>{' '}
+              <span className="text-muted-foreground">
+                This is a separate gut-feeling call from your bracket Final pick. If both end up
+                right, you get the full <span className="font-semibold">+15</span> bracket champion
+                bonus <span className="italic">and</span> the{' '}
+                <span className="font-semibold">+{SCORING.championPickBonus}</span> gut bonus.
+              </span>
+            </div>
+            <div className="bg-muted/50 rounded-md p-3 text-xs">
+              <span className="font-semibold">Locked at Phase 1.</span>{' '}
+              <span className="text-muted-foreground">
+                Required to submit a prediction. Once Phase 1 ends, the pick is frozen — no
+                changes even if your bracket Final pick is still editable.
+              </span>
+            </div>
+            <div className="border-t pt-3">
+              <div className="flex items-center justify-between font-semibold">
+                <span>Maximum Champion Pick Points</span>
+                <span className="text-primary">+{SCORING.championPickBonus} pts</span>
               </div>
             </div>
           </div>
