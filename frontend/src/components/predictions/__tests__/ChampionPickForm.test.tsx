@@ -14,7 +14,7 @@ describe('ChampionPickForm', () => {
     render(
       <ChampionPickForm teams={sampleTeams} value={null} onChange={jest.fn()} />
     );
-    expect(screen.getByText('Phase 1 Champions Pick')).toBeInTheDocument();
+    expect(screen.getByText('Your Gut Feeling Champion')).toBeInTheDocument();
     expect(screen.getByTestId('champion-pick-select')).toBeInTheDocument();
   });
 

@@ -53,7 +53,7 @@ export function ChampionPickForm({
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h3 className="text-lg font-semibold">Phase 1 Champions Pick</h3>
+        <h3 className="text-lg font-semibold">Your Gut Feeling Champion</h3>
         <Badge variant={filled ? 'default' : 'secondary'} className={cn(filled && 'bg-green-600')}>
           {filled ? (
             <>

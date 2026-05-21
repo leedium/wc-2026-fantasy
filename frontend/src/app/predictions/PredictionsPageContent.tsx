@@ -47,9 +47,9 @@ import { AdvancersForm } from '@/components/predictions/AdvancersForm';
 type PositionKey = 'first' | 'second' | 'third' | 'fourth';
 
 type Step =
-  | 'champion_pick'
   | 'groups'
   | 'best_thirds'
+  | 'champion_pick'
   | 'round_of_32'
   | 'round_of_16'
   | 'quarter_finals'
@@ -58,12 +58,12 @@ type Step =
   | 'third_place'
   | 'tiebreaker';
 
-type TopStep = 'champion_pick' | 'groups' | 'best_thirds' | 'knockout' | 'tiebreaker';
+type TopStep = 'groups' | 'best_thirds' | 'champion_pick' | 'knockout' | 'tiebreaker';
 
 const STEP_ORDER: Step[] = [
-  'champion_pick',
   'groups',
   'best_thirds',
+  'champion_pick',
   'round_of_32',
   'round_of_16',
   'quarter_finals',
@@ -74,9 +74,9 @@ const STEP_ORDER: Step[] = [
 ];
 
 const STEP_LABELS: Record<Step, string> = {
-  champion_pick: 'Champion Pick',
   groups: 'Group Stage',
   best_thirds: 'Best 3rds',
+  champion_pick: 'Gut Feeling Champion',
   round_of_32: 'Round of 32',
   round_of_16: 'Round of 16',
   quarter_finals: 'Quarter-finals',
@@ -104,11 +104,11 @@ const SUB_STEP_LABELS: Record<KnockoutStage, string> = {
   third_place: '3rd',
 };
 
-const TOP_STEPS: TopStep[] = ['champion_pick', 'groups', 'best_thirds', 'knockout', 'tiebreaker'];
+const TOP_STEPS: TopStep[] = ['groups', 'best_thirds', 'champion_pick', 'knockout', 'tiebreaker'];
 const TOP_STEP_LABELS: Record<TopStep, string> = {
-  champion_pick: 'Champion',
   groups: 'Group Stage',
   best_thirds: 'Best 3rds',
+  champion_pick: 'Gut Feeling',
   knockout: 'Knockout',
   tiebreaker: 'Tiebreaker',
 };
@@ -336,7 +336,7 @@ export function PredictionsPageContent({
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [isSavingProgress, setIsSavingProgress] = React.useState(false);
   const [hydrated, setHydrated] = React.useState(false);
-  const [currentStep, setCurrentStep] = React.useState<Step>('champion_pick');
+  const [currentStep, setCurrentStep] = React.useState<Step>('groups');
   const userInteractedRef = React.useRef(false);
   const initialStepSet = React.useRef(false);
   const nameRef = React.useRef<HTMLInputElement>(null);
@@ -912,7 +912,8 @@ export function PredictionsPageContent({
   const currentStepComplete = stepStatus[currentStep];
   const nextStepLabel = !isLastStep ? STEP_LABELS[STEP_ORDER[stepIndex + 1]] : null;
   const previousStepLabel = !isFirstStep ? STEP_LABELS[STEP_ORDER[stepIndex - 1]] : null;
-  // Bottom-nav action layout for the Best 3rds step in Phase 1:
+  // Bottom-nav action layout for the Gut Feeling Champion step in Phase 1
+  // (the final Phase-1 step):
   //   - Regular users: "Save Phase 1 Picks" only. Knockout steps are
   //     read-only in phase 1, so a Continue button would dump them on
   //     disabled screens.
@@ -921,12 +922,12 @@ export function PredictionsPageContent({
   //     regular participant gets; "Continue to Round 32" keeps the wizard
   //     flow into the knockout bracket (which they can edit thanks to
   //     phase2Editable).
-  const isPhase1BestThirds =
-    phase === 'phase1' && currentStep === 'best_thirds';
-  const showSavePhase1 = isPhase1BestThirds;
+  const isPhase1LastStep =
+    phase === 'phase1' && currentStep === 'champion_pick';
+  const showSavePhase1 = isPhase1LastStep;
   const showReviewSubmit = isLastStep;
   const showContinue =
-    !isLastStep && (!isPhase1BestThirds || isSuperAdmin);
+    !isLastStep && (!isPhase1LastStep || isSuperAdmin);
 
   // Why is the Save Phase 1 Picks button disabled? The button has four
   // silent gates (name validation, current-step completion, lock state,
@@ -941,7 +942,7 @@ export function PredictionsPageContent({
         : nameError
           ? 'Enter a prediction name above first.'
           : !currentStepComplete
-            ? 'Rank all 8 of your best 3rd-place teams above.'
+            ? 'Pick your gut-feeling champion above first.'
             : null;
 
   return (

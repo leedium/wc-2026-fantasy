@@ -264,25 +264,14 @@ describe('PredictionsPageContent — stepper navigation', () => {
     const user = userEvent.setup();
     render(<PredictionsPageContent mode="create" />);
 
-    // Wizard now opens on the Phase 1 Champions Pick step; Continue is gated
-    // on that pick being filled.
-    const continueBtn = await screen.findByRole('button', { name: /Continue to Group Stage/ });
+    const continueBtn = await screen.findByRole('button', { name: /Continue to Best 3rds/ });
     expect(continueBtn).toBeDisabled();
 
-    await user.click(screen.getByTestId('fill-champion'));
-    expect(screen.getByRole('button', { name: /Continue to Group Stage/ })).toBeEnabled();
-
-    // Now advance through champion → groups and assert the next step's
-    // Continue is again gated on completion.
-    await user.click(screen.getByRole('button', { name: /Continue to Group Stage/ }));
-    expect(
-      screen.getByRole('button', { name: /Continue to Best 3rds/ })
-    ).toBeDisabled();
     await user.click(screen.getByTestId('fill-all-groups'));
     expect(screen.getByRole('button', { name: /Continue to Best 3rds/ })).toBeEnabled();
   });
 
-  it('advances Groups → Best 3rds → Round of 32 via Continue (phase 2 open)', async () => {
+  it('advances Groups → Best 3rds → Gut Feeling Champion → Round of 32 via Continue (phase 2 open)', async () => {
     configureQueries({ phase: 'phase2_open' });
     const user = userEvent.setup();
     render(<PredictionsPageContent mode="create" />);
@@ -296,6 +285,11 @@ describe('PredictionsPageContent — stepper navigation', () => {
     expect(screen.getByTestId('advancers-form')).toBeInTheDocument();
 
     await user.click(screen.getByTestId('fill-all-bundles'));
+    await user.click(
+      screen.getByRole('button', { name: /Continue to Gut Feeling Champion/ })
+    );
+    expect(screen.getByTestId('champion-pick-form')).toBeInTheDocument();
+    await user.click(screen.getByTestId('fill-champion'));
     await user.click(screen.getByRole('button', { name: /Continue to Round of 32/ }));
 
     // Top "Knockout" chip is now current; sub row appears with R32 selected.
@@ -307,18 +301,21 @@ describe('PredictionsPageContent — stepper navigation', () => {
     expect(screen.getByRole('tab', { name: /R32/ })).toHaveAttribute('aria-selected', 'true');
   });
 
-  it('shows Save Phase 1 Picks instead of Continue on Best 3rds in phase 1', async () => {
+  it('shows Save Phase 1 Picks on the Gut Feeling Champion step in phase 1', async () => {
     configureQueries(); // phase 1 default
     const user = userEvent.setup();
     render(<PredictionsPageContent mode="create" />);
 
-    await user.click(await screen.findByTestId('fill-champion'));
-    await user.click(screen.getByRole('button', { name: /Continue to Group Stage/ }));
-    await user.click(screen.getByTestId('fill-all-groups'));
+    await user.click(await screen.findByTestId('fill-all-groups'));
     await user.click(screen.getByRole('button', { name: /Continue to Best 3rds/ }));
     await user.click(screen.getByTestId('fill-all-bundles'));
+    await user.click(
+      screen.getByRole('button', { name: /Continue to Gut Feeling Champion/ })
+    );
+    await user.click(screen.getByTestId('fill-champion'));
 
-    // No "Continue to Round of 32" in phase 1.
+    // No "Continue to Round of 32" in phase 1 — knockout is locked for
+    // regular users.
     expect(
       screen.queryByRole('button', { name: /Continue to Round of 32/ })
     ).not.toBeInTheDocument();
@@ -329,7 +326,7 @@ describe('PredictionsPageContent — stepper navigation', () => {
     expect(screen.getByRole('tab', { name: /Tiebreaker/ })).toBeDisabled();
   });
 
-  it('shows BOTH Save Phase 1 Picks and Continue to Round 32 for super admin on Best 3rds in phase 1', async () => {
+  it('shows BOTH Save Phase 1 Picks and Continue to Round 32 for super admin on Gut Feeling Champion in phase 1', async () => {
     // Super admins may be playing the pool themselves, so they still need
     // the Phase 1 commit action a regular user gets. They also retain the
     // "Continue to Round 32" jump because their phase2 fields are editable
@@ -339,11 +336,13 @@ describe('PredictionsPageContent — stepper navigation', () => {
     const user = userEvent.setup();
     render(<PredictionsPageContent mode="create" />);
 
-    await user.click(await screen.findByTestId('fill-champion'));
-    await user.click(screen.getByRole('button', { name: /Continue to Group Stage/ }));
-    await user.click(screen.getByTestId('fill-all-groups'));
+    await user.click(await screen.findByTestId('fill-all-groups'));
     await user.click(screen.getByRole('button', { name: /Continue to Best 3rds/ }));
     await user.click(screen.getByTestId('fill-all-bundles'));
+    await user.click(
+      screen.getByRole('button', { name: /Continue to Gut Feeling Champion/ })
+    );
+    await user.click(screen.getByTestId('fill-champion'));
 
     expect(screen.getByRole('button', { name: /Save Phase 1 Picks/ })).toBeInTheDocument();
     expect(
@@ -359,11 +358,13 @@ describe('PredictionsPageContent — stepper navigation', () => {
     const user = userEvent.setup();
     render(<PredictionsPageContent mode="create" />);
 
-    await user.click(await screen.findByTestId('fill-champion'));
-    await user.click(screen.getByRole('button', { name: /Continue to Group Stage/ }));
-    await user.click(screen.getByTestId('fill-all-groups'));
+    await user.click(await screen.findByTestId('fill-all-groups'));
     await user.click(screen.getByRole('button', { name: /Continue to Best 3rds/ }));
     await user.click(screen.getByTestId('fill-all-bundles'));
+    await user.click(
+      screen.getByRole('button', { name: /Continue to Gut Feeling Champion/ })
+    );
+    await user.click(screen.getByTestId('fill-champion'));
 
     const saveBtn = screen.getByRole('button', { name: /Save Phase 1 Picks/ });
     expect(saveBtn).toBeDisabled();
@@ -382,6 +383,10 @@ describe('PredictionsPageContent — stepper navigation', () => {
     await user.click(await screen.findByTestId('fill-all-groups'));
     await user.click(screen.getByRole('button', { name: /Continue to Best 3rds/ }));
     await user.click(screen.getByTestId('fill-all-bundles'));
+    await user.click(
+      screen.getByRole('button', { name: /Continue to Gut Feeling Champion/ })
+    );
+    await user.click(screen.getByTestId('fill-champion'));
     await user.click(screen.getByRole('button', { name: /Continue to Round of 32/ }));
     // Filling all knockout matches at once satisfies every knockout sub-step.
     await user.click(screen.getByTestId('fill-all-knockout'));
@@ -431,10 +436,6 @@ describe('PredictionsPageContent — stepper navigation', () => {
     expect(screen.getByRole('tab', { name: /Group Stage/ })).not.toBeDisabled();
     expect(screen.getByRole('tab', { name: /Best 3rds/ })).not.toBeDisabled();
 
-    // Wizard now opens on the Phase 1 Champions Pick step; advance through
-    // it first so the test exercises the locked-Groups Continue.
-    await user.click(screen.getByTestId('fill-champion'));
-    await user.click(screen.getByRole('button', { name: /Continue to Group Stage/ }));
     await user.click(screen.getByTestId('fill-all-groups'));
 
     const continueBtn = screen.getByRole('button', { name: /Continue to Best 3rds/ });
@@ -451,9 +452,6 @@ describe('PredictionsPageContent — autosave', () => {
     const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
     render(<PredictionsPageContent mode="create" />);
 
-    // Wizard now opens on Champion Pick; navigate to Groups before
-    // exercising the group-stage interaction this test cares about.
-    await user.click(await screen.findByRole('tab', { name: /Group Stage/ }));
     await user.click(await screen.findByTestId('fill-one-group-position'));
     expect(window.localStorage.getItem(DRAFT_KEY)).toBeNull();
 
@@ -494,12 +492,8 @@ describe('PredictionsPageContent — autosave', () => {
     );
     configureQueries();
 
-    const user = userEvent.setup();
     render(<PredictionsPageContent mode="create" />);
 
-    // Wizard opens on Champion Pick now; switch to Group Stage so the
-    // mocked groups-filled testid is rendered.
-    await user.click(await screen.findByRole('tab', { name: /Group Stage/ }));
     // Draft has 1 group slot + 1 tiebreaker filled (total 2). Server would have 0.
     await waitFor(() => expect(screen.getByTestId('groups-filled')).toHaveTextContent('1'));
     // Progress bar reflects the combined draft state (groups + tiebreaker).
@@ -529,7 +523,6 @@ describe('PredictionsPageContent — autosave', () => {
     );
     configureQueries();
 
-    const user = userEvent.setup();
     render(
       <PredictionsPageContent
         mode="edit"
@@ -548,9 +541,6 @@ describe('PredictionsPageContent — autosave', () => {
       />
     );
 
-    // Wizard opens on Champion Pick; navigate to Groups to see the mocked
-    // groups-filled testid.
-    await user.click(await screen.findByRole('tab', { name: /Group Stage/ }));
     // Server hydration → exactly 1 filled slot. Draft would have been 24.
     await waitFor(() =>
       expect(screen.getByTestId('groups-filled')).toHaveTextContent('1')
@@ -596,15 +586,17 @@ describe('PredictionsPageContent — autosave', () => {
 
     render(<PredictionsPageContent mode="create" />);
 
-    // Wizard starts at Round of 32 in phase 2; navigate to Champion tab
-    // first so we can fill the Phase 1 pick (required for completion),
-    // then walk back through Group Stage → ... → Tiebreaker.
-    await user.click(await screen.findByRole('tab', { name: /Champion/ }));
-    await user.click(await screen.findByTestId('fill-champion'));
-    await user.click(screen.getByRole('tab', { name: /Group Stage/ }));
+    // Wizard starts at Round of 32 in phase 2; navigate back to Group
+    // Stage and walk forward through Best 3rds → Gut Feeling Champion
+    // (Phase 1 fields) → Round of 32 → … → Tiebreaker.
+    await user.click(await screen.findByRole('tab', { name: /Group Stage/ }));
     await user.click(await screen.findByTestId('fill-all-groups'));
     await user.click(screen.getByRole('button', { name: /Continue to Best 3rds/ }));
     await user.click(screen.getByTestId('fill-all-bundles'));
+    await user.click(
+      screen.getByRole('button', { name: /Continue to Gut Feeling Champion/ })
+    );
+    await user.click(screen.getByTestId('fill-champion'));
     await user.click(screen.getByRole('button', { name: /Continue to Round of 32/ }));
     await user.click(screen.getByTestId('fill-all-knockout'));
     // Walk through R16 → QF → SF → Final → 3rd → Tiebreaker via Continue.

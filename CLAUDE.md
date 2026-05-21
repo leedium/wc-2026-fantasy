@@ -1,6 +1,6 @@
 # CLAUDE.md
 
-> **Version:** 3.3.0
+> **Version:** 3.3.1
 > **Last Updated:** 2026-05-21
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
@@ -99,7 +99,7 @@ All schema/policies/RPCs live in `supabase/migrations/`. Run `supabase db reset`
 
 Plus flat bonuses on top: champion (M32 winner) `+15`, third-place winner (M31) `+5`. Round of 32 picks aren't scored directly — they decide R16 slots. The legacy `knockout_matches.point_value` column is still in the schema but the v2 RPCs ignore it. Max knockout points = 80 + 48 + 32 + 20 + 15 + 5 = **200**. Helper function `public.knockout_round_scores(tournament_id, stage, correct_pts, wrong_pts)` is shared by `get_leaderboard` and `get_leaderboard_rank`.
 
-**Phase 1 Champions Pick** — `+5` if `predictions.champion_team_id` matches the actual M32 winner. Independent of the bracket Final (M32) pick scoring (`+15`) — users can pick the same team for both (so a correct gut pick + correct bracket Final stacks to `+20`), or split between them. The pick is collected via a dropdown as the first wizard step, required at create time, and writable only while the tournament is in `phase1`; once `phase1_locked` (or later) it is frozen.
+**Gut Feeling Champion (Phase 1)** — `+5` if `predictions.champion_team_id` matches the actual M32 winner. Independent of the bracket Final (M32) pick scoring (`+15`) — users can pick the same team for both (so a correct gut pick + correct bracket Final stacks to `+20`), or split between them. The pick is collected via a dropdown as the final Phase 1 wizard step (after Best 3rds), required at create time, and writable only while the tournament is in `phase1`; once `phase1_locked` (or later) it is frozen.
 
 **Tiebreaker** — closest prediction to the *champion's* total goals across all 8 of their tournament matches (regulation + extra time only; no penalty-shootout goals). Stored on `tournaments.champion_total_goals` (admin-entered when the tournament ends). `predictions.total_goals` is reused with a relaxed CHECK of `between 0 and 50`.
 
@@ -149,7 +149,7 @@ Plus flat bonuses on top: champion (M32 winner) `+15`, third-place winner (M31) 
 - Each user can create as many named predictions per tournament as they like. Each prediction is independent (own picks, own tiebreaker, own payment).
 - All predictions submitted upfront before a single tournament-wide lock time (users may edit any of their predictions until lock)
 - Payment is **per prediction**: each one must be marked paid by an admin before lock to be eligible. The leaderboard shows one row per paid prediction (a user with N paid predictions occupies N rows).
-- **Phase 1 Champions Pick**: one team picked from the 48 as your tournament champion. Required at prediction-creation time, collected as the first wizard step, and locked when Phase 1 ends. Independent of the bracket Final (M32) pick — both score separately.
+- **Gut Feeling Champion** (Phase 1): one team picked from the 48 as your tournament champion. Required at prediction-creation time, collected as the final Phase 1 wizard step (after Best 3rds), and locked when Phase 1 ends. Independent of the bracket Final (M32) pick — both score separately.
 - Group stage: predict positions 1–4 for all 12 groups; only the top 2 finishers are scored (set-based 6/4/3/2/0 with a +8 exact-order bonus for Group I, the "Group of Death")
 - Knockout: predict winners R32 → Final. R32 picks decide which teams sit in your R16 slots and aren't scored directly; R16/QF/SF/Final score per advancing team with correct-side / wrong-side tiers; champion and third-place winner each get a flat bonus
 - Tiebreaker: closest prediction to the champion's total tournament goals (regulation + extra time across their 8 matches; penalty-shootout goals excluded)
