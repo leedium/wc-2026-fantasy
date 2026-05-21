@@ -1,7 +1,7 @@
 # CLAUDE.md
 
-> **Version:** 3.2.1
-> **Last Updated:** 2026-05-20
+> **Version:** 3.3.1
+> **Last Updated:** 2026-05-21
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
@@ -48,7 +48,7 @@ All schema/policies/RPCs live in `supabase/migrations/`. Run `supabase db reset`
 - `profiles` — 1:1 with `auth.users`. Holds `username` (citext, unique, 3–24 chars, `[A-Za-z0-9_]`), `display_name`, `avatar_url`, `is_admin`. Auto-created via `handle_new_user` trigger; if `raw_user_meta_data.username` is missing (default for self-signup), the trigger generates `user_<8 hex chars>` with a 10-attempt collision retry. Admin-create flows still pass an explicit username.
 - `tournaments` — single active tournament enforced by partial unique index. Holds `lock_time` (single tournament-wide deadline) and `status` (`upcoming|group_stage|knockout|completed`).
 - `groups` (12: A–L), `teams` (48, FK to groups), `knockout_matches` (31, R32 → final, with `team1_source`/`team2_source` strings like `"M1"` or `"A1"`).
-- `predictions` — **many per `(user, tournament)`**, no quantity limit. Each has a unique `prediction_name` per user/tournament (case-insensitive), 1–60 chars matching `^[A-Za-z0-9 _\-.''‘’]+$`. Holds `total_goals` tiebreaker + submission timestamp.
+- `predictions` — **many per `(user, tournament)`**, no quantity limit. Each has a unique `prediction_name` per user/tournament (case-insensitive), 1–60 chars matching `^[A-Za-z0-9 _\-.''‘’]+$`. Holds `total_goals` tiebreaker, `champion_team_id` (the Phase 1 Champions Pick — nullable for legacy rows; required on new prediction creation), and submission timestamp.
 - `group_predictions` — normalized: 12 rows per prediction with `first_team_id`/`second_team_id`/`third_team_id`/`fourth_team_id`. CHECK enforces all four are distinct. PK is `(prediction_id, group_id)`.
 - `knockout_predictions` — one per `(prediction, match)` with predicted winner.
 - `tournament_payments` — one per `prediction_id` (UNIQUE). Payment is per-prediction, not per-user. Each paid prediction is its own ranked entry on the leaderboard. Has an `is_free boolean` (default `false`) that flags rows created via the referral-redeem flow rather than admin-recorded cash.
@@ -65,10 +65,10 @@ All schema/policies/RPCs live in `supabase/migrations/`. Run `supabase db reset`
 
 ### RPCs (the trust boundary)
 
-- **`submit_predictions(payload jsonb)`** — single transaction. Payload includes optional `prediction_id` (omit to create, present to update) and required-on-create `prediction_name`. Users can create unlimited predictions per `(user, tournament)`; `prediction_name` uniqueness is enforced by the unique index. Raises `'predictions are locked'` (→ 403), `'prediction name taken'` (→ 409), `'prediction name required'` (→ 400), `'prediction not found'` (→ 404).
+- **`submit_predictions(payload jsonb)`** — single transaction. Payload includes optional `prediction_id` (omit to create, present to update), required-on-create `prediction_name`, and required-on-create `champion_team_id` (the Phase 1 Champions Pick — only writable while `tournament_phase = 'phase1'`). Users can create unlimited predictions per `(user, tournament)`; `prediction_name` uniqueness is enforced by the unique index. Raises `'predictions are locked'` (→ 403), `'prediction name taken'` (→ 409), `'prediction name required'` (→ 400), `'champion pick required'` (→ 400), `'prediction not found'` (→ 404).
 - **`admin_submit_predictions(p_user_id, payload)`** — same branching, no auth/lock check, scoped to the target user.
 - **`admin_set_prediction_payment(p_prediction_id, p_paid, p_paid_at)`** — replaces the old `admin_set_payment(user_id, tournament_id, …)`. Upserts `tournament_payments` keyed on `prediction_id`.
-- **`get_leaderboard(p_tournament_id, p_page, p_page_size)`** — paginated, SECURITY DEFINER. Returns one row per **paid prediction** with columns `rank, prediction_id, prediction_name, username, points, group_points, knockout_points, total_goals, total_count`. A user with N paid predictions occupies N rows.
+- **`get_leaderboard(p_tournament_id, p_page, p_page_size)`** — paginated, SECURITY DEFINER. Returns one row per **paid prediction** with columns `rank, prediction_id, prediction_name, username, points, group_points, advancer_points, knockout_points, champion_pick_points, total_goals, total_count`. A user with N paid predictions occupies N rows. `champion_pick_points` is 5 when `predictions.champion_team_id` equals the actual M32 winner, else 0; it is also folded into the `points` total used for ranking.
 - **`get_leaderboard_rank(p_tournament_id, p_user_id, p_page_size)`** — returns one row per paid prediction the user owns: `(prediction_id, prediction_name, rank, page, points)`. The frontend picks the best row for "find me".
 - **`admin_list_users(p_search, p_page, p_page_size)`** — returns `(id, username, is_admin, is_super_admin, prediction_count, paid_prediction_count, total_count)`.
 - **`redeem_referral_credit(p_prediction_id)`** — SECURITY DEFINER, caller-scoped. Locks one available `referrals` row (`FOR UPDATE SKIP LOCKED` blocks double-spend), inserts a `tournament_payments` row with `is_free = true`, marks the referral redeemed. Raises `'not your prediction'` (→ 403), `'predictions are locked'` (→ 403), `'prediction already paid'` (→ 409), `'no referral credits available'` (→ 409), `'prediction not found'` (→ 404).
@@ -99,9 +99,11 @@ All schema/policies/RPCs live in `supabase/migrations/`. Run `supabase db reset`
 
 Plus flat bonuses on top: champion (M32 winner) `+15`, third-place winner (M31) `+5`. Round of 32 picks aren't scored directly — they decide R16 slots. The legacy `knockout_matches.point_value` column is still in the schema but the v2 RPCs ignore it. Max knockout points = 80 + 48 + 32 + 20 + 15 + 5 = **200**. Helper function `public.knockout_round_scores(tournament_id, stage, correct_pts, wrong_pts)` is shared by `get_leaderboard` and `get_leaderboard_rank`.
 
+**Gut Feeling Champion (Phase 1)** — `+5` if `predictions.champion_team_id` matches the actual M32 winner. Independent of the bracket Final (M32) pick scoring (`+15`) — users can pick the same team for both (so a correct gut pick + correct bracket Final stacks to `+20`), or split between them. The pick is collected via a dropdown as the final Phase 1 wizard step (after Best 3rds), required at create time, and writable only while the tournament is in `phase1`; once `phase1_locked` (or later) it is frozen.
+
 **Tiebreaker** — closest prediction to the *champion's* total goals across all 8 of their tournament matches (regulation + extra time only; no penalty-shootout goals). Stored on `tournaments.champion_total_goals` (admin-entered when the tournament ends). `predictions.total_goals` is reused with a relaxed CHECK of `between 0 and 50`.
 
-**Grand total max: 74 + 200 = 274.**
+**Grand total max: 74 + 10 + 200 + 5 = 289.** (Group 74 + Advancers 10 + Knockout 200 + Champion Pick 5.)
 
 ## Frontend Architecture
 
@@ -147,6 +149,7 @@ Plus flat bonuses on top: champion (M32 winner) `+15`, third-place winner (M31) 
 - Each user can create as many named predictions per tournament as they like. Each prediction is independent (own picks, own tiebreaker, own payment).
 - All predictions submitted upfront before a single tournament-wide lock time (users may edit any of their predictions until lock)
 - Payment is **per prediction**: each one must be marked paid by an admin before lock to be eligible. The leaderboard shows one row per paid prediction (a user with N paid predictions occupies N rows).
+- **Gut Feeling Champion** (Phase 1): one team picked from the 48 as your tournament champion. Required at prediction-creation time, collected as the final Phase 1 wizard step (after Best 3rds), and locked when Phase 1 ends. Independent of the bracket Final (M32) pick — both score separately.
 - Group stage: predict positions 1–4 for all 12 groups; only the top 2 finishers are scored (set-based 6/4/3/2/0 with a +8 exact-order bonus for Group I, the "Group of Death")
 - Knockout: predict winners R32 → Final. R32 picks decide which teams sit in your R16 slots and aren't scored directly; R16/QF/SF/Final score per advancing team with correct-side / wrong-side tiers; champion and third-place winner each get a flat bonus
 - Tiebreaker: closest prediction to the champion's total tournament goals (regulation + extra time across their 8 matches; penalty-shootout goals excluded)

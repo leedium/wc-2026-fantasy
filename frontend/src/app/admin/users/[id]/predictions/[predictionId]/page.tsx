@@ -22,7 +22,7 @@ export default async function AdminEditPredictionPage({
   const { data: prediction } = await supabase
     .from('predictions')
     .select(
-      'id, prediction_name, total_goals, submitted_at, tournament_payments!prediction_id(paid_at)'
+      'id, prediction_name, total_goals, champion_team_id, submitted_at, tournament_payments!prediction_id(paid_at)'
     )
     .eq('id', predictionId)
     .eq('user_id', id)
@@ -64,6 +64,7 @@ export default async function AdminEditPredictionPage({
     id: p.id,
     name: p.prediction_name,
     totalGoals: p.total_goals,
+    championTeamId: p.champion_team_id,
     submittedAt: p.submitted_at,
     isPaid: payment != null,
     paidAt: payment?.paid_at ?? null,

@@ -72,12 +72,14 @@ export interface Predictions {
   knockout: KnockoutMatchPrediction[];
   advancers: AdvancerPrediction[];
   totalGoals: number | null;
+  championTeamId: string | null;
 }
 
 export interface PredictionSummary {
   id: string;
   name: string;
   totalGoals: number | null;
+  championTeamId: string | null;
   submittedAt: string | null;
   isPaid: boolean;
   paidAt: string | null;
@@ -98,6 +100,7 @@ export interface LeaderboardEntry {
   groupPoints: number;
   advancerPoints: number;
   knockoutPoints: number;
+  championPickPoints: number;
 }
 
 export interface LeaderboardRankMatch {

@@ -8,6 +8,7 @@ interface RpcRow {
   prediction_name: string;
   username: string;
   total_goals: number | null;
+  champion_team_id: string | null;
   submitted_at: string | null;
   groups: Array<{
     group_id: string;
@@ -51,6 +52,7 @@ export async function GET(_request: NextRequest, context: RouteContext) {
     name: row.prediction_name,
     username: row.username,
     totalGoals: row.total_goals,
+    championTeamId: row.champion_team_id,
     submittedAt: row.submitted_at,
     // The RPC only ever returns paid + submitted predictions, so these are
     // always true. Kept for shape-compat with BracketPreviewDialog.

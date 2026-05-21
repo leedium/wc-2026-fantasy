@@ -6,6 +6,7 @@ import { PREDICTION_NAME_MAX, PREDICTION_NAME_REGEX } from '@/lib/constants';
 interface UpdatePayload {
   predictionName?: string;
   totalGoals?: number | null;
+  championTeamId?: string | null;
   submit?: boolean;
   groups?: Array<{
     groupId: string;
@@ -31,7 +32,7 @@ export async function GET(_request: NextRequest, context: RouteContext) {
   const { data: prediction } = await supabase
     .from('predictions')
     .select(
-      'id, prediction_name, tournament_id, total_goals, submitted_at, tournament_payments!prediction_id(paid_at, is_free)'
+      'id, prediction_name, tournament_id, total_goals, champion_team_id, submitted_at, tournament_payments!prediction_id(paid_at, is_free)'
     )
     .eq('id', id)
     .maybeSingle();
@@ -72,6 +73,7 @@ export async function GET(_request: NextRequest, context: RouteContext) {
     name: p.prediction_name,
     tournamentId: p.tournament_id,
     totalGoals: p.total_goals,
+    championTeamId: p.champion_team_id,
     submittedAt: p.submitted_at,
     isPaid: payment != null,
     paidAt: payment?.paid_at ?? null,
@@ -122,8 +124,13 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
   if (!Array.isArray(body.groups) || !Array.isArray(body.knockout)) {
     return NextResponse.json({ error: 'Invalid payload' }, { status: 400 });
   }
+  const hasChampionField = Object.prototype.hasOwnProperty.call(body, 'championTeamId');
+  const championTeamId = body.championTeamId?.trim() || null;
+  if (hasChampionField && !championTeamId) {
+    return NextResponse.json({ error: 'championTeamId is required' }, { status: 400 });
+  }
 
-  const payload = {
+  const payload: Record<string, unknown> = {
     tournament_id: prediction.tournament_id,
     prediction_id: id,
     prediction_name: name ?? null,
@@ -145,6 +152,9 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
       team_id: a.teamId,
     })),
   };
+  if (hasChampionField) {
+    payload.champion_team_id = championTeamId;
+  }
 
   const { data, error } = await supabase.rpc('submit_predictions', { payload });
   if (error) {
@@ -155,6 +165,7 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
     else if (msg.includes('name taken')) status = 409;
     else if (msg.includes('duplicate advancer')) status = 409;
     else if (msg.includes('advancer')) status = 400;
+    else if (msg.includes('champion pick')) status = 400;
     return NextResponse.json({ error: safeMessage(error) }, { status });
   }
   return NextResponse.json({ predictionId: data });

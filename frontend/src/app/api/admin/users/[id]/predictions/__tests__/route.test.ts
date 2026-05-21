@@ -58,6 +58,7 @@ describe('admin user predictions', () => {
         tournamentId: 't1',
         predictionName: 'Main',
         totalGoals: 25,
+        championTeamId: 'team-arg',
         groups: [],
         knockout: [],
       }),
@@ -67,7 +68,32 @@ describe('admin user predictions', () => {
     expect(await res.json()).toEqual({ predictionId: 'pred-id' });
     expect(supabaseMock.rpc).toHaveBeenCalledWith(
       'admin_submit_predictions',
-      expect.objectContaining({ p_user_id: 'u2' })
+      expect.objectContaining({
+        p_user_id: 'u2',
+        payload: expect.objectContaining({ champion_team_id: 'team-arg' }),
+      })
     );
+  });
+
+  it('POST returns 400 when championTeamId missing', async () => {
+    supabaseMock.auth.getUser.mockResolvedValue({ data: { user: { id: 'u1' } } });
+    supabaseMock.from.mockImplementation(() => ({
+      select: () => ({
+        eq: () => ({ maybeSingle: async () => ({ data: { is_admin: true } }) }),
+      }),
+    }));
+    const res = await POST(
+      postReq({
+        tournamentId: 't1',
+        predictionName: 'Main',
+        totalGoals: 25,
+        groups: [],
+        knockout: [],
+      }),
+      { params: Promise.resolve({ id: 'u2' }) }
+    );
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.error).toMatch(/championTeamId/);
   });
 });
