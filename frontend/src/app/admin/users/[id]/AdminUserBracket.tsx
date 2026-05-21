@@ -33,8 +33,16 @@ interface AdminPrediction {
   markedBy: string | null;
 }
 
+interface AdminUserSummary {
+  id: string;
+  username: string | null;
+  displayName: string | null;
+  email: string | null;
+}
+
 interface AdminPredictionsResponse {
   tournament: { id: string; lockTime: string };
+  user?: AdminUserSummary;
   predictions: AdminPrediction[];
 }
 
@@ -160,6 +168,7 @@ export function AdminUserBracket({ userId }: { userId: string }) {
   const lockTime = query.data?.tournament.lockTime
     ? new Date(query.data.tournament.lockTime)
     : null;
+  const userSummary = query.data?.user ?? null;
   const predictions = query.data?.predictions ?? [];
 
   // After any mutation that changes a prediction's payment state or
@@ -215,6 +224,27 @@ export function AdminUserBracket({ userId }: { userId: string }) {
     <PageLayout>
       <h1 className="mb-2 text-3xl font-bold">Admin</h1>
       <AdminNav />
+
+      {userSummary && (
+        <Card className="mb-4">
+          <CardContent className="grid gap-3 p-4 sm:grid-cols-2">
+            <div>
+              <p className="text-muted-foreground text-xs uppercase tracking-wide">
+                Username
+              </p>
+              <p className="text-sm font-medium">{userSummary.username ?? '—'}</p>
+            </div>
+            <div>
+              <p className="text-muted-foreground text-xs uppercase tracking-wide">Email</p>
+              <p className="text-sm font-medium break-all">
+                {userSummary.email ?? (
+                  <span className="text-muted-foreground">Unavailable</span>
+                )}
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       <div className="mb-4 flex items-center justify-between">
         <h2 className="text-xl font-semibold">User predictions</h2>

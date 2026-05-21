@@ -32,6 +32,7 @@ export async function GET(request: NextRequest) {
   const rows = (usersResult.data ?? []) as Array<{
     id: string;
     username: string;
+    email: string | null;
     is_admin: boolean;
     is_super_admin: boolean;
     prediction_count: number;
@@ -43,6 +44,7 @@ export async function GET(request: NextRequest) {
     users: rows.map((r) => ({
       id: r.id,
       username: r.username,
+      email: r.email ?? null,
       isAdmin: r.is_admin,
       isSuperAdmin: r.is_super_admin,
       predictionCount: r.prediction_count,

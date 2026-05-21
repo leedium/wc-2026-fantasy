@@ -36,6 +36,7 @@ import { EMAIL_REGEX, PASSWORD_MIN_LENGTH, USERNAME_REGEX } from '@/lib/constant
 interface AdminUser {
   id: string;
   username: string;
+  email: string | null;
   isAdmin: boolean;
   isSuperAdmin: boolean;
   predictionCount: number;
@@ -483,6 +484,20 @@ function EditUserDialog({
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-3">
+          <div className="space-y-1">
+            <Label htmlFor="edit-email">Email</Label>
+            <Input
+              id="edit-email"
+              type="email"
+              value={target?.email ?? ''}
+              readOnly
+              disabled
+              placeholder={target?.email ? undefined : 'Unavailable'}
+            />
+            <p className="text-muted-foreground text-xs">
+              Email is managed through Supabase Auth and can&apos;t be changed here.
+            </p>
+          </div>
           <div className="space-y-1">
             <Label htmlFor="edit-username">Username</Label>
             <Input
