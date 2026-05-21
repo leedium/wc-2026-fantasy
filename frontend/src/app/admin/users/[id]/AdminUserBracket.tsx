@@ -162,8 +162,17 @@ export function AdminUserBracket({ userId }: { userId: string }) {
     : null;
   const predictions = query.data?.predictions ?? [];
 
+  // After any mutation that changes a prediction's payment state or
+  // existence, invalidate BOTH the detail-page query and the user-list
+  // query — `AdminUsersList` displays `predictionCount` /
+  // `paidPredictionCount` columns that go stale otherwise (the list query
+  // key is `['admin-users']`, see AdminUsersList.tsx).
   const refresh = React.useCallback(
-    () => queryClient.invalidateQueries({ queryKey: ['admin-user-predictions', userId] }),
+    () =>
+      Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['admin-user-predictions', userId] }),
+        queryClient.invalidateQueries({ queryKey: ['admin-users'] }),
+      ]),
     [queryClient, userId]
   );
 
