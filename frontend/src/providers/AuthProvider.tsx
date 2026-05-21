@@ -2,6 +2,7 @@
 
 import * as React from 'react';
 import type { User } from '@supabase/supabase-js';
+import { useQueryClient } from '@tanstack/react-query';
 import { createSupabaseBrowserClient } from '@/lib/supabase/client';
 import { clearAllDrafts } from '@/hooks/useDraftPersistence';
 import type { Profile } from '@/types/tournament';
@@ -28,6 +29,7 @@ export function AuthProvider({ children, initialUser, initialProfile }: AuthProv
   const [loading, setLoading] = React.useState(false);
 
   const supabase = React.useMemo(() => createSupabaseBrowserClient(), []);
+  const queryClient = useQueryClient();
 
   const loadProfile = React.useCallback(
     async (userId: string) => {
@@ -55,8 +57,17 @@ export function AuthProvider({ children, initialUser, initialProfile }: AuthProv
   React.useEffect(() => {
     // Never await Supabase calls inside this callback — auth-js holds an internal
     // navigator.locks lock for the duration of the listener, and re-entering it
-    // can wedge a later signOut() (see supabase/auth-js#762).
+    // can wedge a later signOut() (see supabase/auth-js#762). queryClient.clear()
+    // and clearAllDrafts() are sync, so they're safe to call here.
     const { data: subscription } = supabase.auth.onAuthStateChange((event, session) => {
+      // SIGNED_OUT fires for both same-tab signOut() and cross-tab logouts;
+      // wiping the React Query cache here is what prevents user A's
+      // /predictions data from being served to user B if they sign in
+      // within the gcTime window (5 min by QueryProvider default). Idempotent
+      // with the explicit clear in signOut() below.
+      if (event === 'SIGNED_OUT') {
+        queryClient.clear();
+      }
       setUser(session?.user ?? null);
       if (!session?.user) {
         setProfile(null);
@@ -66,17 +77,24 @@ export function AuthProvider({ children, initialUser, initialProfile }: AuthProv
       void loadProfile(session.user.id);
     });
     return () => subscription.subscription.unsubscribe();
-  }, [supabase, loadProfile]);
+  }, [supabase, loadProfile, queryClient]);
 
   const signOut = React.useCallback(async () => {
     setLoading(true);
     const userId = user?.id;
     await supabase.auth.signOut({ scope: 'local' });
     if (userId) clearAllDrafts(userId);
+    // Wipe the React Query cache so the next sign-in (possibly as a
+    // different user) doesn't see this user's predictions / referral
+    // status / etc. served from the still-warm gcTime cache. The
+    // SIGNED_OUT listener above does this too — keeping it here as well
+    // makes the cleanup happen even if the listener doesn't fire (e.g.
+    // the auth-js lock wedges and AuthMenu's 5s fallback fires first).
+    queryClient.clear();
     setUser(null);
     setProfile(null);
     setLoading(false);
-  }, [supabase, user]);
+  }, [supabase, user, queryClient]);
 
   const refreshProfile = React.useCallback(async () => {
     if (user) await loadProfile(user.id);
