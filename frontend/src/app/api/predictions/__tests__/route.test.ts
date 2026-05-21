@@ -28,6 +28,7 @@ function basePostBody(overrides: Record<string, unknown> = {}) {
   return {
     tournamentId: 't1',
     predictionName: 'Main',
+    championTeamId: 'team-arg',
     groups: [],
     knockout: [],
     ...overrides,
@@ -122,6 +123,24 @@ describe('POST /api/predictions', () => {
     expect(res.status).toBe(400);
     const body = await res.json();
     expect(body.error).toMatch(/0-50/);
+  });
+
+  it('returns 400 when championTeamId missing', async () => {
+    supabaseMock.auth.getUser.mockResolvedValue({ data: { user: { id: 'u1' } } });
+    const res = await POST(postRequest(basePostBody({ championTeamId: null })));
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.error).toMatch(/championTeamId/);
+  });
+
+  it('returns 400 when rpc reports champion pick required', async () => {
+    supabaseMock.auth.getUser.mockResolvedValue({ data: { user: { id: 'u1' } } });
+    supabaseMock.rpc.mockResolvedValue({
+      data: null,
+      error: { message: 'champion pick required' },
+    });
+    const res = await POST(postRequest(basePostBody()));
+    expect(res.status).toBe(400);
   });
 
   it('returns 403 when rpc reports lock', async () => {

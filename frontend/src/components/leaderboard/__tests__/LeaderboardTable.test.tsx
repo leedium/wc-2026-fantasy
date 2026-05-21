@@ -13,6 +13,7 @@ const entries: LeaderboardEntry[] = [
     groupPoints: 90,
     advancerPoints: 0,
     knockoutPoints: 110,
+    championPickPoints: 0,
   },
   {
     rank: 2,
@@ -24,6 +25,7 @@ const entries: LeaderboardEntry[] = [
     groupPoints: 80,
     advancerPoints: 0,
     knockoutPoints: 100,
+    championPickPoints: 0,
   },
   {
     rank: 3,
@@ -35,6 +37,7 @@ const entries: LeaderboardEntry[] = [
     groupPoints: 75,
     advancerPoints: 0,
     knockoutPoints: 95,
+    championPickPoints: 0,
   },
 ];
 

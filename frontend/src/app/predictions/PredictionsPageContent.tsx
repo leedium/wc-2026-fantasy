@@ -7,6 +7,7 @@ import { ArrowLeft, ArrowRight, Clock, Save } from 'lucide-react';
 import { toast } from 'sonner';
 
 import { PageLayout } from '@/components/layout/PageLayout';
+import { ChampionPickForm } from '@/components/predictions/ChampionPickForm';
 import { GroupStageForm } from '@/components/predictions/GroupStageForm';
 import { KnockoutBracket } from '@/components/predictions/KnockoutBracket';
 import { PredictionStepper, type StepperStep } from '@/components/predictions/PredictionStepper';
@@ -46,6 +47,7 @@ import { AdvancersForm } from '@/components/predictions/AdvancersForm';
 type PositionKey = 'first' | 'second' | 'third' | 'fourth';
 
 type Step =
+  | 'champion_pick'
   | 'groups'
   | 'best_thirds'
   | 'round_of_32'
@@ -56,9 +58,10 @@ type Step =
   | 'third_place'
   | 'tiebreaker';
 
-type TopStep = 'groups' | 'best_thirds' | 'knockout' | 'tiebreaker';
+type TopStep = 'champion_pick' | 'groups' | 'best_thirds' | 'knockout' | 'tiebreaker';
 
 const STEP_ORDER: Step[] = [
+  'champion_pick',
   'groups',
   'best_thirds',
   'round_of_32',
@@ -71,6 +74,7 @@ const STEP_ORDER: Step[] = [
 ];
 
 const STEP_LABELS: Record<Step, string> = {
+  champion_pick: 'Champion Pick',
   groups: 'Group Stage',
   best_thirds: 'Best 3rds',
   round_of_32: 'Round of 32',
@@ -100,8 +104,9 @@ const SUB_STEP_LABELS: Record<KnockoutStage, string> = {
   third_place: '3rd',
 };
 
-const TOP_STEPS: TopStep[] = ['groups', 'best_thirds', 'knockout', 'tiebreaker'];
+const TOP_STEPS: TopStep[] = ['champion_pick', 'groups', 'best_thirds', 'knockout', 'tiebreaker'];
 const TOP_STEP_LABELS: Record<TopStep, string> = {
+  champion_pick: 'Champion',
   groups: 'Group Stage',
   best_thirds: 'Best 3rds',
   knockout: 'Knockout',
@@ -113,6 +118,7 @@ function isKnockoutStage(step: Step): step is KnockoutStage {
 }
 
 function topOf(step: Step): TopStep {
+  if (step === 'champion_pick') return 'champion_pick';
   if (step === 'groups') return 'groups';
   if (step === 'best_thirds') return 'best_thirds';
   if (step === 'tiebreaker') return 'tiebreaker';
@@ -123,6 +129,7 @@ export interface InitialPrediction {
   id: string;
   name: string;
   totalGoals: number | null;
+  championTeamId: string | null;
   submittedAt: string | null;
   isPaid: boolean;
   paidAt: string | null;
@@ -143,6 +150,7 @@ interface DraftData {
   knockoutPredictions: KnockoutMatchPrediction[];
   advancerPredictions: AdvancerPrediction[];
   totalGoals: number | null;
+  championTeamId: string | null;
 }
 
 interface PredictionsPageContentProps {
@@ -322,18 +330,21 @@ export function PredictionsPageContent({
       }))
   );
   const [totalGoals, setTotalGoals] = React.useState<number | null>(initial?.totalGoals ?? null);
+  const [championTeamId, setChampionTeamId] = React.useState<string | null>(
+    initial?.championTeamId ?? null
+  );
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [isSavingProgress, setIsSavingProgress] = React.useState(false);
   const [hydrated, setHydrated] = React.useState(false);
-  const [currentStep, setCurrentStep] = React.useState<Step>('groups');
+  const [currentStep, setCurrentStep] = React.useState<Step>('champion_pick');
   const userInteractedRef = React.useRef(false);
   const initialStepSet = React.useRef(false);
   const nameRef = React.useRef<HTMLInputElement>(null);
 
   // Once we know the phase and have hydrated, jump straight to Round of 32
-  // when phase 2 is open — group + advancer picks are frozen at that point
-  // so the user's only remaining work is the knockout bracket. Runs once;
-  // later navigation is up to the user.
+  // when phase 2 is open — group + advancer + champion picks are frozen at
+  // that point so the user's only remaining work is the knockout bracket.
+  // Runs once; later navigation is up to the user.
   React.useEffect(() => {
     if (initialStepSet.current) return;
     if (!hydrated) return;
@@ -394,6 +405,7 @@ export function PredictionsPageContent({
     let advancerSeed = seedAdvancers;
     let nameSeed = initial?.name ?? '';
     let totalGoalsSeed = initial?.totalGoals ?? null;
+    let championSeed = initial?.championTeamId ?? null;
     let restoredFromDraft = false;
 
     if (isLocked) {
@@ -415,6 +427,7 @@ export function PredictionsPageContent({
         advancerSeed = draft.data.advancerPredictions ?? [];
         nameSeed = draft.data.predictionName ?? nameSeed;
         totalGoalsSeed = draft.data.totalGoals;
+        championSeed = draft.data.championTeamId ?? championSeed;
         restoredFromDraft = true;
       }
     }
@@ -423,6 +436,7 @@ export function PredictionsPageContent({
     setKnockoutPredictions(knockoutSeed);
     setAdvancerPredictions(advancerSeed);
     setTotalGoals(totalGoalsSeed);
+    setChampionTeamId(championSeed);
     setPredictionName(nameSeed);
     setHydrated(true);
 
@@ -436,6 +450,7 @@ export function PredictionsPageContent({
             setKnockoutPredictions(seedKnockout);
             setAdvancerPredictions(seedAdvancers);
             setTotalGoals(initial?.totalGoals ?? null);
+            setChampionTeamId(initial?.championTeamId ?? null);
             setPredictionName(initial?.name ?? '');
           },
         },
@@ -464,13 +479,24 @@ export function PredictionsPageContent({
   const completedAdvancers = advancerPredictions.filter((a) => !!a.teamId).length;
   const tiebreakerSlots = 1;
   const filledTiebreaker = totalGoals !== null ? 1 : 0;
+  const championSlots = 1;
+  const filledChampion = championTeamId !== null ? 1 : 0;
 
   const totalSlots =
-    totalGroupSlots + ADVANCER_COUNT + totalKnockoutMatches + tiebreakerSlots;
+    championSlots +
+    totalGroupSlots +
+    ADVANCER_COUNT +
+    totalKnockoutMatches +
+    tiebreakerSlots;
   const filledSlots =
-    filledGroupSlots + completedAdvancers + completedKnockoutMatches + filledTiebreaker;
+    filledChampion +
+    filledGroupSlots +
+    completedAdvancers +
+    completedKnockoutMatches +
+    filledTiebreaker;
   const overallPercent = totalSlots > 0 ? Math.round((filledSlots / totalSlots) * 100) : 0;
 
+  const isChampionPickComplete = championTeamId !== null;
   const isGroupsComplete = totalGroupsCount > 0 && completedGroups === totalGroupsCount;
   const isAdvancersComplete = completedAdvancers === ADVANCER_COUNT;
   const isBracketComplete =
@@ -485,7 +511,11 @@ export function PredictionsPageContent({
   // isBracketComplete is naturally false and Submit stays disabled until
   // Phase 2 opens.
   const isPredictionsComplete =
-    isGroupsComplete && isAdvancersComplete && isBracketComplete && isTiebreakerComplete;
+    isChampionPickComplete &&
+    isGroupsComplete &&
+    isAdvancersComplete &&
+    isBracketComplete &&
+    isTiebreakerComplete;
 
   const trimmedName = predictionName.trim();
   const nameError =
@@ -540,6 +570,7 @@ export function PredictionsPageContent({
   }, [matchesByStage, knockoutPredictions]);
 
   const stepStatus: Record<Step, boolean> = {
+    champion_pick: isChampionPickComplete,
     groups: isGroupsComplete,
     best_thirds: isAdvancersComplete,
     round_of_32: stageCompletion.round_of_32,
@@ -573,6 +604,8 @@ export function PredictionsPageContent({
       status = 'locked';
     } else if (value === topValue) {
       status = 'current';
+    } else if (value === 'champion_pick') {
+      status = isChampionPickComplete ? 'done' : 'upcoming';
     } else if (value === 'groups') {
       status = isGroupsComplete ? 'done' : 'upcoming';
     } else if (value === 'best_thirds') {
@@ -601,6 +634,8 @@ export function PredictionsPageContent({
         knockoutPredictions: next.knockoutPredictions ?? knockoutPredictions,
         advancerPredictions: next.advancerPredictions ?? advancerPredictions,
         totalGoals: next.totalGoals !== undefined ? next.totalGoals : totalGoals,
+        championTeamId:
+          next.championTeamId !== undefined ? next.championTeamId : championTeamId,
       });
     },
     [
@@ -612,6 +647,7 @@ export function PredictionsPageContent({
       knockoutPredictions,
       advancerPredictions,
       totalGoals,
+      championTeamId,
     ]
   );
 
@@ -650,6 +686,11 @@ export function PredictionsPageContent({
     persistDraft({ totalGoals: value });
   };
 
+  const handleChampionTeamIdChange = (value: string | null) => {
+    setChampionTeamId(value);
+    persistDraft({ championTeamId: value });
+  };
+
   const handleAdvancerRankChange = (rank: number, teamId: string | null) => {
     setAdvancerPredictions((prev) => {
       const others = prev.filter((a) => a.rank !== rank);
@@ -667,6 +708,7 @@ export function PredictionsPageContent({
 
   const handleTopChange = (value: string) => {
     if (!TOP_STEPS.includes(value as TopStep)) return;
+    if (value === 'champion_pick') return goToStep('champion_pick');
     if (value === 'groups') return goToStep('groups');
     if (value === 'best_thirds') return goToStep('best_thirds');
     if (value === 'tiebreaker') return goToStep('tiebreaker');
@@ -734,6 +776,16 @@ export function PredictionsPageContent({
       toast.error('Please complete all predictions before submitting');
       return;
     }
+    // The submit_predictions RPC requires champion_team_id whenever Phase 1
+    // writes are involved (create, or any Phase 1 edit). Guard before the
+    // network round-trip so the user lands back on the Champion Pick step
+    // instead of seeing a generic save-failed toast.
+    const willSendPhase1 = usesAdminRoute || phase === 'phase1';
+    if (willSendPhase1 && !championTeamId) {
+      toast.error('Pick a champion before saving');
+      goToStep('champion_pick');
+      return;
+    }
 
     if (markSubmitted) setIsSubmitting(true);
     else setIsSavingProgress(true);
@@ -743,7 +795,10 @@ export function PredictionsPageContent({
       // (admin_submit_predictions) has no phase guards, so send everything.
       const sendPhase1Fields = usesAdminRoute || phase === 'phase1';
       const sendPhase2Fields = usesAdminRoute || phase === 'phase2_open';
-      const body = {
+      // championTeamId is a Phase 1 field: only forward it when the RPC
+      // will accept Phase 1 writes. On a Phase 2 PATCH from a regular user
+      // we omit the key entirely so the RPC preserves the existing value.
+      const body: Record<string, unknown> = {
         tournamentId: tournament.id,
         predictionName: trimmedName,
         totalGoals: sendPhase2Fields ? totalGoals : null,
@@ -770,6 +825,9 @@ export function PredictionsPageContent({
             }))
           : [],
       };
+      if (sendPhase1Fields) {
+        body.championTeamId = championTeamId;
+      }
 
       const url =
         mode === 'edit' && predictionId
@@ -980,6 +1038,15 @@ export function PredictionsPageContent({
         />
 
         <div>
+          {currentStep === 'champion_pick' && (
+            <ChampionPickForm
+              teams={teams}
+              value={championTeamId}
+              onChange={handleChampionTeamIdChange}
+              disabled={!phase1Editable}
+            />
+          )}
+
           {currentStep === 'groups' && (
             <GroupStageForm
               groups={groups}

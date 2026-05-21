@@ -7,6 +7,7 @@ interface SubmitPayload {
   tournamentId?: string;
   predictionName?: string;
   totalGoals?: number | null;
+  championTeamId?: string | null;
   submit?: boolean;
   groups?: Array<{
     groupId: string;
@@ -42,7 +43,7 @@ export async function GET(
   const { data: predictions } = await supabase
     .from('predictions')
     .select(
-      'id, prediction_name, total_goals, submitted_at, tournament_payments!prediction_id(paid_at, marked_by)'
+      'id, prediction_name, total_goals, champion_team_id, submitted_at, tournament_payments!prediction_id(paid_at, marked_by)'
     )
     .eq('user_id', userId)
     .eq('tournament_id', tournament.id)
@@ -53,6 +54,7 @@ export async function GET(
     id: string;
     prediction_name: string;
     total_goals: number | null;
+    champion_team_id: string | null;
     submitted_at: string | null;
     // PostgREST returns an object (not array) when the embed resolves through
     // a unique FK — `tournament_payments.prediction_id` is unique, so it's 1:1.
@@ -72,6 +74,7 @@ export async function GET(
         id: p.id,
         name: p.prediction_name,
         totalGoals: p.total_goals,
+        championTeamId: p.champion_team_id,
         submittedAt: p.submitted_at,
         isPaid: payment != null,
         paidAt: payment?.paid_at ?? null,
@@ -107,11 +110,16 @@ export async function POST(
   if (!Array.isArray(body.groups) || !Array.isArray(body.knockout)) {
     return NextResponse.json({ error: 'Invalid payload' }, { status: 400 });
   }
+  const championTeamId = body.championTeamId?.trim() || null;
+  if (!championTeamId) {
+    return NextResponse.json({ error: 'championTeamId is required' }, { status: 400 });
+  }
 
   const payload = {
     tournament_id: body.tournamentId,
     prediction_name: name,
     total_goals: body.totalGoals,
+    champion_team_id: championTeamId,
     submit: body.submit !== false,
     groups: body.groups.map((g) => ({
       group_id: g.groupId,
@@ -140,6 +148,7 @@ export async function POST(
     if (msg.includes('name taken')) status = 409;
     else if (msg.includes('duplicate advancer')) status = 409;
     else if (msg.includes('advancer')) status = 400;
+    else if (msg.includes('champion pick')) status = 400;
     return NextResponse.json({ error: safeMessage(error) }, { status });
   }
   return NextResponse.json({ predictionId: data });

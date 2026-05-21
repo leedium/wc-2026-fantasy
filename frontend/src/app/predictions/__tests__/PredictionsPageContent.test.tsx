@@ -153,6 +153,23 @@ jest.mock('@/components/predictions/AdvancersForm', () => ({
   ),
 }));
 
+interface ChampionPickFormProps {
+  value: string | null;
+  onChange: (teamId: string | null) => void;
+}
+jest.mock('@/components/predictions/ChampionPickForm', () => ({
+  ChampionPickForm: ({ value, onChange }: ChampionPickFormProps) => (
+    <div data-testid="champion-pick-form">
+      <span data-testid="champion-value">{value ?? 'null'}</span>
+      <button
+        type="button"
+        data-testid="fill-champion"
+        onClick={() => onChange('team-arg')}
+      />
+    </div>
+  ),
+}));
+
 import { PredictionsPageContent } from '../PredictionsPageContent';
 import { DRAFT_DEBOUNCE_MS, DRAFT_VERSION } from '@/hooks/useDraftPersistence';
 
@@ -247,9 +264,20 @@ describe('PredictionsPageContent — stepper navigation', () => {
     const user = userEvent.setup();
     render(<PredictionsPageContent mode="create" />);
 
-    const continueBtn = await screen.findByRole('button', { name: /Continue to Best 3rds/ });
+    // Wizard now opens on the Phase 1 Champions Pick step; Continue is gated
+    // on that pick being filled.
+    const continueBtn = await screen.findByRole('button', { name: /Continue to Group Stage/ });
     expect(continueBtn).toBeDisabled();
 
+    await user.click(screen.getByTestId('fill-champion'));
+    expect(screen.getByRole('button', { name: /Continue to Group Stage/ })).toBeEnabled();
+
+    // Now advance through champion → groups and assert the next step's
+    // Continue is again gated on completion.
+    await user.click(screen.getByRole('button', { name: /Continue to Group Stage/ }));
+    expect(
+      screen.getByRole('button', { name: /Continue to Best 3rds/ })
+    ).toBeDisabled();
     await user.click(screen.getByTestId('fill-all-groups'));
     expect(screen.getByRole('button', { name: /Continue to Best 3rds/ })).toBeEnabled();
   });
@@ -284,7 +312,9 @@ describe('PredictionsPageContent — stepper navigation', () => {
     const user = userEvent.setup();
     render(<PredictionsPageContent mode="create" />);
 
-    await user.click(await screen.findByTestId('fill-all-groups'));
+    await user.click(await screen.findByTestId('fill-champion'));
+    await user.click(screen.getByRole('button', { name: /Continue to Group Stage/ }));
+    await user.click(screen.getByTestId('fill-all-groups'));
     await user.click(screen.getByRole('button', { name: /Continue to Best 3rds/ }));
     await user.click(screen.getByTestId('fill-all-bundles'));
 
@@ -309,7 +339,9 @@ describe('PredictionsPageContent — stepper navigation', () => {
     const user = userEvent.setup();
     render(<PredictionsPageContent mode="create" />);
 
-    await user.click(await screen.findByTestId('fill-all-groups'));
+    await user.click(await screen.findByTestId('fill-champion'));
+    await user.click(screen.getByRole('button', { name: /Continue to Group Stage/ }));
+    await user.click(screen.getByTestId('fill-all-groups'));
     await user.click(screen.getByRole('button', { name: /Continue to Best 3rds/ }));
     await user.click(screen.getByTestId('fill-all-bundles'));
 
@@ -327,7 +359,9 @@ describe('PredictionsPageContent — stepper navigation', () => {
     const user = userEvent.setup();
     render(<PredictionsPageContent mode="create" />);
 
-    await user.click(await screen.findByTestId('fill-all-groups'));
+    await user.click(await screen.findByTestId('fill-champion'));
+    await user.click(screen.getByRole('button', { name: /Continue to Group Stage/ }));
+    await user.click(screen.getByTestId('fill-all-groups'));
     await user.click(screen.getByRole('button', { name: /Continue to Best 3rds/ }));
     await user.click(screen.getByTestId('fill-all-bundles'));
 
@@ -397,6 +431,10 @@ describe('PredictionsPageContent — stepper navigation', () => {
     expect(screen.getByRole('tab', { name: /Group Stage/ })).not.toBeDisabled();
     expect(screen.getByRole('tab', { name: /Best 3rds/ })).not.toBeDisabled();
 
+    // Wizard now opens on the Phase 1 Champions Pick step; advance through
+    // it first so the test exercises the locked-Groups Continue.
+    await user.click(screen.getByTestId('fill-champion'));
+    await user.click(screen.getByRole('button', { name: /Continue to Group Stage/ }));
     await user.click(screen.getByTestId('fill-all-groups'));
 
     const continueBtn = screen.getByRole('button', { name: /Continue to Best 3rds/ });
@@ -413,6 +451,9 @@ describe('PredictionsPageContent — autosave', () => {
     const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
     render(<PredictionsPageContent mode="create" />);
 
+    // Wizard now opens on Champion Pick; navigate to Groups before
+    // exercising the group-stage interaction this test cares about.
+    await user.click(await screen.findByRole('tab', { name: /Group Stage/ }));
     await user.click(await screen.findByTestId('fill-one-group-position'));
     expect(window.localStorage.getItem(DRAFT_KEY)).toBeNull();
 
@@ -453,8 +494,12 @@ describe('PredictionsPageContent — autosave', () => {
     );
     configureQueries();
 
+    const user = userEvent.setup();
     render(<PredictionsPageContent mode="create" />);
 
+    // Wizard opens on Champion Pick now; switch to Group Stage so the
+    // mocked groups-filled testid is rendered.
+    await user.click(await screen.findByRole('tab', { name: /Group Stage/ }));
     // Draft has 1 group slot + 1 tiebreaker filled (total 2). Server would have 0.
     await waitFor(() => expect(screen.getByTestId('groups-filled')).toHaveTextContent('1'));
     // Progress bar reflects the combined draft state (groups + tiebreaker).
@@ -484,6 +529,7 @@ describe('PredictionsPageContent — autosave', () => {
     );
     configureQueries();
 
+    const user = userEvent.setup();
     render(
       <PredictionsPageContent
         mode="edit"
@@ -492,6 +538,7 @@ describe('PredictionsPageContent — autosave', () => {
           id: 'pred-1',
           name: 'Server',
           totalGoals: 7,
+          championTeamId: null,
           submittedAt: new Date().toISOString(),
           isPaid: false,
           paidAt: null,
@@ -501,6 +548,9 @@ describe('PredictionsPageContent — autosave', () => {
       />
     );
 
+    // Wizard opens on Champion Pick; navigate to Groups to see the mocked
+    // groups-filled testid.
+    await user.click(await screen.findByRole('tab', { name: /Group Stage/ }));
     // Server hydration → exactly 1 filled slot. Draft would have been 24.
     await waitFor(() =>
       expect(screen.getByTestId('groups-filled')).toHaveTextContent('1')
@@ -531,7 +581,11 @@ describe('PredictionsPageContent — autosave', () => {
 
   it('clears the draft after a successful submit', async () => {
     // Phase 2 open so Submit is reachable — regular users can't submit in
-    // phase 1 (Continue → R32 is replaced by Save Phase 1 Picks).
+    // phase 1 (Continue → R32 is replaced by Save Phase 1 Picks). Use a
+    // super-admin profile so the champion pick (a Phase 1 field) is still
+    // editable through the admin route — required because the wizard's
+    // completion gate now includes isChampionPickComplete.
+    mockAuthProfile = { isSuperAdmin: true };
     configureQueries({ phase: 'phase2_open' });
     (global.fetch as jest.Mock).mockResolvedValue({
       ok: true,
@@ -542,8 +596,12 @@ describe('PredictionsPageContent — autosave', () => {
 
     render(<PredictionsPageContent mode="create" />);
 
-    // Wizard starts at Round of 32 in phase 2; navigate to Group Stage first.
-    await user.click(await screen.findByRole('tab', { name: /Group Stage/ }));
+    // Wizard starts at Round of 32 in phase 2; navigate to Champion tab
+    // first so we can fill the Phase 1 pick (required for completion),
+    // then walk back through Group Stage → ... → Tiebreaker.
+    await user.click(await screen.findByRole('tab', { name: /Champion/ }));
+    await user.click(await screen.findByTestId('fill-champion'));
+    await user.click(screen.getByRole('tab', { name: /Group Stage/ }));
     await user.click(await screen.findByTestId('fill-all-groups'));
     await user.click(screen.getByRole('button', { name: /Continue to Best 3rds/ }));
     await user.click(screen.getByTestId('fill-all-bundles'));
