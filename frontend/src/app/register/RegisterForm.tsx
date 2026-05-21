@@ -10,12 +10,28 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { FieldError } from '@/components/ui/field-error';
 import { createSupabaseBrowserClient } from '@/lib/supabase/client';
-import { ROUTES, EMAIL_REGEX, PASSWORD_MIN_LENGTH } from '@/lib/constants';
+import {
+  ROUTES,
+  EMAIL_REGEX,
+  PASSWORD_MIN_LENGTH,
+  REFERRAL_CODE_REGEX,
+} from '@/lib/constants';
 import { cn } from '@/lib/utils';
 
 type FieldName = 'email' | 'password' | 'confirmPassword';
 
-export function RegisterForm() {
+interface RegisterFormProps {
+  /** Pre-filled referral code from /register?ref=…, after server-side format check. */
+  initialReferralCode?: string;
+}
+
+interface ReferralLookup {
+  status: 'idle' | 'checking' | 'valid' | 'invalid';
+  /** Referrer's username, present when status === 'valid'. */
+  referrerUsername?: string;
+}
+
+export function RegisterForm({ initialReferralCode }: RegisterFormProps = {}) {
   const router = useRouter();
   const [email, setEmail] = React.useState('');
   const [password, setPassword] = React.useState('');
@@ -40,11 +56,69 @@ export function RegisterForm() {
   const [isResending, setIsResending] = React.useState(false);
   const [resendCooldown, setResendCooldown] = React.useState(0);
 
+  // Referral code state. `referralCode` is what the user typed (or what
+  // came in via ?ref=). We validate via /api/referrals/validate after a
+  // short debounce so the user sees "Invited by @user" or "Invalid invite
+  // code" inline. An invalid code never blocks signup — the server-side
+  // trigger silently ignores codes it can't resolve.
+  const [referralCode, setReferralCode] = React.useState(initialReferralCode ?? '');
+  const [referralExpanded, setReferralExpanded] = React.useState(
+    Boolean(initialReferralCode)
+  );
+  const [referralLookup, setReferralLookup] = React.useState<ReferralLookup>({
+    status: 'idle',
+  });
+
   React.useEffect(() => {
     if (resendCooldown <= 0) return;
     const id = window.setTimeout(() => setResendCooldown((s) => s - 1), 1000);
     return () => window.clearTimeout(id);
   }, [resendCooldown]);
+
+  // Debounced referral-code lookup. Aborts in-flight requests when the
+  // user keeps typing, and only runs for codes that match the strict
+  // format (saves the API hit on every keystroke).
+  React.useEffect(() => {
+    const trimmed = referralCode.trim().toUpperCase();
+    if (!trimmed) {
+      setReferralLookup({ status: 'idle' });
+      return;
+    }
+    if (!REFERRAL_CODE_REGEX.test(trimmed)) {
+      setReferralLookup({ status: 'invalid' });
+      return;
+    }
+    setReferralLookup({ status: 'checking' });
+    const controller = new AbortController();
+    const timer = window.setTimeout(async () => {
+      try {
+        const res = await fetch(
+          `/api/referrals/validate?code=${encodeURIComponent(trimmed)}`,
+          { signal: controller.signal, cache: 'no-store' }
+        );
+        if (!res.ok) {
+          setReferralLookup({ status: 'invalid' });
+          return;
+        }
+        const json = (await res.json()) as {
+          valid: boolean;
+          referrerUsername?: string;
+        };
+        setReferralLookup(
+          json.valid
+            ? { status: 'valid', referrerUsername: json.referrerUsername }
+            : { status: 'invalid' }
+        );
+      } catch (err) {
+        if ((err as Error).name === 'AbortError') return;
+        setReferralLookup({ status: 'invalid' });
+      }
+    }, 350);
+    return () => {
+      controller.abort();
+      window.clearTimeout(timer);
+    };
+  }, [referralCode]);
 
   const emailRef = React.useRef<HTMLInputElement>(null);
   const passwordRef = React.useRef<HTMLInputElement>(null);
@@ -107,9 +181,21 @@ export function RegisterForm() {
     setIsSubmitting(true);
 
     const supabase = createSupabaseBrowserClient();
+    // Only forward a referral code we've successfully resolved — that way
+    // typos / stale links never hit the DB trigger, and we don't leak
+    // invalid codes into auth metadata. Invalid codes still proceed with
+    // signup (the trigger would silently skip anyway).
+    const trimmedRef = referralCode.trim().toUpperCase();
+    const passthroughRef =
+      referralLookup.status === 'valid' && REFERRAL_CODE_REGEX.test(trimmedRef)
+        ? trimmedRef
+        : undefined;
     const { data, error: signUpError } = await supabase.auth.signUp({
       email: email.trim(),
       password,
+      options: passthroughRef
+        ? { data: { referral_code: passthroughRef } }
+        : undefined,
     });
 
     if (signUpError) {
@@ -286,6 +372,60 @@ export function RegisterForm() {
           id="confirmPassword-error"
           message={showError('confirmPassword') || undefined}
         />
+      </div>
+      <div className="space-y-2">
+        {referralExpanded ? (
+          <>
+            <Label htmlFor="referralCode">Referral code (optional)</Label>
+            <Input
+              id="referralCode"
+              type="text"
+              autoComplete="off"
+              inputMode="text"
+              maxLength={8}
+              value={referralCode}
+              onChange={(e) =>
+                setReferralCode(e.target.value.toUpperCase().replace(/\s+/g, ''))
+              }
+              disabled={isSubmitting}
+              placeholder="e.g. ABCD1234"
+              className="font-mono uppercase tracking-widest"
+              aria-describedby="referral-status"
+            />
+            <p
+              id="referral-status"
+              className={cn(
+                'text-sm',
+                referralLookup.status === 'valid' && 'text-green-600 dark:text-green-500',
+                referralLookup.status === 'invalid' && 'text-muted-foreground',
+                referralLookup.status === 'checking' && 'text-muted-foreground'
+              )}
+              role="status"
+              aria-live="polite"
+            >
+              {referralLookup.status === 'idle' &&
+                'Enter the 8-character code shared by a friend.'}
+              {referralLookup.status === 'checking' && 'Checking…'}
+              {referralLookup.status === 'valid' && (
+                <>
+                  Invited by{' '}
+                  <span className="font-semibold">@{referralLookup.referrerUsername}</span>
+                </>
+              )}
+              {referralLookup.status === 'invalid' &&
+                "We don't recognize that code — you can still sign up without it."}
+            </p>
+          </>
+        ) : (
+          <button
+            type="button"
+            onClick={() => setReferralExpanded(true)}
+            disabled={isSubmitting}
+            className="text-primary text-sm hover:underline disabled:opacity-50"
+          >
+            Have a referral code?
+          </button>
+        )}
       </div>
       {serverError && (
         <p role="alert" className="text-destructive text-sm">

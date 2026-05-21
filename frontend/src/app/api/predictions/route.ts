@@ -39,7 +39,7 @@ export async function GET() {
   const { data: predictions } = await supabase
     .from('predictions')
     .select(
-      'id, prediction_name, total_goals, submitted_at, tournament_payments!prediction_id(paid_at)'
+      'id, prediction_name, total_goals, submitted_at, tournament_payments!prediction_id(paid_at, is_free)'
     )
     .eq('user_id', user.id)
     .eq('tournament_id', tournament.id)
@@ -109,7 +109,7 @@ export async function GET() {
     advancersByPrediction.set(a.prediction_id, list);
   }
 
-  type Payment = { paid_at: string | null };
+  type Payment = { paid_at: string | null; is_free: boolean | null };
   type PredictionRow = {
     id: string;
     prediction_name: string;
@@ -134,6 +134,7 @@ export async function GET() {
         submittedAt: p.submitted_at,
         isPaid: payment != null,
         paidAt: payment?.paid_at ?? null,
+        isFreePaid: payment?.is_free === true,
         groups: (groupsByPrediction.get(p.id) ?? []).map((g) => ({
           groupId: g.group_id,
           first: g.first_team_id,

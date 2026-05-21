@@ -51,7 +51,9 @@ All schema/policies/RPCs live in `supabase/migrations/`. Run `supabase db reset`
 - `predictions` — **many per `(user, tournament)`**, no quantity limit. Each has a unique `prediction_name` per user/tournament (case-insensitive), 1–60 chars matching `^[A-Za-z0-9 _\-.''‘’]+$`. Holds `total_goals` tiebreaker + submission timestamp.
 - `group_predictions` — normalized: 12 rows per prediction with `first_team_id`/`second_team_id`/`third_team_id`/`fourth_team_id`. CHECK enforces all four are distinct. PK is `(prediction_id, group_id)`.
 - `knockout_predictions` — one per `(prediction, match)` with predicted winner.
-- `tournament_payments` — one per `prediction_id` (UNIQUE). Payment is per-prediction, not per-user. Each paid prediction is its own ranked entry on the leaderboard.
+- `tournament_payments` — one per `prediction_id` (UNIQUE). Payment is per-prediction, not per-user. Each paid prediction is its own ranked entry on the leaderboard. Has an `is_free boolean` (default `false`) that flags rows created via the referral-redeem flow rather than admin-recorded cash.
+- `referral_codes` — one per `user_id`, holding a unique 8-char citext code drawn from a 31-symbol unambiguous alphabet (no `0/O/1/I/L`). Kept in its own table (rather than on `profiles`) so the `profiles_select_all` policy doesn't expose codes to enumeration. Auto-populated by the `handle_new_user` trigger; backfilled for older rows in migration `0035_referrals.sql`.
+- `referrals` — one row per referred user. PK is `referee_id` (so each user can be referred only once). Holds `referrer_id`, the `referrer_code_used` snapshot, `qualified_at` (set by trigger when the referee's first non-free payment lands), `reward_redeemed_at` + `reward_prediction_id` (set when the referrer cashes the credit). DB CHECK blocks self-referral; no client writes — all mutations go through SECURITY DEFINER triggers/RPCs.
 - `group_standings`, `knockout_results` — admin-submitted truth for scoring.
 
 ### Auth + RLS
@@ -69,6 +71,11 @@ All schema/policies/RPCs live in `supabase/migrations/`. Run `supabase db reset`
 - **`get_leaderboard(p_tournament_id, p_page, p_page_size)`** — paginated, SECURITY DEFINER. Returns one row per **paid prediction** with columns `rank, prediction_id, prediction_name, username, points, group_points, knockout_points, total_goals, total_count`. A user with N paid predictions occupies N rows.
 - **`get_leaderboard_rank(p_tournament_id, p_user_id, p_page_size)`** — returns one row per paid prediction the user owns: `(prediction_id, prediction_name, rank, page, points)`. The frontend picks the best row for "find me".
 - **`admin_list_users(p_search, p_page, p_page_size)`** — returns `(id, username, is_admin, is_super_admin, prediction_count, paid_prediction_count, total_count)`.
+- **`redeem_referral_credit(p_prediction_id)`** — SECURITY DEFINER, caller-scoped. Locks one available `referrals` row (`FOR UPDATE SKIP LOCKED` blocks double-spend), inserts a `tournament_payments` row with `is_free = true`, marks the referral redeemed. Raises `'not your prediction'` (→ 403), `'predictions are locked'` (→ 403), `'prediction already paid'` (→ 409), `'no referral credits available'` (→ 409), `'prediction not found'` (→ 404).
+- **`get_referral_status()`** — caller-scoped aggregates only: `(referral_code, available_credits, qualified_total, redeemed_total)`. Never exposes the referee usernames; admins use `admin_list_user_referrals` for that.
+- **`resolve_referrer_username(p_code)`** — SECURITY DEFINER, granted to `anon` + `authenticated`. Powers the pre-signup `/api/referrals/validate` "Invited by @user" affordance; returns NULL for invalid codes (no timing distinction between bad-format and unknown). Rate-limit at WAF.
+- **`admin_list_user_referrals(p_user_id)`** — moderation view; returns inbound + outbound referrals for one user.
+- **`referrals_sync_qualification()`** — trigger on `tournament_payments` AFTER INSERT/UPDATE/DELETE. Sets `referrals.qualified_at` when the referee's first non-free payment lands; clears it on delete only if the referrer has not yet redeemed the credit (redeemed credits are sticky so the referrer's leaderboard entry stays stable).
 
 ### Scoring (v2, in `migrations/0006_scoring_v2.sql`)
 
@@ -109,6 +116,7 @@ Plus flat bonuses on top: champion (M32 winner) `+15`, third-place winner (M31) 
 - `/admin/users` — admin user list (per-user predictions count + paid count).
 - `/admin/users/[id]` — list of a user's predictions with per-prediction payment toggle and edit/delete.
 - `/admin/users/[id]/predictions/new` and `/admin/users/[id]/predictions/[predictionId]` — admin editor mounted on the same wizard component (`PredictionsPageContent` accepts `apiBasePath` + `redirectAfterCreate` props).
+- `/referrals` — protected hub showing the user's referral code + share URL and the (free picks available / friends paid / credits used) tally. `/register?ref=<code>` is the deep link target.
 - `/auth/callback` — Supabase auth code exchange
 
 ### API routes (`src/app/api/*`)
@@ -167,6 +175,7 @@ App-level rate limiting isn't implemented (Cloudflare Workers' multi-instance mo
 | `/login`, `/register` (POST) | 10 requests | 1 minute | Challenge |
 | `/api/admin/users/*/password-reset` | 10 requests | 5 minutes | Block |
 | `/api/admin/*` | 100 requests | 1 minute | Block |
+| `/api/referrals/validate` | 10 requests | 1 minute | Block |
 | Site-wide | 600 requests | 1 minute | Challenge |
 
 All by client IP. The first three protect against email enumeration / mailbox flooding; the admin rules cap blast radius if an admin account is compromised; the site-wide rule absorbs basic scraping.

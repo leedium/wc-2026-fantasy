@@ -46,6 +46,11 @@ const KNOWN_ERROR_FRAGMENTS = [
   'is not a 3rd-place slot',
   'unknown r32 match',
   'all r32 3rd-place bracket slots',
+  // Referrals (migration 0035)
+  'no referral credits available',
+  'not your prediction',
+  'prediction already paid',
+  'prediction_id is required',
 ] as const;
 
 export function safeMessage(

@@ -1,6 +1,7 @@
 'use client';
 
 import * as React from 'react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 
@@ -10,8 +11,9 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { FieldError } from '@/components/ui/field-error';
+import { ReferralActivityCard } from '@/components/referrals/ReferralActivityCard';
 import { useAuthContext } from '@/providers/AuthProvider';
-import { USERNAME_REGEX } from '@/lib/constants';
+import { ROUTES, USERNAME_REGEX } from '@/lib/constants';
 import { cn } from '@/lib/utils';
 
 interface AccountFormProps {
@@ -187,6 +189,20 @@ export function AccountForm({ email, initialUsername, initialDisplayName }: Acco
           </form>
         </CardContent>
       </Card>
+
+      {/* Read-only snapshot of the user's referral activity. The share
+          link + code copy controls live on the dedicated /referrals
+          page; the link below sends users there for those. */}
+      <div className="mt-6 max-w-xl space-y-2">
+        <ReferralActivityCard />
+        <p className="text-muted-foreground text-sm">
+          Want to invite a friend?{' '}
+          <Link href={ROUTES.referrals} className="text-primary hover:underline">
+            Get your referral link
+          </Link>
+          .
+        </p>
+      </div>
     </PageLayout>
   );
 }

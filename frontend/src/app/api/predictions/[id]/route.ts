@@ -31,7 +31,7 @@ export async function GET(_request: NextRequest, context: RouteContext) {
   const { data: prediction } = await supabase
     .from('predictions')
     .select(
-      'id, prediction_name, tournament_id, total_goals, submitted_at, tournament_payments!prediction_id(paid_at)'
+      'id, prediction_name, tournament_id, total_goals, submitted_at, tournament_payments!prediction_id(paid_at, is_free)'
     )
     .eq('id', id)
     .maybeSingle();
@@ -55,7 +55,7 @@ export async function GET(_request: NextRequest, context: RouteContext) {
       .eq('prediction_id', id),
   ]);
 
-  type Payment = { paid_at: string | null };
+  type Payment = { paid_at: string | null; is_free: boolean | null };
   type Pred = typeof prediction & {
     tournament_payments: Payment | Payment[] | null;
   };
@@ -75,6 +75,7 @@ export async function GET(_request: NextRequest, context: RouteContext) {
     submittedAt: p.submitted_at,
     isPaid: payment != null,
     paidAt: payment?.paid_at ?? null,
+    isFreePaid: payment?.is_free === true,
     groups: (groupsRes.data ?? []).map((g) => ({
       groupId: g.group_id,
       first: g.first_team_id,
