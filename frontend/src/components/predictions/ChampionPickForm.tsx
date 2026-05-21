@@ -111,7 +111,14 @@ export function ChampionPickForm({
             <SelectTrigger data-testid="champion-pick-select">
               <SelectValue placeholder="Pick a team" />
             </SelectTrigger>
-            <SelectContent>
+            {/*
+              48 teams + 12 group labels make this list far too long for the
+              default popper mode (which pins the Viewport to the trigger's
+              height and forces chevron-scroll). `item-aligned` opens the
+              dropdown next to the trigger with native browser scrolling, so
+              users can wheel/touch/swipe through all 12 groups.
+            */}
+            <SelectContent position="item-aligned">
               {teamsByGroup.map(([groupLetter, groupTeams]) => (
                 <SelectGroup key={groupLetter}>
                   <SelectLabel>Group {groupLetter}</SelectLabel>
