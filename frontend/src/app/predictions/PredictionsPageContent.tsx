@@ -326,7 +326,6 @@ export function PredictionsPageContent({
   const [isSavingProgress, setIsSavingProgress] = React.useState(false);
   const [hydrated, setHydrated] = React.useState(false);
   const [currentStep, setCurrentStep] = React.useState<Step>('groups');
-  const tabsContentRef = React.useRef<HTMLDivElement | null>(null);
   const userInteractedRef = React.useRef(false);
   const initialStepSet = React.useRef(false);
   const nameRef = React.useRef<HTMLInputElement>(null);
@@ -680,10 +679,19 @@ export function PredictionsPageContent({
     goToStep(value as Step);
   };
 
+  // After any step transition (top-tab, sub-tab, Continue button), scroll the
+  // viewport back to the page top. Previously this used
+  // `tabsContentRef.scrollIntoView({ block: 'start' })`, which (a) put the
+  // content wrapper at the top with the stepper above the viewport — so users
+  // landed on a new step with no indication of which step they were on — and
+  // (b) was unreliable on iOS Safari, which sometimes ignores `block: 'start'`
+  // when the target is partially in view. `window.scrollTo` is rock-solid
+  // cross-browser and lands above the progress bar + stepper so the user can
+  // immediately see what step they're on.
   React.useEffect(() => {
     if (!userInteractedRef.current) return;
     if (typeof window === 'undefined') return;
-    tabsContentRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   }, [currentStep]);
 
   const goToNextStep = () => {
@@ -971,7 +979,7 @@ export function PredictionsPageContent({
           onSubChange={topValue === 'knockout' ? handleSubChange : undefined}
         />
 
-        <div ref={tabsContentRef}>
+        <div>
           {currentStep === 'groups' && (
             <GroupStageForm
               groups={groups}
