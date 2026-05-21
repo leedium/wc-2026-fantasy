@@ -796,6 +796,13 @@ export function PredictionsPageContent({
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ['predictions'] }),
         queryClient.invalidateQueries({ queryKey: ['prediction', newId] }),
+        // When the admin wizard saves, the user list's `predictionCount`
+        // and `paidPredictionCount` columns (`AdminUsersList`, query key
+        // `['admin-users']`) reflect counts that just changed. Mark the
+        // list stale so the next /admin/users mount refetches.
+        ...(usesAdminRoute
+          ? [queryClient.invalidateQueries({ queryKey: ['admin-users'] })]
+          : []),
       ]);
       toast.success(markSubmitted ? 'Prediction submitted' : 'Progress saved');
 
