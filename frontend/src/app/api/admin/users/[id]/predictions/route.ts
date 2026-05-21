@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { requireAdmin, isAdminGateError } from '@/lib/auth/requireAdmin';
+import { createAdminSupabaseClient } from '@/lib/supabase/admin';
 import { safeMessage } from '@/lib/api/errors';
 import { PREDICTION_NAME_MAX, PREDICTION_NAME_REGEX } from '@/lib/constants';
 
@@ -40,6 +41,21 @@ export async function GET(
     return NextResponse.json({ error: 'No active tournament' }, { status: 404 });
   }
 
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('username, display_name')
+    .eq('id', userId)
+    .maybeSingle();
+
+  let email: string | null = null;
+  try {
+    const admin = createAdminSupabaseClient();
+    const { data: authUser } = await admin.auth.admin.getUserById(userId);
+    email = authUser.user?.email ?? null;
+  } catch {
+    // Service role unavailable (e.g. in tests); email simply omitted.
+  }
+
   const { data: predictions } = await supabase
     .from('predictions')
     .select(
@@ -68,6 +84,12 @@ export async function GET(
 
   return NextResponse.json({
     tournament: { id: tournament.id, lockTime: tournament.lock_time },
+    user: {
+      id: userId,
+      username: (profile?.username as string | undefined) ?? null,
+      displayName: (profile?.display_name as string | null | undefined) ?? null,
+      email,
+    },
     predictions: ((predictions ?? []) as Pred[]).map((p) => {
       const payment = unwrapPayment(p.tournament_payments);
       return {
