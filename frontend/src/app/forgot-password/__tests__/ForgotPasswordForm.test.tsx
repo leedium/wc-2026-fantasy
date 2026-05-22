@@ -40,6 +40,24 @@ describe('ForgotPasswordForm', () => {
     expect(await screen.findByRole('alert')).toHaveTextContent(/network error/i);
   });
 
+  it('re-enables the form when returning via "Try a different address"', async () => {
+    fetchMock.mockResolvedValue({ ok: true } as Response);
+    const user = userEvent.setup();
+    render(<ForgotPasswordForm />);
+
+    await user.type(screen.getByLabelText(/Email or username/i), 'alice');
+    await user.click(screen.getByRole('button', { name: /Send reset link/i }));
+
+    await screen.findByRole('status');
+    await user.click(screen.getByRole('button', { name: /Try a different address/i }));
+
+    const input = screen.getByLabelText(/Email or username/i);
+    expect(input).toBeEnabled();
+    expect(input).toHaveValue('');
+    const submitButton = screen.getByRole('button', { name: /Send reset link/i });
+    expect(submitButton).toBeEnabled();
+  });
+
   it('shows error alert when API returns non-2xx', async () => {
     fetchMock.mockResolvedValue({ ok: false, status: 500 } as Response);
     const user = userEvent.setup();
