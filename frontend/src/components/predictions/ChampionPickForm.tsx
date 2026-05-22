@@ -5,13 +5,6 @@ import { CheckCircle2, Circle, Trophy } from 'lucide-react';
 
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
 import { TeamFlag } from '@/components/shared/TeamFlag';
 import { SCORING } from '@/lib/constants';
 import { cn } from '@/lib/utils';
@@ -33,9 +26,9 @@ export function ChampionPickForm({
   const filled = !!value;
   const pickedTeam = filled ? (teams.find((t) => t.id === value) ?? null) : null;
 
-  // Flat alphabetical list of all 48 teams. SelectGroup/SelectLabel was
-  // dropped because sticky group headers in Radix's item-aligned popper
-  // jank badly on iOS Safari (the picker visually jumps as the user scrolls).
+  // Flat alphabetical list of all 48 teams. Rendered into a native <select>
+  // so iOS users get the platform wheel picker (rock-solid; Radix's overlay
+  // jittered badly on iOS Safari with a 48-item list).
   const sortedTeams = React.useMemo(
     () => [...teams].sort((a, b) => a.name.localeCompare(b.name)),
     [teams]
@@ -95,38 +88,31 @@ export function ChampionPickForm({
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">
-          <Select
+          <select
+            data-testid="champion-pick-select"
+            aria-label="Champion team"
             value={value ?? ''}
-            onValueChange={(next) => onChange(next || null)}
+            onChange={(e) => onChange(e.target.value || null)}
             disabled={disabled}
+            className={cn(
+              'border-input ring-offset-background focus:ring-ring flex h-9 w-full rounded-md border bg-transparent px-3 py-2 text-sm shadow-sm focus:ring-1 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50',
+              !value && 'text-muted-foreground'
+            )}
           >
-            <SelectTrigger data-testid="champion-pick-select">
-              <SelectValue placeholder="Pick a team" />
-            </SelectTrigger>
-            {/*
-              48-item flat list. `item-aligned` opens the dropdown next to the
-              trigger with native browser scrolling, so users can wheel/touch/
-              swipe through every team without the chevron-scroll quirk of the
-              default popper mode.
-            */}
-            <SelectContent position="item-aligned">
-              {sortedTeams.map((team) => (
-                <SelectItem key={team.id} value={team.id}>
-                  <span className="flex items-center gap-2">
-                    <TeamFlag code={team.code} />
-                    <span>{team.name}</span>
-                    <span className="text-muted-foreground text-xs">
-                      ({team.code} · Group {team.group})
-                    </span>
-                  </span>
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+            <option value="" disabled hidden>
+              Pick a team
+            </option>
+            {sortedTeams.map((team) => (
+              <option key={team.id} value={team.id}>
+                {team.name} ({team.code} · Group {team.group})
+              </option>
+            ))}
+          </select>
           {pickedTeam && (
-            <p className="text-muted-foreground text-xs">
-              Your champion:{' '}
-              <span className="text-foreground font-medium">{pickedTeam.name}</span>{' '}
+            <p className="text-muted-foreground flex flex-wrap items-center gap-1.5 text-xs">
+              Your champion:
+              <TeamFlag code={pickedTeam.code} />
+              <span className="text-foreground font-medium">{pickedTeam.name}</span>
               from Group {pickedTeam.group}
             </p>
           )}
