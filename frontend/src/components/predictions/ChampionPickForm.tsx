@@ -8,9 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
   Select,
   SelectContent,
-  SelectGroup,
   SelectItem,
-  SelectLabel,
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
@@ -35,20 +33,13 @@ export function ChampionPickForm({
   const filled = !!value;
   const pickedTeam = filled ? (teams.find((t) => t.id === value) ?? null) : null;
 
-  // Group all 48 teams by their group letter so the 48-item dropdown stays
-  // scannable. Groups are sorted alphabetically (A–L).
-  const teamsByGroup = React.useMemo(() => {
-    const map = new Map<string, Team[]>();
-    for (const team of teams) {
-      const list = map.get(team.group) ?? [];
-      list.push(team);
-      map.set(team.group, list);
-    }
-    for (const list of map.values()) {
-      list.sort((a, b) => a.name.localeCompare(b.name));
-    }
-    return Array.from(map.entries()).sort(([a], [b]) => a.localeCompare(b));
-  }, [teams]);
+  // Flat alphabetical list of all 48 teams. SelectGroup/SelectLabel was
+  // dropped because sticky group headers in Radix's item-aligned popper
+  // jank badly on iOS Safari (the picker visually jumps as the user scrolls).
+  const sortedTeams = React.useMemo(
+    () => [...teams].sort((a, b) => a.name.localeCompare(b.name)),
+    [teams]
+  );
 
   return (
     <div className="space-y-6">
@@ -112,26 +103,22 @@ export function ChampionPickForm({
               <SelectValue placeholder="Pick a team" />
             </SelectTrigger>
             {/*
-              48 teams + 12 group labels make this list far too long for the
-              default popper mode (which pins the Viewport to the trigger's
-              height and forces chevron-scroll). `item-aligned` opens the
-              dropdown next to the trigger with native browser scrolling, so
-              users can wheel/touch/swipe through all 12 groups.
+              48-item flat list. `item-aligned` opens the dropdown next to the
+              trigger with native browser scrolling, so users can wheel/touch/
+              swipe through every team without the chevron-scroll quirk of the
+              default popper mode.
             */}
             <SelectContent position="item-aligned">
-              {teamsByGroup.map(([groupLetter, groupTeams]) => (
-                <SelectGroup key={groupLetter}>
-                  <SelectLabel>Group {groupLetter}</SelectLabel>
-                  {groupTeams.map((team) => (
-                    <SelectItem key={team.id} value={team.id}>
-                      <span className="flex items-center gap-2">
-                        <TeamFlag code={team.code} />
-                        <span>{team.name}</span>
-                        <span className="text-muted-foreground text-xs">({team.code})</span>
-                      </span>
-                    </SelectItem>
-                  ))}
-                </SelectGroup>
+              {sortedTeams.map((team) => (
+                <SelectItem key={team.id} value={team.id}>
+                  <span className="flex items-center gap-2">
+                    <TeamFlag code={team.code} />
+                    <span>{team.name}</span>
+                    <span className="text-muted-foreground text-xs">
+                      ({team.code} · Group {team.group})
+                    </span>
+                  </span>
+                </SelectItem>
               ))}
             </SelectContent>
           </Select>
