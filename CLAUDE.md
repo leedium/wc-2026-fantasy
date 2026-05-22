@@ -1,6 +1,6 @@
 # CLAUDE.md
 
-> **Version:** 3.3.1
+> **Version:** 3.4.0
 > **Last Updated:** 2026-05-21
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
@@ -54,6 +54,7 @@ All schema/policies/RPCs live in `supabase/migrations/`. Run `supabase db reset`
 - `tournament_payments` — one per `prediction_id` (UNIQUE). Payment is per-prediction, not per-user. Each paid prediction is its own ranked entry on the leaderboard. Has an `is_free boolean` (default `false`) that flags rows created via the referral-redeem flow rather than admin-recorded cash.
 - `referral_codes` — one per `user_id`, holding a unique 8-char citext code drawn from a 31-symbol unambiguous alphabet (no `0/O/1/I/L`). Kept in its own table (rather than on `profiles`) so the `profiles_select_all` policy doesn't expose codes to enumeration. Auto-populated by the `handle_new_user` trigger; backfilled for older rows in migration `0035_referrals.sql`.
 - `referrals` — one row per referred user. PK is `referee_id` (so each user can be referred only once). Holds `referrer_id`, the `referrer_code_used` snapshot, `qualified_at` (set by trigger when the referee's first non-free payment lands), `reward_redeemed_at` + `reward_prediction_id` (set when the referrer cashes the credit). DB CHECK blocks self-referral; no client writes — all mutations go through SECURITY DEFINER triggers/RPCs.
+- `loyalty_redemptions` — append-only ledger for the loyalty-rewards program (migration `0038_loyalty_credits.sql`). One row per redeemed loyalty credit, holding `(user_id, tournament_id, prediction_id UNIQUE, redeemed_at, cash_paid_count_at_redemption)`. The "earned" side is derived — `floor(non_free_paid_count / 5)` per tournament — so admin reversals of cash payments naturally drop `available_credits` while already-redeemed credits stay sticky.
 - `group_standings`, `knockout_results` — admin-submitted truth for scoring.
 
 ### Auth + RLS
@@ -71,8 +72,12 @@ All schema/policies/RPCs live in `supabase/migrations/`. Run `supabase db reset`
 - **`get_leaderboard(p_tournament_id, p_page, p_page_size)`** — paginated, SECURITY DEFINER. Returns one row per **paid prediction** with columns `rank, prediction_id, prediction_name, username, points, group_points, advancer_points, knockout_points, champion_pick_points, total_goals, total_count`. A user with N paid predictions occupies N rows. `champion_pick_points` is 5 when `predictions.champion_team_id` equals the actual M32 winner, else 0; it is also folded into the `points` total used for ranking.
 - **`get_leaderboard_rank(p_tournament_id, p_user_id, p_page_size)`** — returns one row per paid prediction the user owns: `(prediction_id, prediction_name, rank, page, points)`. The frontend picks the best row for "find me".
 - **`admin_list_users(p_search, p_page, p_page_size)`** — returns `(id, username, is_admin, is_super_admin, prediction_count, paid_prediction_count, total_count)`.
-- **`redeem_referral_credit(p_prediction_id)`** — SECURITY DEFINER, caller-scoped. Locks one available `referrals` row (`FOR UPDATE SKIP LOCKED` blocks double-spend), inserts a `tournament_payments` row with `is_free = true`, marks the referral redeemed. Raises `'not your prediction'` (→ 403), `'predictions are locked'` (→ 403), `'prediction already paid'` (→ 409), `'no referral credits available'` (→ 409), `'prediction not found'` (→ 404).
-- **`get_referral_status()`** — caller-scoped aggregates only: `(referral_code, available_credits, qualified_total, redeemed_total)`. Never exposes the referee usernames; admins use `admin_list_user_referrals` for that.
+- **`redeem_referral_credit(p_prediction_id)`** — internal building block (called by `redeem_free_pick`). SECURITY DEFINER, caller-scoped. Locks one available `referrals` row (`FOR UPDATE SKIP LOCKED` blocks double-spend), inserts a `tournament_payments` row with `is_free = true`, marks the referral redeemed. Raises `'not your prediction'` (→ 403), `'predictions are locked'` (→ 403), `'prediction already paid'` (→ 409), `'no referral credits available'` (→ 409), `'prediction not found'` (→ 404).
+- **`get_referral_status()`** — internal building block (called by `get_rewards_status`). Caller-scoped aggregates only: `(referral_code, available_credits, qualified_total, redeemed_total)`. Never exposes the referee usernames; admins use `admin_list_user_referrals` for that.
+- **`redeem_loyalty_credit(p_prediction_id)`** — internal building block (called by `redeem_free_pick`). SECURITY DEFINER, caller-scoped. Takes a per-user+tournament transactional advisory lock, recomputes `available_credits` inside the lock, inserts a `loyalty_redemptions` row and a free `tournament_payments` row. Raises `'no loyalty credits available'` (→ 409) plus the same prediction-state errors as `redeem_referral_credit`.
+- **`get_loyalty_status(p_tournament_id)`** — internal building block (called by `get_rewards_status`). Returns `(cash_paid_count, earned_credits, redeemed_credits, available_credits)` for the caller in the given tournament.
+- **`get_rewards_status(p_tournament_id)`** — client-facing read. Merges referral + loyalty into one flat row consumed by `/api/rewards/status` + `useRewardsStatus`. Returns `(referral_code, total_available, referral_*, loyalty_*)`.
+- **`redeem_free_pick(p_prediction_id)`** — client-facing write. Tries `redeem_referral_credit` first (referrals are slower to acquire, so burning them first keeps the user's own paying activity generating loyalty credits at the same rate), falls back to `redeem_loyalty_credit`. Returns `(payment_id, source)` where `source` ∈ `'referral' | 'loyalty'`. Raises `'no free picks available'` (→ 409) only if both sources are empty.
 - **`resolve_referrer_username(p_code)`** — SECURITY DEFINER, granted to `anon` + `authenticated`. Powers the pre-signup `/api/referrals/validate` "Invited by @user" affordance; returns NULL for invalid codes (no timing distinction between bad-format and unknown). Rate-limit at WAF.
 - **`admin_list_user_referrals(p_user_id)`** — moderation view; returns inbound + outbound referrals for one user.
 - **`referrals_sync_qualification()`** — trigger on `tournament_payments` AFTER INSERT/UPDATE/DELETE. Sets `referrals.qualified_at` when the referee's first non-free payment lands; clears it on delete only if the referrer has not yet redeemed the credit (redeemed credits are sticky so the referrer's leaderboard entry stays stable).
@@ -105,6 +110,15 @@ Plus flat bonuses on top: champion (M32 winner) `+15`, third-place winner (M31) 
 
 **Grand total max: 74 + 10 + 200 + 5 = 289.** (Group 74 + Advancers 10 + Knockout 200 + Champion Pick 5.)
 
+## Free-Pick Programs
+
+Two earning paths, one unified redemption surface. Both deposit an `is_free = true` row in `tournament_payments` which the leaderboard treats identically to a cash payment.
+
+- **Referrals** (`0035_referrals.sql`): invite a friend with your code, earn 1 free pick when their first cash payment lands. Lifetime-scoped (no tournament_id on the `referrals` table). Free-pick payments do *not* count toward referrer qualification (the trigger filters on `is_free = false`).
+- **Loyalty** (`0038_loyalty_credits.sql`): for every 5 cash-paid predictions you have in a tournament, earn 1 free pick redeemable in that same tournament. Per-tournament; free picks don't compound (the count gates on `is_free = false`).
+
+Client-facing API surface is `/api/rewards/*` driven by `redeem_free_pick` + `get_rewards_status`. The per-source RPCs (`redeem_referral_credit`, `redeem_loyalty_credit`, `get_referral_status`, `get_loyalty_status`) are kept as internal building blocks. Redemption order: referral first (slower to acquire socially, so burning it first keeps loyalty accruing).
+
 ## Frontend Architecture
 
 ### App Router routes
@@ -118,7 +132,8 @@ Plus flat bonuses on top: champion (M32 winner) `+15`, third-place winner (M31) 
 - `/admin/users` — admin user list (per-user predictions count + paid count).
 - `/admin/users/[id]` — list of a user's predictions with per-prediction payment toggle and edit/delete.
 - `/admin/users/[id]/predictions/new` and `/admin/users/[id]/predictions/[predictionId]` — admin editor mounted on the same wizard component (`PredictionsPageContent` accepts `apiBasePath` + `redirectAfterCreate` props).
-- `/referrals` — protected hub showing the user's referral code + share URL and the (free picks available / friends paid / credits used) tally. `/register?ref=<code>` is the deep link target.
+- `/referrals` — protected share-link page: user's referral code + share URL + share button. `/register?ref=<code>` is the deep link target. Credit counts live on `/rewards`.
+- `/rewards` — protected credit hub showing referral activity (free picks available / friends paid / credits used) and loyalty activity (free picks available / cash predictions paid / credits redeemed + progress toward next free pick). Backed by `/api/rewards/status`.
 - `/auth/callback` — Supabase auth code exchange
 
 ### API routes (`src/app/api/*`)
@@ -130,6 +145,8 @@ Plus flat bonuses on top: champion (M32 winner) `+15`, third-place winner (M31) 
 `admin/users/[id]/predictions/[predictionId]` — per-prediction admin CRUD.
 `admin/predictions/[predictionId]/payment` — `GET` / `PATCH` per-prediction payment toggle (`admin_set_prediction_payment`).
 `leaderboard` — paginated list (rows include `predictionId` + `predictionName`). `leaderboard/me` — `matches[]` with one entry per paid prediction the user owns.
+`rewards/status` — `GET` for the unified free-pick state (referral + loyalty merged). `rewards/redeem` — `POST { predictionId }` to consume one free pick (referral first, then loyalty); returns `{ paymentId, source }`. The single source for the menu credit badge, predictions banner, `<ReferralActivityCard />`, `<LoyaltyActivityCard />`, and `<RewardsSummaryCard />` is the `useRewardsStatus` hook.
+`referrals/validate` — pre-signup public lookup; rate-limited at WAF.
 
 ### Supabase clients
 

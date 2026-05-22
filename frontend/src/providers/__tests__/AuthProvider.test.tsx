@@ -122,7 +122,7 @@ describe('AuthProvider', () => {
   it('clears the React Query cache when SIGNED_OUT fires', async () => {
     // Seed cache with stale data that would belong to the previous user.
     queryClient.setQueryData(['predictions'], { stale: true });
-    queryClient.setQueryData(['referralStatus'], { code: 'OLD' });
+    queryClient.setQueryData(['rewardsStatus'], { totalAvailable: 0 });
     expect(queryClient.getQueryData(['predictions'])).toEqual({ stale: true });
 
     render(
@@ -141,6 +141,6 @@ describe('AuthProvider', () => {
     });
 
     expect(queryClient.getQueryData(['predictions'])).toBeUndefined();
-    expect(queryClient.getQueryData(['referralStatus'])).toBeUndefined();
+    expect(queryClient.getQueryData(['rewardsStatus'])).toBeUndefined();
   });
 });

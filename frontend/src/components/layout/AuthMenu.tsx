@@ -3,14 +3,14 @@
 import * as React from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Gift, LogOut, Settings, User as UserIcon } from 'lucide-react';
+import { Gift, LogOut, Settings, Trophy, User as UserIcon } from 'lucide-react';
 import { toast } from 'sonner';
 
 import { Button } from '@/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { useAuth } from '@/hooks/useAuth';
 import { useMounted } from '@/hooks/useMounted';
-import { useReferralStatus } from '@/hooks/useReferralStatus';
+import { useRewardsStatus } from '@/hooks/useRewardsStatus';
 import { ROUTES } from '@/lib/constants';
 import { cn } from '@/lib/utils';
 
@@ -19,8 +19,8 @@ export function AuthMenu() {
   const router = useRouter();
   const mounted = useMounted();
   const [isSigningOut, setIsSigningOut] = React.useState(false);
-  const { status: referralStatus } = useReferralStatus();
-  const credits = referralStatus.availableCredits;
+  const { status: rewardsStatus } = useRewardsStatus();
+  const credits = rewardsStatus.totalAvailable;
 
   const handleSignOut = async () => {
     setIsSigningOut(true);
@@ -80,9 +80,10 @@ export function AuthMenu() {
         <Button variant="outline" size="sm" className="relative gap-2">
           <UserIcon className="h-4 w-4" />
           <span className="max-w-[120px] truncate">{displayName}</span>
-          {/* Unread-style indicator for available referral credits.
-              aria-hidden because the popover content surfaces the count
-              for screen readers — this dot is purely a visual hint. */}
+          {/* Unread-style indicator for available free-pick credits
+              (any source). aria-hidden because the popover content
+              surfaces the count for screen readers — this dot is purely
+              a visual hint. */}
           {credits > 0 && (
             <span
               aria-hidden
@@ -106,9 +107,9 @@ export function AuthMenu() {
             className="w-full justify-start gap-2"
             asChild
           >
-            <Link href={ROUTES.referrals}>
-              <Gift className="h-4 w-4" />
-              <span className="flex-1 text-left">Refer a friend</span>
+            <Link href={ROUTES.rewards}>
+              <Trophy className="h-4 w-4" />
+              <span className="flex-1 text-left">Rewards</span>
               {credits > 0 && (
                 <span
                   className={cn(
@@ -120,6 +121,17 @@ export function AuthMenu() {
                   {credits}
                 </span>
               )}
+            </Link>
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            className="w-full justify-start gap-2"
+            asChild
+          >
+            <Link href={ROUTES.referrals}>
+              <Gift className="h-4 w-4" />
+              <span className="flex-1 text-left">Refer a friend</span>
             </Link>
           </Button>
           <Button

@@ -4,16 +4,16 @@ import { Gift } from 'lucide-react';
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
-import { useReferralStatus } from '@/hooks/useReferralStatus';
+import { useRewardsStatus } from '@/hooks/useRewardsStatus';
 
 /**
- * Three-stat summary of the caller's referral activity. Used on both
- * `/referrals` (alongside the share-link card) and `/account` (as a
- * read-only snapshot). The hook is shared, so the underlying React
- * Query cache is hit at most once per stale window across both mounts.
+ * Three-stat summary of the caller's referral activity. Mounted on
+ * `/rewards` alongside `<LoyaltyActivityCard />`. Reads the referral
+ * branch of the unified rewards status.
  */
 export function ReferralActivityCard() {
-  const { status, isLoading } = useReferralStatus();
+  const { status, isLoading } = useRewardsStatus();
+  const referral = status.referral;
 
   return (
     <Card>
@@ -34,11 +34,11 @@ export function ReferralActivityCard() {
           <div className="grid grid-cols-3 gap-4 text-center">
             <Stat
               label="Free picks available"
-              value={status.availableCredits}
-              emphasis={status.availableCredits > 0}
+              value={referral.available}
+              emphasis={referral.available > 0}
             />
-            <Stat label="Friends paid" value={status.qualifiedTotal} />
-            <Stat label="Credits used" value={status.redeemedTotal} />
+            <Stat label="Friends paid" value={referral.qualifiedTotal} />
+            <Stat label="Credits used" value={referral.redeemedTotal} />
           </div>
         )}
         <p className="text-muted-foreground mt-4 text-xs">

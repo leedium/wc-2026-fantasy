@@ -26,11 +26,11 @@ import {
 } from '@/hooks/useDraftPersistence';
 import { useTournamentLock } from '@/hooks/useTournamentLock';
 import {
-  REFERRAL_STATUS_QUERY_KEY,
-  useReferralStatus,
-} from '@/hooks/useReferralStatus';
+  REWARDS_STATUS_QUERY_KEY,
+  useRewardsStatus,
+} from '@/hooks/useRewardsStatus';
 import { BracketPreviewDialog } from '@/components/predictions/BracketPreviewDialog';
-import { ReferralCreditBanner } from '@/components/predictions/ReferralCreditBanner';
+import { FreePickBanner } from '@/components/predictions/FreePickBanner';
 import { ROUTES } from '@/lib/constants';
 
 interface ApiPrediction {
@@ -66,7 +66,7 @@ export function PredictionsListPage() {
   const [isDeleting, setIsDeleting] = React.useState(false);
   const [previewId, setPreviewId] = React.useState<string | null>(null);
   const [redeemingId, setRedeemingId] = React.useState<string | null>(null);
-  const { status: referralStatus } = useReferralStatus();
+  const { status: rewardsStatus } = useRewardsStatus();
 
   const query = useQuery<ApiResponse>({
     queryKey: ['predictions'],
@@ -92,10 +92,11 @@ export function PredictionsListPage() {
     if (redeemingId) return;
     setRedeemingId(prediction.id);
     try {
-      const res = await fetch(
-        `/api/predictions/${encodeURIComponent(prediction.id)}/redeem-credit`,
-        { method: 'POST' }
-      );
+      const res = await fetch('/api/rewards/redeem', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ predictionId: prediction.id }),
+      });
       const body = await res.json().catch(() => ({}));
       if (!res.ok) {
         throw new Error(String(body.error ?? 'Failed to redeem credit'));
@@ -103,7 +104,7 @@ export function PredictionsListPage() {
       toast.success(`Free credit applied to "${prediction.name}"`);
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ['predictions'] }),
-        queryClient.invalidateQueries({ queryKey: REFERRAL_STATUS_QUERY_KEY }),
+        queryClient.invalidateQueries({ queryKey: REWARDS_STATUS_QUERY_KEY }),
       ]);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Failed to redeem credit');
@@ -161,7 +162,7 @@ export function PredictionsListPage() {
       </div>
 
       <div className="mb-4">
-        <ReferralCreditBanner />
+        <FreePickBanner />
       </div>
 
       {query.isLoading ? (
@@ -230,12 +231,12 @@ export function PredictionsListPage() {
                       </Link>
                     </Button>
                   )}
-                  {/* Redeem a referral credit on an unpaid, pre-lock,
-                      user-owned prediction. The server RPC is the source
-                      of truth — we just hide the button when none of the
-                      preconditions hold. */}
+                  {/* Redeem a free pick (referral or loyalty) on an
+                      unpaid, pre-lock, user-owned prediction. The server
+                      RPC is the source of truth — we just hide the button
+                      when none of the preconditions hold. */}
                   {!p.isPaid &&
-                    referralStatus.availableCredits > 0 &&
+                    rewardsStatus.totalAvailable > 0 &&
                     (!isLocked || isSuperAdmin) && (
                       <Button
                         variant="outline"
