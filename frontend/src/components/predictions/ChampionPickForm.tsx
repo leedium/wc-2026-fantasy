@@ -68,15 +68,16 @@ export function ChampionPickForm({
           </span>
         </summary>
         <div className="text-muted-foreground mt-3 space-y-2 text-sm">
+          <p>Select your Phase 1 Champion Pick before the tournament begins.</p>
           <p>
-            Pick one of the 48 teams as your tournament champion. This is your Phase 1
-            commitment — it locks when Phase 1 ends and cannot be changed afterward.
+            This pick locks at kickoff of the opening match. Once the playoffs begin, you may
+            submit a new Phase 2 Champion Pick.
           </p>
           <p>
-            <strong>Scoring:</strong> +{SCORING.championPickBonus} bonus points if your pick
-            matches the actual champion (winner of the Final). This is independent of your
-            bracket Final pick — you can pick the same team for both, or split your bet.
+            <strong>Bonus:</strong> +{SCORING.championPickBonus} points if your pick wins the
+            tournament.
           </p>
+          <p>Separate from your bracket Final pick.</p>
         </div>
       </details>
 
