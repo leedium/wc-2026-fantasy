@@ -43,7 +43,7 @@ export async function GET() {
     return NextResponse.json({
       referralCode: null,
       totalAvailable: 0,
-      referral: { available: 0, qualifiedTotal: 0, redeemedTotal: 0 },
+      referral: { available: 0, qualifiedTotal: 0, earned: 0, redeemedTotal: 0 },
       loyalty: { available: 0, earned: 0, redeemed: 0, cashPaid: 0 },
     });
   }
@@ -54,6 +54,7 @@ export async function GET() {
     referral: {
       available: row.referral_available ?? 0,
       qualifiedTotal: row.referral_qualified ?? 0,
+      earned: row.referral_earned ?? 0,
       redeemedTotal: row.referral_redeemed ?? 0,
     },
     loyalty: {

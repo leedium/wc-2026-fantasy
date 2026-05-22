@@ -9,10 +9,12 @@ export interface RewardsStatus {
   /** Sum of free picks across all sources — drives the menu badge + banner. */
   totalAvailable: number;
   referral: {
-    /** Referrals qualified but not yet redeemed. */
+    /** Referral credits earned but not yet redeemed. */
     available: number;
     /** Lifetime count of referrals whose referee paid at least once. */
     qualifiedTotal: number;
+    /** floor(qualifiedTotal / 4) — total referral credits earned. */
+    earned: number;
     /** Lifetime count of referral credits the user has cashed in. */
     redeemedTotal: number;
   };
@@ -31,7 +33,7 @@ export interface RewardsStatus {
 const ZERO: RewardsStatus = {
   referralCode: null,
   totalAvailable: 0,
-  referral: { available: 0, qualifiedTotal: 0, redeemedTotal: 0 },
+  referral: { available: 0, qualifiedTotal: 0, earned: 0, redeemedTotal: 0 },
   loyalty: { available: 0, earned: 0, redeemed: 0, cashPaid: 0 },
 };
 

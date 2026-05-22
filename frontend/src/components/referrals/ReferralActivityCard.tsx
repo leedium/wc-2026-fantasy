@@ -14,6 +14,7 @@ import { useRewardsStatus } from '@/hooks/useRewardsStatus';
 export function ReferralActivityCard() {
   const { status, isLoading } = useRewardsStatus();
   const referral = status.referral;
+  const toNext = referral.qualifiedTotal % 4;
 
   return (
     <Card>
@@ -31,20 +32,27 @@ export function ReferralActivityCard() {
             ))}
           </div>
         ) : (
-          <div className="grid grid-cols-3 gap-4 text-center">
-            <Stat
-              label="Free picks available"
-              value={referral.available}
-              emphasis={referral.available > 0}
-            />
-            <Stat label="Friends paid" value={referral.qualifiedTotal} />
-            <Stat label="Credits used" value={referral.redeemedTotal} />
-          </div>
+          <>
+            <div className="grid grid-cols-3 gap-4 text-center">
+              <Stat
+                label="Free picks available"
+                value={referral.available}
+                emphasis={referral.available > 0}
+              />
+              <Stat label="Friends paid" value={referral.qualifiedTotal} />
+              <Stat label="Credits used" value={referral.redeemedTotal} />
+            </div>
+            {referral.qualifiedTotal > 0 && (
+              <p className="text-muted-foreground mt-4 text-sm">
+                <strong>{toNext}/4</strong> toward your next free pick.
+              </p>
+            )}
+          </>
         )}
         <p className="text-muted-foreground mt-4 text-xs">
-          Credits unlock <em>only after</em> a referred friend&apos;s payment is
-          confirmed by an admin. We don&apos;t show who used your code — only the
-          counts.
+          Earn 1 free pick for every 4 referred friends whose payment is
+          confirmed by an admin. We don&apos;t show who used your code — only
+          the counts.
         </p>
       </CardContent>
     </Card>
