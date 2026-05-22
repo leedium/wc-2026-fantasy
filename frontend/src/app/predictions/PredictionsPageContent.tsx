@@ -41,6 +41,7 @@ import type {
   TournamentInfo,
 } from '@/types/tournament';
 import { ADVANCER_COUNT } from '@/lib/constants';
+import { autofillGroupPredictionsByFifaRanking } from '@/lib/fifaRankings';
 import { applyGroupPositionChange } from '@/lib/groupSwap';
 import { AdvancersForm } from '@/components/predictions/AdvancersForm';
 
@@ -671,6 +672,20 @@ export function PredictionsPageContent({
     });
   };
 
+  const handleAutofillGroupsByFifaRanking = () => {
+    if (!groups) return;
+    const next = autofillGroupPredictionsByFifaRanking(groups);
+    setGroupPredictions(next);
+    persistDraft({ groupPredictions: next });
+  };
+
+  const handleResetGroups = () => {
+    if (!groups) return;
+    const next = buildEmptyGroups(groups);
+    setGroupPredictions(next);
+    persistDraft({ groupPredictions: next });
+  };
+
   const handleKnockoutPredictionChange = (matchId: string, winnerId: string | null) => {
     setKnockoutPredictions((prev) => {
       const next = prev.map((prediction) =>
@@ -1053,6 +1068,8 @@ export function PredictionsPageContent({
               groups={groups}
               predictions={groupPredictions}
               onPredictionChange={handleGroupPredictionChange}
+              onAutofillByFifaRanking={handleAutofillGroupsByFifaRanking}
+              onResetGroups={handleResetGroups}
               disabled={!phase1Editable}
             />
           )}
