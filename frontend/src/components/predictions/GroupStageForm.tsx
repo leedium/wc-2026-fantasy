@@ -4,6 +4,7 @@ import * as React from 'react';
 import { CheckCircle2, Circle } from 'lucide-react';
 
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
   Select,
@@ -48,6 +49,16 @@ interface GroupStageFormProps {
   variant?: 'predict' | 'admin';
   /** Optional render-prop appended inside each group card (e.g., a Save row). */
   extraPerCard?: (groupId: string) => React.ReactNode;
+  /**
+   * Predict-variant only: when provided, renders an "Auto-fill by FIFA ranking"
+   * button in the header that overwrites all 12 groups with rank-ordered picks.
+   */
+  onAutofillByFifaRanking?: () => void;
+  /**
+   * Predict-variant only: when provided, renders a "Reset" button that clears
+   * every position in every group back to the unselected state.
+   */
+  onResetGroups?: () => void;
 }
 
 // Local alias for the existing internal usage.
@@ -175,8 +186,13 @@ export function GroupStageForm({
   disabled = false,
   variant = 'predict',
   extraPerCard,
+  onAutofillByFifaRanking,
+  onResetGroups,
 }: GroupStageFormProps) {
   const isAdmin = variant === 'admin';
+  const showAutofill = !isAdmin && !!onAutofillByFifaRanking && !disabled;
+  const showReset = !isAdmin && !!onResetGroups && !disabled;
+  const showActions = showAutofill || showReset;
 
   // Calculate completion stats
   const completedGroups = predictions.filter((p) => {
@@ -224,6 +240,33 @@ export function GroupStageForm({
             </p>
           </div>
         </details>
+      )}
+
+      {showActions && (
+        <div className="flex items-center justify-between gap-2">
+          {showAutofill ? (
+            <Button
+              type="button"
+              variant="outline"
+              size="lg"
+              onClick={onAutofillByFifaRanking}
+            >
+              Auto-fill by FIFA ranking
+            </Button>
+          ) : (
+            <span />
+          )}
+          {showReset && (
+            <Button
+              type="button"
+              variant="outline"
+              size="lg"
+              onClick={onResetGroups}
+            >
+              Reset
+            </Button>
+          )}
+        </div>
       )}
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
