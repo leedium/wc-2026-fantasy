@@ -33,8 +33,6 @@ export async function GET(_request: NextRequest, context: RouteContext) {
         referrer_code_used: string;
         created_at: string;
         qualified_at: string | null;
-        reward_redeemed_at: string | null;
-        reward_prediction_id: string | null;
       }) => ({
         direction: r.direction,
         refereeId: r.referee_id,
@@ -44,8 +42,6 @@ export async function GET(_request: NextRequest, context: RouteContext) {
         referrerCodeUsed: r.referrer_code_used,
         createdAt: r.created_at,
         qualifiedAt: r.qualified_at,
-        rewardRedeemedAt: r.reward_redeemed_at,
-        rewardPredictionId: r.reward_prediction_id,
       })
     ),
   });

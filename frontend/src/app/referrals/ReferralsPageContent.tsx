@@ -66,9 +66,9 @@ export function ReferralsPageContent() {
         <div className="mb-6">
           <h1 className="mb-2 text-3xl font-bold">Refer a friend</h1>
           <p className="text-muted-foreground">
-            Share your referral link. When a friend signs up and pays for a
-            prediction, you earn a <strong>free pick</strong>. Track your credits
-            on the{' '}
+            Share your referral link. For every <strong>4 friends</strong> who
+            sign up and pay for a prediction, you earn a <strong>free pick</strong>.
+            Track your credits on the{' '}
             <Link href={ROUTES.rewards} className="text-primary hover:underline">
               rewards page
             </Link>

@@ -53,8 +53,9 @@ describe('GET /api/rewards/status', () => {
           referral_code: 'ABCD2345',
           total_available: 3,
           referral_available: 2,
-          referral_qualified: 4,
-          referral_redeemed: 2,
+          referral_qualified: 9,
+          referral_earned: 2,
+          referral_redeemed: 0,
           loyalty_available: 1,
           loyalty_earned: 1,
           loyalty_redeemed: 0,
@@ -69,7 +70,7 @@ describe('GET /api/rewards/status', () => {
     expect(await res.json()).toEqual({
       referralCode: 'ABCD2345',
       totalAvailable: 3,
-      referral: { available: 2, qualifiedTotal: 4, redeemedTotal: 2 },
+      referral: { available: 2, qualifiedTotal: 9, earned: 2, redeemedTotal: 0 },
       loyalty: { available: 1, earned: 1, redeemed: 0, cashPaid: 7 },
     });
     expect(supabaseMock.rpc).toHaveBeenCalledWith('get_rewards_status', {
@@ -87,7 +88,7 @@ describe('GET /api/rewards/status', () => {
     expect(await res.json()).toEqual({
       referralCode: null,
       totalAvailable: 0,
-      referral: { available: 0, qualifiedTotal: 0, redeemedTotal: 0 },
+      referral: { available: 0, qualifiedTotal: 0, earned: 0, redeemedTotal: 0 },
       loyalty: { available: 0, earned: 0, redeemed: 0, cashPaid: 0 },
     });
   });
