@@ -45,6 +45,7 @@ export function ForgotPasswordForm() {
         return;
       }
       setSubmitted(true);
+      setIsSubmitting(false);
     } catch {
       setServerError('Network error. Please try again.');
       setIsSubmitting(false);
