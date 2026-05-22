@@ -6,15 +6,20 @@ jest.mock('../LockStatusBanner', () => ({
   LockStatusBanner: () => null,
 }));
 
-// AuthMenu pulls in useReferralStatus (TanStack Query). Stub it so this layout
+// AuthMenu pulls in useRewardsStatus (TanStack Query). Stub it so this layout
 // test doesn't need a QueryClientProvider just to render the header.
-jest.mock('@/hooks/useReferralStatus', () => ({
-  useReferralStatus: () => ({
-    status: { code: null, availableCredits: 0, qualifiedTotal: 0, redeemedTotal: 0 },
+jest.mock('@/hooks/useRewardsStatus', () => ({
+  useRewardsStatus: () => ({
+    status: {
+      referralCode: null,
+      totalAvailable: 0,
+      referral: { available: 0, qualifiedTotal: 0, redeemedTotal: 0 },
+      loyalty: { available: 0, earned: 0, redeemed: 0, cashPaid: 0 },
+    },
     isLoading: false,
     refetch: async () => ({ data: null }),
   }),
-  REFERRAL_STATUS_QUERY_KEY: ['referralStatus'],
+  REWARDS_STATUS_QUERY_KEY: ['rewardsStatus'],
 }));
 
 import { PageLayout } from '../PageLayout';

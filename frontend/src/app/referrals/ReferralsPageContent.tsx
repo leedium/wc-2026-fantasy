@@ -10,18 +10,16 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
-import { ReferralActivityCard } from '@/components/referrals/ReferralActivityCard';
-import { useReferralStatus } from '@/hooks/useReferralStatus';
+import { useRewardsStatus } from '@/hooks/useRewardsStatus';
 import { ROUTES } from '@/lib/constants';
 
 /**
- * "Refer a friend" hub. Shows the user's shareable code + URL, three-stat
- * summary (pending invitees / credits available / credits used), and a
- * short explainer. The shareable URL is built at render time from
- * window.location.origin so dev/preview/prod each emit the correct host.
+ * "Refer a friend" share page. Single job: show the user's code + share
+ * URL with one-tap copy/share. Credit counts and history live on /rewards
+ * (linked at the bottom).
  */
 export function ReferralsPageContent() {
-  const { status, isLoading } = useReferralStatus();
+  const { status, isLoading } = useRewardsStatus();
   const [origin, setOrigin] = React.useState('');
 
   React.useEffect(() => {
@@ -30,7 +28,10 @@ export function ReferralsPageContent() {
     }
   }, []);
 
-  const shareUrl = status.code && origin ? `${origin}${ROUTES.register}?ref=${status.code}` : '';
+  const shareUrl =
+    status.referralCode && origin
+      ? `${origin}${ROUTES.register}?ref=${status.referralCode}`
+      : '';
 
   const copy = async (value: string, label: string) => {
     if (!value) return;
@@ -59,23 +60,17 @@ export function ReferralsPageContent() {
     copy(shareUrl, 'Share link');
   };
 
-  // The qualified-but-not-yet-redeemed bucket (= availableCredits) is what
-  // matters most. "Pending invitees" — referees who signed up but haven't
-  // paid yet — is qualifiedTotal subtracted from referee count, but we
-  // don't expose referee count for privacy, so present it as the gap
-  // between qualified and total. We don't have a total here; fall back to
-  // qualifiedTotal as the headline "referrals who paid" stat.
   return (
     <PageLayout>
       <div className="mx-auto max-w-2xl py-8">
         <div className="mb-6">
           <h1 className="mb-2 text-3xl font-bold">Refer a friend</h1>
           <p className="text-muted-foreground">
-            Invite a friend with your referral link. When they pay for a prediction, you
-            earn a <strong>free pick</strong> credit — redeem it on any unpaid bracket
-            from the{' '}
-            <Link href={ROUTES.predictions} className="text-primary hover:underline">
-              predictions page
+            Share your referral link. When a friend signs up and pays for a
+            prediction, you earn a <strong>free pick</strong>. Track your credits
+            on the{' '}
+            <Link href={ROUTES.rewards} className="text-primary hover:underline">
+              rewards page
             </Link>
             .
           </p>
@@ -91,7 +86,7 @@ export function ReferralsPageContent() {
           <CardContent className="space-y-4">
             {isLoading ? (
               <Skeleton className="h-10 w-full" />
-            ) : status.code ? (
+            ) : status.referralCode ? (
               <>
                 <div>
                   <label className="text-muted-foreground mb-1 block text-sm">
@@ -100,14 +95,14 @@ export function ReferralsPageContent() {
                   <div className="flex gap-2">
                     <Input
                       readOnly
-                      value={status.code}
+                      value={status.referralCode}
                       className="font-mono uppercase tracking-widest"
                       onFocus={(e) => e.currentTarget.select()}
                     />
                     <Button
                       variant="outline"
                       size="icon"
-                      onClick={() => copy(status.code ?? '', 'Code')}
+                      onClick={() => copy(status.referralCode ?? '', 'Code')}
                       title="Copy code"
                     >
                       <Copy className="h-4 w-4" />
@@ -148,7 +143,6 @@ export function ReferralsPageContent() {
           </CardContent>
         </Card>
 
-        <ReferralActivityCard />
       </div>
     </PageLayout>
   );

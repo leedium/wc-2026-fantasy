@@ -51,6 +51,10 @@ const KNOWN_ERROR_FRAGMENTS = [
   'not your prediction',
   'prediction already paid',
   'prediction_id is required',
+  // Loyalty rewards (migration 0038)
+  'no loyalty credits available',
+  'no free picks available',
+  'tournament_id is required',
 ] as const;
 
 export function safeMessage(

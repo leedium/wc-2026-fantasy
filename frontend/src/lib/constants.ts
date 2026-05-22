@@ -70,6 +70,7 @@ export const ROUTES = {
   terms: '/terms',
   privacy: '/privacy',
   referrals: '/referrals',
+  rewards: '/rewards',
 } as const;
 
 /** 8 uppercase chars from a 31-symbol alphabet (no 0/O/1/I/L). */

@@ -11,7 +11,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { FieldError } from '@/components/ui/field-error';
-import { ReferralActivityCard } from '@/components/referrals/ReferralActivityCard';
+import { RewardsSummaryCard } from '@/components/rewards/RewardsSummaryCard';
 import { useAuthContext } from '@/providers/AuthProvider';
 import { ROUTES, USERNAME_REGEX } from '@/lib/constants';
 import { cn } from '@/lib/utils';
@@ -190,11 +190,11 @@ export function AccountForm({ email, initialUsername, initialDisplayName }: Acco
         </CardContent>
       </Card>
 
-      {/* Read-only snapshot of the user's referral activity. The share
-          link + code copy controls live on the dedicated /referrals
-          page; the link below sends users there for those. */}
+      {/* Compact free-pick summary. Full breakdown (referral + loyalty
+          activity) lives on /rewards; share-link copy controls live on
+          /referrals. */}
       <div className="mt-6 max-w-xl space-y-2">
-        <ReferralActivityCard />
+        <RewardsSummaryCard />
         <p className="text-muted-foreground text-sm">
           Want to invite a friend?{' '}
           <Link href={ROUTES.referrals} className="text-primary hover:underline">
