@@ -41,6 +41,7 @@ interface AdminUser {
   isSuperAdmin: boolean;
   predictionCount: number;
   paidPredictionCount: number;
+  totalRewards: number;
 }
 
 interface UsersResponse {
@@ -138,8 +139,12 @@ export function AdminUsersList() {
               <TableHeader>
                 <TableRow>
                   <TableHead>Username</TableHead>
+                  <TableHead>Email</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Predictions</TableHead>
+                  <TableHead title="Lifetime referral credits earned + active-tournament loyalty credits earned">
+                    Total rewards
+                  </TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
@@ -147,6 +152,9 @@ export function AdminUsersList() {
                 {(query.data?.users ?? []).map((u) => (
                   <TableRow key={u.id}>
                     <TableCell className="font-medium">{u.username}</TableCell>
+                    <TableCell className="text-muted-foreground text-sm">
+                      {u.email ?? '—'}
+                    </TableCell>
                     <TableCell>
                       {u.isSuperAdmin ? (
                         <Badge title="Cannot be demoted or deleted">super admin</Badge>
@@ -162,6 +170,13 @@ export function AdminUsersList() {
                           <span className="font-medium">{u.paidPredictionCount}</span>
                           <span className="text-muted-foreground"> / {u.predictionCount} paid</span>
                         </span>
+                      ) : (
+                        <span className="text-muted-foreground">—</span>
+                      )}
+                    </TableCell>
+                    <TableCell className="text-sm">
+                      {u.totalRewards > 0 ? (
+                        <span className="font-medium">{u.totalRewards}</span>
                       ) : (
                         <span className="text-muted-foreground">—</span>
                       )}
@@ -211,7 +226,7 @@ export function AdminUsersList() {
                 ))}
                 {(query.data?.users ?? []).length === 0 && (
                   <TableRow>
-                    <TableCell colSpan={4} className="text-muted-foreground py-8 text-center">
+                    <TableCell colSpan={6} className="text-muted-foreground py-8 text-center">
                       No users found
                     </TableCell>
                   </TableRow>
