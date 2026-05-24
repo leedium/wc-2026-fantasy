@@ -6,7 +6,7 @@ import { ROUTES } from '@/lib/constants';
 
 const footerLinks = [
   { label: 'About', href: ROUTES.about },
-  { label: 'Rules', href: ROUTES.rules },
+  { label: 'Rules & Scoring', href: ROUTES.rules },
   { label: 'Terms', href: ROUTES.terms },
   { label: 'Privacy', href: ROUTES.privacy },
 ];
@@ -19,7 +19,7 @@ export function Footer() {
       <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
         <div className="flex flex-col items-center gap-6 sm:flex-row sm:justify-between">
           <div className="flex flex-col items-center sm:items-start">
-            <span className="text-foreground text-lg font-semibold">WC2026 Prediction Game</span>
+            <span className="text-foreground text-lg font-semibold">soccer-pool 2026</span>
             <span className="text-muted-foreground text-sm">
               Bracket predictions for the FIFA World Cup 2026
             </span>

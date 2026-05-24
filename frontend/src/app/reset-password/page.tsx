@@ -5,7 +5,7 @@ import { PageLayout } from '@/components/layout/PageLayout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 
 export const metadata = {
-  title: 'Reset password — WC2026',
+  title: 'Reset password — soccer-pool 2026',
 };
 
 export default async function ResetPasswordPage() {

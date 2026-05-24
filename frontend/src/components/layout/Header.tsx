@@ -7,6 +7,7 @@ import { Menu } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { ROUTES } from '@/lib/constants';
 import { AuthMenu } from '@/components/layout/AuthMenu';
+import { HeaderPotTotal } from '@/components/layout/HeaderPotTotal';
 import { ThemeToggle } from '@/components/shared/ThemeToggle';
 import { useAuthContext } from '@/providers/AuthProvider';
 import { useMounted } from '@/hooks/useMounted';
@@ -24,7 +25,7 @@ const baseNavLinks = [
   { label: 'Home', href: ROUTES.home },
   { label: 'Predictions', href: ROUTES.predictions },
   { label: 'Leaderboard', href: ROUTES.leaderboard },
-  { label: 'Rules', href: ROUTES.rules },
+  { label: 'Rules & Scoring', href: ROUTES.rules },
   { label: 'About', href: ROUTES.about },
 ];
 
@@ -47,7 +48,7 @@ export function Header() {
     <header className="border-border bg-background/95 supports-[backdrop-filter]:bg-background/60 sticky top-0 z-50 w-full border-b backdrop-blur">
       <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
         <Link href={ROUTES.home} className="flex items-center space-x-2">
-          <span className="text-foreground text-xl font-bold">WC2026</span>
+          <span className="text-foreground text-xl font-bold">soccer-pool 2026</span>
         </Link>
 
         <NavigationMenu className="hidden md:flex">
@@ -71,6 +72,7 @@ export function Header() {
         </NavigationMenu>
 
         <div className="hidden items-center gap-4 md:flex">
+          <HeaderPotTotal />
           <ThemeToggle />
           <AuthMenu />
         </div>
@@ -91,6 +93,7 @@ export function Header() {
                 <SheetHeader>
                   <SheetTitle>Navigation</SheetTitle>
                 </SheetHeader>
+                <HeaderPotTotal className="mt-4" />
                 <nav className="mt-6 flex flex-col space-y-4">
                   {navLinks.map((link) => (
                     <Link

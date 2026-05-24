@@ -6,7 +6,7 @@ import { PageLayout } from '@/components/layout/PageLayout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 
 export const metadata = {
-  title: 'Forgot password — WC2026',
+  title: 'Forgot password — soccer-pool 2026',
 };
 
 export default async function ForgotPasswordPage() {

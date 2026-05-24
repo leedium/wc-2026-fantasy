@@ -6,7 +6,7 @@ import { ROUTES } from '@/lib/constants';
 import { ReferralsPageContent } from './ReferralsPageContent';
 
 export const metadata: Metadata = {
-  title: 'Refer a friend — WC2026',
+  title: 'Refer a friend — soccer-pool 2026',
 };
 
 export default async function ReferralsPage() {
