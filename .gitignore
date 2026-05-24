@@ -144,6 +144,7 @@ vite.config.ts.timestamp-*
 .claude/settings.local.json
 .claude/projects/
 .claude/sessions/
+.claude/scheduled_tasks.lock
 
 # Supabase CLI local state
 supabase/.branches/
