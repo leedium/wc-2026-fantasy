@@ -162,6 +162,8 @@ interface PredictionsPageContentProps {
   apiBasePath?: string;
   /** Where to navigate after a successful save. Defaults to /predictions. */
   redirectAfterSave?: string;
+  /** Optional breadcrumb rendered above the title (used by admin pages). */
+  breadcrumb?: React.ReactNode;
 }
 
 async function fetchJSON<T>(url: string): Promise<T> {
@@ -258,6 +260,7 @@ export function PredictionsPageContent({
   initial,
   apiBasePath = '/api/predictions',
   redirectAfterSave,
+  breadcrumb,
 }: PredictionsPageContentProps) {
   const router = useRouter();
   const queryClient = useQueryClient();
@@ -912,6 +915,7 @@ export function PredictionsPageContent({
   if (isLoading || !tournament || !groups || !teams || !matches) {
     return (
       <PageLayout>
+        {breadcrumb}
         <div className="space-y-4 py-8">
           <Skeleton className="h-10 w-64" />
           <Skeleton className="h-32 w-full" />
@@ -962,6 +966,7 @@ export function PredictionsPageContent({
 
   return (
     <PageLayout>
+      {breadcrumb}
       <div className="mb-8">
         <h1 className="mb-2 text-3xl font-bold">
           {mode === 'edit' ? 'Edit Prediction' : 'New Prediction'}

@@ -8,6 +8,7 @@ import { toast } from 'sonner';
 
 import { PageLayout } from '@/components/layout/PageLayout';
 import { AdminNav } from '@/components/admin/AdminNav';
+import { AdminBreadcrumb } from '@/components/admin/AdminBreadcrumb';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -68,7 +69,9 @@ function PaymentRow({
   onChanged: () => void;
 }) {
   const [paidAtInput, setPaidAtInput] = React.useState(
-    prediction.paidAt ? toLocalDatetimeInput(prediction.paidAt) : ''
+    prediction.paidAt
+      ? toLocalDatetimeInput(prediction.paidAt)
+      : toLocalDatetimeInput(new Date().toISOString())
   );
   const [busy, setBusy] = React.useState(false);
 
@@ -207,11 +210,23 @@ export function AdminUserBracket({ userId }: { userId: string }) {
     }
   };
 
+  const userLabel =
+    userSummary?.displayName ||
+    userSummary?.username ||
+    userSummary?.email ||
+    'User';
+
   if (query.isLoading) {
     return (
       <PageLayout>
         <h1 className="mb-2 text-3xl font-bold">Admin</h1>
         <AdminNav />
+        <AdminBreadcrumb
+          items={[
+            { label: 'Users', href: '/admin/users' },
+            { label: 'Loading…' },
+          ]}
+        />
         <div className="space-y-4">
           <Skeleton className="h-10 w-64" />
           <Skeleton className="h-32 w-full" />
@@ -224,6 +239,12 @@ export function AdminUserBracket({ userId }: { userId: string }) {
     <PageLayout>
       <h1 className="mb-2 text-3xl font-bold">Admin</h1>
       <AdminNav />
+      <AdminBreadcrumb
+        items={[
+          { label: 'Users', href: '/admin/users' },
+          { label: userLabel },
+        ]}
+      />
 
       {userSummary && (
         <Card className="mb-4">
