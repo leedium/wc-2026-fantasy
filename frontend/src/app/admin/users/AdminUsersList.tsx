@@ -138,7 +138,6 @@ export function AdminUsersList() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Username</TableHead>
                   <TableHead>Email</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Predictions</TableHead>
@@ -151,8 +150,7 @@ export function AdminUsersList() {
               <TableBody>
                 {(query.data?.users ?? []).map((u) => (
                   <TableRow key={u.id}>
-                    <TableCell className="font-medium">{u.username}</TableCell>
-                    <TableCell className="text-muted-foreground text-sm">
+                    <TableCell className="font-medium text-sm">
                       {u.email ?? '—'}
                     </TableCell>
                     <TableCell>
@@ -226,7 +224,7 @@ export function AdminUsersList() {
                 ))}
                 {(query.data?.users ?? []).length === 0 && (
                   <TableRow>
-                    <TableCell colSpan={6} className="text-muted-foreground py-8 text-center">
+                    <TableCell colSpan={5} className="text-muted-foreground py-8 text-center">
                       No users found
                     </TableCell>
                   </TableRow>
