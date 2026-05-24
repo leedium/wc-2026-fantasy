@@ -80,19 +80,23 @@ describe('GET /api/admin/users', () => {
         {
           id: 'a',
           username: 'alice',
+          email: 'alice@example.com',
           is_admin: false,
           is_super_admin: false,
           prediction_count: 3,
           paid_prediction_count: 2,
+          total_rewards: 1,
           total_count: 2,
         },
         {
           id: 'b',
           username: 'bob',
+          email: null,
           is_admin: true,
           is_super_admin: true,
           prediction_count: 0,
           paid_prediction_count: 0,
+          total_rewards: 0,
           total_count: 2,
         },
       ],
@@ -105,16 +109,20 @@ describe('GET /api/admin/users', () => {
     expect(body.users).toHaveLength(2);
     expect(body.users[0]).toMatchObject({
       username: 'alice',
+      email: 'alice@example.com',
       predictionCount: 3,
       paidPredictionCount: 2,
+      totalRewards: 1,
       isSuperAdmin: false,
     });
     expect(body.users[1]).toMatchObject({
       username: 'bob',
+      email: null,
       isAdmin: true,
       isSuperAdmin: true,
       predictionCount: 0,
       paidPredictionCount: 0,
+      totalRewards: 0,
     });
     expect(body.tournament).toEqual({ id: 't1', lockTime: '2026-06-01T00:00:00Z' });
   });

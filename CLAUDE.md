@@ -1,7 +1,7 @@
 # CLAUDE.md
 
-> **Version:** 3.5.0
-> **Last Updated:** 2026-05-22
+> **Version:** 3.6.0
+> **Last Updated:** 2026-05-24
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
@@ -72,7 +72,7 @@ All schema/policies/RPCs live in `supabase/migrations/`. Run `supabase db reset`
 - **`admin_set_prediction_payment(p_prediction_id, p_paid, p_paid_at)`** — replaces the old `admin_set_payment(user_id, tournament_id, …)`. Upserts `tournament_payments` keyed on `prediction_id`.
 - **`get_leaderboard(p_tournament_id, p_page, p_page_size)`** — paginated, SECURITY DEFINER. Returns one row per **paid prediction** with columns `rank, prediction_id, prediction_name, username, points, group_points, advancer_points, knockout_points, champion_pick_points, total_goals, total_count`. A user with N paid predictions occupies N rows. `champion_pick_points` is 5 when `predictions.champion_team_id` equals the actual M32 winner, else 0; it is also folded into the `points` total used for ranking.
 - **`get_leaderboard_rank(p_tournament_id, p_user_id, p_page_size)`** — returns one row per paid prediction the user owns: `(prediction_id, prediction_name, rank, page, points)`. The frontend picks the best row for "find me".
-- **`admin_list_users(p_search, p_page, p_page_size)`** — returns `(id, username, is_admin, is_super_admin, prediction_count, paid_prediction_count, total_count)`.
+- **`admin_list_users(p_search, p_page, p_page_size)`** — returns `(id, username, email, is_admin, is_super_admin, prediction_count, paid_prediction_count, total_rewards, total_count)`. `email` is sourced from `auth.users` (safe because the RPC is SECURITY DEFINER + admin-gated). `total_rewards = floor(qualified_referrals / 4) + floor(active_tournament_cash_paid / 5)` — engagement view, not "available" (no redemption subtraction).
 - **`redeem_referral_credit(p_prediction_id)`** — internal building block (called by `redeem_free_pick`). SECURITY DEFINER, caller-scoped. Takes a per-user transactional advisory lock, recomputes `available_credits = floor(qualified_total / 4) - redeemed_total` inside the lock, inserts a `referral_redemptions` row and a free `tournament_payments` row. Raises `'not your prediction'` (→ 403), `'predictions are locked'` (→ 403), `'prediction already paid'` (→ 409), `'no referral credits available'` (→ 409), `'prediction not found'` (→ 404).
 - **`get_referral_status()`** — internal building block (called by `get_rewards_status`). Caller-scoped aggregates only: `(referral_code, qualified_total, earned_credits, redeemed_total, available_credits)` where `earned_credits = floor(qualified_total / 4)` and `available_credits = greatest(0, earned_credits - redeemed_total)`. Never exposes the referee usernames; admins use `admin_list_user_referrals` for that.
 - **`redeem_loyalty_credit(p_prediction_id)`** — internal building block (called by `redeem_free_pick`). SECURITY DEFINER, caller-scoped. Takes a per-user+tournament transactional advisory lock, recomputes `available_credits` inside the lock, inserts a `loyalty_redemptions` row and a free `tournament_payments` row. Raises `'no loyalty credits available'` (→ 409) plus the same prediction-state errors as `redeem_referral_credit`.

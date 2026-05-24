@@ -58,7 +58,7 @@ export function AuthMenu() {
     );
   }
 
-  const displayName = profile?.displayName || profile?.username || user.email;
+  const displayName = profile?.displayName || user.email || profile?.username;
 
   // Defer the Radix Popover until after hydration. Radix uses useId()
   // internally, and its IDs shift between SSR and client when other

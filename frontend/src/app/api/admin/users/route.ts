@@ -37,6 +37,7 @@ export async function GET(request: NextRequest) {
     is_super_admin: boolean;
     prediction_count: number;
     paid_prediction_count: number;
+    total_rewards: number;
     total_count: number;
   }>;
 
@@ -49,6 +50,7 @@ export async function GET(request: NextRequest) {
       isSuperAdmin: r.is_super_admin,
       predictionCount: r.prediction_count,
       paidPredictionCount: r.paid_prediction_count,
+      totalRewards: r.total_rewards ?? 0,
     })),
     total: Number(rows[0]?.total_count ?? 0),
     page,
