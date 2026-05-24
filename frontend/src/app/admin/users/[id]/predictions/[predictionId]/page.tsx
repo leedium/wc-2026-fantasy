@@ -6,6 +6,7 @@ import {
   PredictionsPageContent,
   type InitialPrediction,
 } from '@/app/predictions/PredictionsPageContent';
+import { AdminBreadcrumb } from '@/components/admin/AdminBreadcrumb';
 
 export const metadata: Metadata = {
   title: 'Edit Prediction | Admin',
@@ -30,7 +31,7 @@ export default async function AdminEditPredictionPage({
 
   if (!prediction) notFound();
 
-  const [groupsRes, knockoutRes, advancersRes] = await Promise.all([
+  const [groupsRes, knockoutRes, advancersRes, profileRes] = await Promise.all([
     supabase
       .from('group_predictions')
       .select('group_id, first_team_id, second_team_id, third_team_id, fourth_team_id')
@@ -43,7 +44,17 @@ export default async function AdminEditPredictionPage({
       .from('advancer_predictions')
       .select('rank, team_id')
       .eq('prediction_id', predictionId),
+    supabase
+      .from('profiles')
+      .select('username, display_name')
+      .eq('id', id)
+      .maybeSingle(),
   ]);
+
+  const userLabel =
+    (profileRes.data?.display_name as string | null) ||
+    (profileRes.data?.username as string | null) ||
+    'User';
 
   // PostgREST returns a single object (not an array) when the embedded
   // relation has a unique FK target — `tournament_payments.prediction_id`
@@ -92,6 +103,15 @@ export default async function AdminEditPredictionPage({
       initial={initial}
       apiBasePath={`/api/admin/users/${id}/predictions`}
       redirectAfterSave={`/admin/users/${id}`}
+      breadcrumb={
+        <AdminBreadcrumb
+          items={[
+            { label: 'Users', href: '/admin/users' },
+            { label: userLabel, href: `/admin/users/${id}` },
+            { label: initial.name },
+          ]}
+        />
+      }
     />
   );
 }
