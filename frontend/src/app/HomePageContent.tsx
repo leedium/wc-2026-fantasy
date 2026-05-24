@@ -3,10 +3,19 @@
 import Image from 'next/image';
 import Link from 'next/link';
 import { useQuery } from '@tanstack/react-query';
-import { Clock, Trophy, Users, UserPlus, Target, Award, ChevronRight } from 'lucide-react';
+import {
+  ChevronRight,
+  Clock,
+  CircleDollarSign,
+  Target,
+  Trophy,
+  Users,
+  UserPlus,
+  Award,
+} from 'lucide-react';
 
 import { PageLayout } from '@/components/layout/PageLayout';
-import { ScoringBreakdown } from '@/components/marketing/ScoringBreakdown';
+import { DonationsToCharity } from '@/components/marketing/DonationsToCharity';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -21,7 +30,15 @@ interface TournamentResponse {
   status: TournamentInfo['status'];
   lockTime: string;
   totalEntries: number;
+  cashPaidPredictionCount: number;
+  potTotalCAD: number;
 }
+
+const POT_FORMATTER = new Intl.NumberFormat('en-CA', {
+  style: 'currency',
+  currency: 'CAD',
+  maximumFractionDigits: 0,
+});
 
 function formatTimeRemaining(lockTime: Date): string {
   const now = new Date();
@@ -109,7 +126,7 @@ export function HomePageContent() {
 
       <section className="py-12">
         <h2 className="mb-8 text-center text-2xl font-bold md:text-3xl">Tournament Overview</h2>
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <Card>
             <CardHeader className="pb-2">
               <CardDescription className="flex items-center gap-2">
@@ -141,6 +158,24 @@ export function HomePageContent() {
               ) : (
                 <p className="text-2xl font-bold">
                   {(tournament?.totalEntries ?? 0).toLocaleString()}
+                </p>
+              )}
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="pb-2">
+              <CardDescription className="flex items-center gap-2">
+                <CircleDollarSign className="h-4 w-4" />
+                Pot Total
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {query.isLoading ? (
+                <Skeleton className="h-8 w-24" />
+              ) : (
+                <p className="text-2xl font-bold">
+                  {POT_FORMATTER.format(tournament?.potTotalCAD ?? 0)}
                 </p>
               )}
             </CardContent>
@@ -233,7 +268,7 @@ export function HomePageContent() {
         </div>
       </section>
 
-      <ScoringBreakdown />
+      <DonationsToCharity />
 
       <section className="py-12">
         <Card className="bg-primary/5 border-primary/20">

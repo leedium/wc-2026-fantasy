@@ -48,7 +48,7 @@ export function ReferralsPageContent() {
     if (typeof navigator !== 'undefined' && navigator.share) {
       try {
         await navigator.share({
-          title: 'Join my WC2026 pool',
+          title: 'Join my soccer-pool 2026',
           text: 'Join my World Cup 2026 prediction pool — use my referral link:',
           url: shareUrl,
         });

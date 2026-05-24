@@ -6,7 +6,7 @@ import { PageLayout } from '@/components/layout/PageLayout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 
 export const metadata = {
-  title: 'Sign up — WC2026',
+  title: 'Sign up — soccer-pool 2026',
 };
 
 // Next.js 16 — searchParams is a Promise.

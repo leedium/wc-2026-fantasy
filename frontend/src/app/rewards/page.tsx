@@ -6,7 +6,7 @@ import { ROUTES } from '@/lib/constants';
 import { RewardsPageContent } from './RewardsPageContent';
 
 export const metadata: Metadata = {
-  title: 'Rewards — WC2026',
+  title: 'Rewards — soccer-pool 2026',
 };
 
 export default async function RewardsPage() {

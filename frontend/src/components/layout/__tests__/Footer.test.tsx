@@ -11,7 +11,7 @@ describe('Footer', () => {
     it('should render branding text', () => {
       render(<Footer />);
 
-      expect(screen.getByText('WC2026 Prediction Game')).toBeInTheDocument();
+      expect(screen.getByText('soccer-pool 2026')).toBeInTheDocument();
       expect(screen.getByText('Bracket predictions for the FIFA World Cup 2026')).toBeInTheDocument();
     });
 
@@ -37,7 +37,7 @@ describe('Footer', () => {
     it('should render Rules link', () => {
       render(<Footer />);
 
-      const rulesLink = screen.getByRole('link', { name: 'Rules' });
+      const rulesLink = screen.getByRole('link', { name: 'Rules & Scoring' });
       expect(rulesLink).toBeInTheDocument();
       expect(rulesLink).toHaveAttribute('href', '/rules');
     });

@@ -13,13 +13,18 @@ jest.mock('@/hooks/useRewardsStatus', () => ({
     status: {
       referralCode: null,
       totalAvailable: 0,
-      referral: { available: 0, qualifiedTotal: 0, redeemedTotal: 0 },
+      referral: { available: 0, qualifiedTotal: 0, earned: 0, redeemedTotal: 0 },
       loyalty: { available: 0, earned: 0, redeemed: 0, cashPaid: 0 },
     },
     isLoading: false,
     refetch: async () => ({ data: null }),
   }),
   REWARDS_STATUS_QUERY_KEY: ['rewardsStatus'],
+}));
+
+// HeaderPotTotal also calls useQuery — stub it out for the same reason.
+jest.mock('../HeaderPotTotal', () => ({
+  HeaderPotTotal: () => null,
 }));
 
 import { PageLayout } from '../PageLayout';
