@@ -17,6 +17,7 @@ export const metadata: Metadata = {
   title: 'World Cup 2026 Prediction Game',
   description:
     'Submit your bracket predictions for the FIFA World Cup 2026 and compete on the leaderboard.',
+  robots: { index: false, follow: false },
   openGraph: {
     title: 'World Cup 2026 Prediction Game',
     description:
