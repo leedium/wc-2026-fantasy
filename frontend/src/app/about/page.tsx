@@ -1,9 +1,11 @@
 import type { Metadata } from 'next';
+import Link from 'next/link';
+import { ArrowRight } from 'lucide-react';
 
 import { PageLayout } from '@/components/layout/PageLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { PRICING } from '@/lib/constants';
+import { PRICING, ROUTES } from '@/lib/constants';
 
 export const metadata: Metadata = {
   title: 'About | World Cup 2026',
@@ -71,12 +73,19 @@ export default function AboutPage() {
           <CardHeader>
             <CardTitle>Charitable Donations</CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="space-y-3">
             <p className="text-muted-foreground text-sm">
               ${PRICING.charityPortionCAD} {PRICING.currency} from every ${PRICING.entryFeeCAD}{' '}
-              {PRICING.currency} entry is set aside for a charity announced before lock.
-              Details on this year&rsquo;s causes are coming soon.
+              {PRICING.currency} entry goes to charity. This year, the pool is supporting two
+              causes that matter to us.
             </p>
+            <Link
+              href={ROUTES.charities}
+              className="text-primary inline-flex items-center gap-1 text-sm font-medium hover:underline"
+            >
+              See our two charity partners
+              <ArrowRight className="h-4 w-4" />
+            </Link>
           </CardContent>
         </Card>
       </section>

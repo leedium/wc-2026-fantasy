@@ -66,12 +66,41 @@ export const ROUTES = {
   admin: '/admin',
   account: '/account',
   about: '/about',
+  charities: '/charities',
   rules: '/rules',
   terms: '/terms',
   privacy: '/privacy',
   referrals: '/referrals',
   rewards: '/rewards',
 } as const;
+
+/**
+ * Charity partners receiving the {@link PRICING.charityPortionCAD} portion of
+ * each entry. Surfaced on the landing page (DonationsToCharity), the About
+ * page, and the dedicated /charities index + detail pages.
+ */
+export const CHARITIES = [
+  {
+    slug: 'canadian-cancer-society',
+    name: 'Canadian Cancer Society',
+    url: 'https://cancer.ca',
+    displayUrl: 'cancer.ca',
+    logo: '/charities/canadian-cancer-society.svg',
+    tagline:
+      "Nick's charity — supporting cancer research, prevention, and patient care across Canada.",
+  },
+  {
+    slug: 'islamic-relief-canada',
+    name: 'Islamic Relief Canada',
+    url: 'https://islamicreliefcanada.org',
+    displayUrl: 'islamicreliefcanada.org',
+    logo: '/charities/islamic-relief-canada.png',
+    tagline:
+      "David's charity — emergency food, water, medical care, and shelter for families in Gaza and beyond.",
+  },
+] as const;
+
+export type Charity = (typeof CHARITIES)[number];
 
 /** 8 uppercase chars from a 31-symbol alphabet (no 0/O/1/I/L). */
 export const REFERRAL_CODE_REGEX = /^[ABCDEFGHJKMNPQRSTUVWXYZ23456789]{8}$/;

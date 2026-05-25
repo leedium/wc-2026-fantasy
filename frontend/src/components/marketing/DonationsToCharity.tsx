@@ -1,7 +1,8 @@
-import { HeartHandshake } from 'lucide-react';
+import Link from 'next/link';
+import { ArrowRight, HeartHandshake } from 'lucide-react';
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { PRICING } from '@/lib/constants';
+import { PRICING, ROUTES } from '@/lib/constants';
 
 export function DonationsToCharity() {
   return (
@@ -19,13 +20,16 @@ export function DonationsToCharity() {
         <CardContent className="text-muted-foreground space-y-3 text-sm">
           <p>
             Each prediction sets aside ${PRICING.charityPortionCAD}{' '}
-            {PRICING.currency} for a charity the pool organizer announces before
-            lock.
+            {PRICING.currency} for charity. This year, the pool is supporting
+            two causes that matter to us.
           </p>
-          <p>
-            Final partner, running total, and impact updates will be published
-            here. Stay tuned.
-          </p>
+          <Link
+            href={ROUTES.charities}
+            className="text-primary inline-flex items-center gap-1 text-sm font-medium hover:underline"
+          >
+            Meet our two charity partners
+            <ArrowRight className="h-4 w-4" />
+          </Link>
         </CardContent>
       </Card>
     </section>
