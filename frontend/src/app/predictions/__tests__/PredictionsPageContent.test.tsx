@@ -402,8 +402,11 @@ describe('PredictionsPageContent — stepper navigation', () => {
       await screen.findByRole('button', { name: /Continue to Tiebreaker/ })
     );
     expect(screen.getByTestId('tiebreaker-input')).toBeInTheDocument();
-    // Final step shows "Review & submit" instead of "Continue to ...".
-    expect(screen.getByRole('button', { name: /Review & submit/ })).toBeInTheDocument();
+    // Final step shows the submit action inline instead of "Continue to …" —
+    // clicking it triggers the actual submit/save, not just a scroll.
+    expect(
+      screen.getAllByRole('button', { name: /Submit Prediction/i }).length
+    ).toBeGreaterThan(0);
   });
 
   it('renders a read-only view when the tournament is locked', async () => {
@@ -630,7 +633,12 @@ describe('PredictionsPageContent — autosave', () => {
     // Provide a prediction name (required to submit).
     await user.type(screen.getByLabelText(/Prediction name/), 'Main');
 
-    await user.click(screen.getByRole('button', { name: /Submit Prediction/ }));
+    // There are two "Submit Prediction" buttons on the final step — the
+    // inline stepper button and the secondary one in the bottom card.
+    // Either one triggers handleSubmit; pick the first.
+    await user.click(
+      screen.getAllByRole('button', { name: /Submit Prediction/ })[0]
+    );
 
     await waitFor(() => expect(toastSuccess).toHaveBeenCalled());
     expect(window.localStorage.getItem(DRAFT_KEY)).toBeNull();

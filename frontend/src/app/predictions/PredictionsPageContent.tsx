@@ -765,14 +765,6 @@ export function PredictionsPageContent({
     }
   };
 
-  const focusSubmit = () => {
-    if (typeof window === 'undefined') return;
-    document.getElementById('submit-predictions-card')?.scrollIntoView({
-      behavior: 'smooth',
-      block: 'center',
-    });
-  };
-
   const persist = async ({
     markSubmitted,
     redirectTo,
@@ -1170,11 +1162,24 @@ export function PredictionsPageContent({
             {showReviewSubmit && (
               <Button
                 type="button"
-                onClick={focusSubmit}
-                disabled={!currentStepComplete}
+                onClick={handleSubmit}
+                disabled={!isReadyToSubmit || isLocked || isSubmitting || isSavingProgress}
+                title={
+                  isReadyToSubmit
+                    ? undefined
+                    : nameError
+                      ? 'Enter a prediction name above first.'
+                      : !isPredictionsComplete
+                        ? 'Complete every section in the stepper before submitting.'
+                        : undefined
+                }
                 className="sm:w-auto"
               >
-                Review & submit
+                {isSubmitting
+                  ? 'Submitting…'
+                  : mode === 'edit'
+                    ? 'Save Changes'
+                    : 'Submit Prediction'}
                 <ArrowRight className="ml-2 h-4 w-4" />
               </Button>
             )}
