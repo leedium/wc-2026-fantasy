@@ -31,7 +31,7 @@ export async function GET(_request: NextRequest, context: RouteContext) {
   const { data: prediction } = await ctx.supabase
     .from('predictions')
     .select(
-      'id, prediction_name, tournament_id, total_goals, champion_team_id, submitted_at, tournament_payments!prediction_id(paid_at, marked_by)'
+      'id, prediction_name, tournament_id, total_goals, champion_team_id, submitted_at, profiles!user_id(username), tournament_payments!prediction_id(paid_at, marked_by)'
     )
     .eq('id', predictionId)
     .eq('user_id', userId)
@@ -55,8 +55,10 @@ export async function GET(_request: NextRequest, context: RouteContext) {
   ]);
 
   type Payment = { paid_at: string | null; marked_by: string | null };
+  type ProfileEmbed = { username: string | null } | { username: string | null }[] | null;
   type Pred = typeof prediction & {
     tournament_payments: Payment | Payment[] | null;
+    profiles: ProfileEmbed;
   };
   const p = prediction as Pred;
   const rawPayment = p.tournament_payments;
@@ -65,10 +67,12 @@ export async function GET(_request: NextRequest, context: RouteContext) {
     : Array.isArray(rawPayment)
       ? (rawPayment[0] ?? null)
       : rawPayment;
+  const profile = Array.isArray(p.profiles) ? (p.profiles[0] ?? null) : p.profiles;
 
   return NextResponse.json({
     id: p.id,
     name: p.prediction_name,
+    username: profile?.username ?? null,
     tournamentId: p.tournament_id,
     totalGoals: p.total_goals,
     championTeamId: p.champion_team_id,
