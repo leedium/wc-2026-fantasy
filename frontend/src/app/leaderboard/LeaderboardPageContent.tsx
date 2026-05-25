@@ -49,9 +49,21 @@ export function LeaderboardPageContent() {
   const [highlightedRank, setHighlightedRank] = React.useState<number | null>(null);
 
   const currentUsername = profile?.username ?? null;
+  // The leaderboard response shape depends on the viewer's identity:
+  // admins get an extra `email` field, anon/auth users don't. Bake the
+  // viewer kind into the cache key so logging in/out triggers a fresh
+  // fetch instead of serving the previously-cached anon payload to a
+  // newly-authenticated admin (and vice versa). Admin editors keep
+  // invalidating by the prefix `['leaderboard', N]`, which still
+  // matches the longer key.
+  const viewerKey: 'admin' | 'auth' | 'anon' = profile?.isAdmin
+    ? 'admin'
+    : user
+      ? 'auth'
+      : 'anon';
 
   const query = useQuery<LeaderboardResponse>({
-    queryKey: ['leaderboard', currentPage],
+    queryKey: ['leaderboard', currentPage, viewerKey],
     queryFn: async () => {
       const res = await fetch(
         `/api/leaderboard?page=${currentPage}&pageSize=${DEFAULT_ITEMS_PER_PAGE}`
@@ -74,7 +86,9 @@ export function LeaderboardPageContent() {
   }, [entries, currentUsername]);
 
   const meQuery = useQuery<{ matches: LeaderboardRankMatch[] }>({
-    queryKey: ['leaderboard-me'],
+    // Caller-scoped data — key on user.id so a different signed-in
+    // user doesn't see the previous account's matches.
+    queryKey: ['leaderboard-me', user?.id ?? null],
     queryFn: async () => {
       const res = await fetch(`/api/leaderboard/me?pageSize=${DEFAULT_ITEMS_PER_PAGE}`);
       if (!res.ok) throw new Error('Failed to fetch rank');

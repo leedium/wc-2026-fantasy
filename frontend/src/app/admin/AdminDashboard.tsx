@@ -126,7 +126,10 @@ export function AdminDashboard() {
     refetchInterval: 30_000,
   });
   const leaderboard = useQuery<LeaderboardResponse>({
-    queryKey: ['leaderboard', 1],
+    // /admin is gated by middleware to admins only, so the response
+    // shape will always include the admin-only `email` field. Keep
+    // the viewer-tagged key in sync with LeaderboardPageContent.
+    queryKey: ['leaderboard', 1, 'admin'],
     queryFn: () => fetchJSON('/api/leaderboard?page=1&pageSize=10'),
   });
   const teams = useQuery<Team[]>({

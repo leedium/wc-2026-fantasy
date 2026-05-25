@@ -1,6 +1,9 @@
 /**
  * @jest-environment node
  */
+export {}; // makes this file a module so the top-level `const` doesn't
+           // collide with identically-named consts in sibling tests.
+
 const supabaseMock = {
   auth: { getUser: jest.fn() },
   from: jest.fn(),
