@@ -32,7 +32,7 @@ export async function GET(_request: NextRequest, context: RouteContext) {
   const { data: prediction } = await supabase
     .from('predictions')
     .select(
-      'id, prediction_name, tournament_id, total_goals, champion_team_id, submitted_at, tournament_payments!prediction_id(paid_at, is_free)'
+      'id, prediction_name, tournament_id, total_goals, champion_team_id, submitted_at, user_id, tournament_payments!prediction_id(paid_at, is_free)'
     )
     .eq('id', id)
     .maybeSingle();
@@ -40,6 +40,15 @@ export async function GET(_request: NextRequest, context: RouteContext) {
   if (!prediction) {
     return NextResponse.json({ error: 'Not found' }, { status: 404 });
   }
+
+  // predictions.user_id FK is on auth.users, not public.profiles, so the
+  // embed shortcut doesn't resolve — fetch the username with a small
+  // follow-up query gated by the existing RLS on profiles_select_all.
+  const { data: profileRow } = await supabase
+    .from('profiles')
+    .select('username')
+    .eq('id', prediction.user_id)
+    .maybeSingle();
 
   const [groupsRes, knockoutRes, advancersRes] = await Promise.all([
     supabase
@@ -71,6 +80,7 @@ export async function GET(_request: NextRequest, context: RouteContext) {
   return NextResponse.json({
     id: p.id,
     name: p.prediction_name,
+    username: profileRow?.username ?? null,
     tournamentId: p.tournament_id,
     totalGoals: p.total_goals,
     championTeamId: p.champion_team_id,

@@ -2,6 +2,7 @@
 
 import * as React from 'react';
 import { useQuery } from '@tanstack/react-query';
+import { Trophy, User as UserIcon } from 'lucide-react';
 
 import { Badge } from '@/components/ui/badge';
 import {
@@ -13,6 +14,7 @@ import {
 } from '@/components/ui/dialog';
 import { Skeleton } from '@/components/ui/skeleton';
 import { BracketView } from '@/components/predictions/BracketView';
+import { TeamFlag } from '@/components/shared/TeamFlag';
 import type {
   Group,
   KnockoutMatch,
@@ -23,7 +25,9 @@ import type {
 interface PredictionDetail {
   id: string;
   name: string;
+  username: string | null;
   totalGoals: number | null;
+  championTeamId: string | null;
   submittedAt: string | null;
   isPaid: boolean;
   paidAt: string | null;
@@ -135,26 +139,92 @@ export function BracketPreviewDialog({
         )}
 
         {ready && (
-          <BracketView
-            matches={matchesQuery.data!}
-            teams={teamsQuery.data!}
-            groupPredictions={(predictionQuery.data!.groups ?? []).map((g) => ({
-              groupId: g.groupId,
-              positions: {
-                first: g.first,
-                second: g.second,
-                third: g.third,
-                fourth: g.fourth,
-              },
-            }))}
-            knockoutPredictions={(predictionQuery.data!.knockout ?? []).map((k) => ({
-              matchId: k.matchId,
-              winnerId: k.winner,
-            }))}
-            bracketAssignments={bracketAssignments}
-          />
+          <>
+            <PredictionMetaBar
+              username={predictionQuery.data!.username}
+              championTeamId={predictionQuery.data!.championTeamId}
+              totalGoals={predictionQuery.data!.totalGoals}
+              teams={teamsQuery.data!}
+            />
+            <BracketView
+              matches={matchesQuery.data!}
+              teams={teamsQuery.data!}
+              groupPredictions={(predictionQuery.data!.groups ?? []).map((g) => ({
+                groupId: g.groupId,
+                positions: {
+                  first: g.first,
+                  second: g.second,
+                  third: g.third,
+                  fourth: g.fourth,
+                },
+              }))}
+              knockoutPredictions={(predictionQuery.data!.knockout ?? []).map((k) => ({
+                matchId: k.matchId,
+                winnerId: k.winner,
+              }))}
+              bracketAssignments={bracketAssignments}
+            />
+          </>
         )}
       </DialogContent>
     </Dialog>
+  );
+}
+
+interface PredictionMetaBarProps {
+  username: string | null;
+  championTeamId: string | null;
+  totalGoals: number | null;
+  teams: Team[];
+}
+
+function PredictionMetaBar({
+  username,
+  championTeamId,
+  totalGoals,
+  teams,
+}: PredictionMetaBarProps) {
+  const championTeam = championTeamId
+    ? (teams.find((t) => t.id === championTeamId) ?? null)
+    : null;
+
+  return (
+    <dl className="bg-muted/40 grid gap-3 rounded-md border px-4 py-3 text-sm sm:grid-cols-3">
+      <div className="flex items-start gap-2">
+        <UserIcon className="text-muted-foreground mt-0.5 h-4 w-4 shrink-0" aria-hidden />
+        <div>
+          <dt className="text-muted-foreground text-xs">User</dt>
+          <dd className="font-medium">{username ? `@${username}` : '—'}</dd>
+        </div>
+      </div>
+      <div className="flex items-start gap-2">
+        <Trophy className="text-muted-foreground mt-0.5 h-4 w-4 shrink-0" aria-hidden />
+        <div>
+          <dt className="text-muted-foreground text-xs">Gut Feeling Champion</dt>
+          <dd className="font-medium">
+            {championTeam ? (
+              <span className="inline-flex items-center gap-1.5">
+                <TeamFlag code={championTeam.code} className="h-4 w-6" />
+                {championTeam.name}
+              </span>
+            ) : (
+              '—'
+            )}
+          </dd>
+        </div>
+      </div>
+      <div className="flex items-start gap-2">
+        <span
+          aria-hidden
+          className="text-muted-foreground mt-0.5 inline-flex h-4 w-4 shrink-0 items-center justify-center text-base leading-none"
+        >
+          ⚽
+        </span>
+        <div>
+          <dt className="text-muted-foreground text-xs">Champion total goals</dt>
+          <dd className="font-medium">{totalGoals != null ? totalGoals : '—'}</dd>
+        </div>
+      </div>
+    </dl>
   );
 }

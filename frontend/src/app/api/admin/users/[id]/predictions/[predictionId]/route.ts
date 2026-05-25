@@ -39,6 +39,14 @@ export async function GET(_request: NextRequest, context: RouteContext) {
 
   if (!prediction) return NextResponse.json({ error: 'Not found' }, { status: 404 });
 
+  // predictions.user_id FK is on auth.users, not public.profiles, so we
+  // fetch the username separately (admins always have profile read).
+  const { data: profileRow } = await ctx.supabase
+    .from('profiles')
+    .select('username')
+    .eq('id', userId)
+    .maybeSingle();
+
   const [groupsRes, knockoutRes, advancersRes] = await Promise.all([
     ctx.supabase
       .from('group_predictions')
@@ -69,6 +77,7 @@ export async function GET(_request: NextRequest, context: RouteContext) {
   return NextResponse.json({
     id: p.id,
     name: p.prediction_name,
+    username: profileRow?.username ?? null,
     tournamentId: p.tournament_id,
     totalGoals: p.total_goals,
     championTeamId: p.champion_team_id,
