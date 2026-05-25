@@ -204,11 +204,11 @@ export function PredictionsListPage() {
                         <Gift className="h-3 w-3" /> Free pick
                       </Badge>
                     ) : p.isPaid ? (
-                      <Badge variant="default" className="gap-1">
+                      <Badge variant="default" className="gap-1 bg-green-600 hover:bg-green-600/90">
                         <CheckCircle2 className="h-3 w-3" /> Paid
                       </Badge>
                     ) : (
-                      <Badge variant="outline" className="gap-1">
+                      <Badge variant="destructive" className="gap-1">
                         <Clock className="h-3 w-3" /> Unpaid
                       </Badge>
                     )}

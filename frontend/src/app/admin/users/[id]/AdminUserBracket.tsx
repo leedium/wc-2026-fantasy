@@ -112,10 +112,12 @@ function PaymentRow({
           isLate ? (
             <Badge variant="destructive">paid (after lock — not eligible)</Badge>
           ) : (
-            <Badge>paid — eligible</Badge>
+            <Badge variant="default" className="bg-green-600 hover:bg-green-600/90">
+              paid — eligible
+            </Badge>
           )
         ) : (
-          <Badge variant="outline">unpaid</Badge>
+          <Badge variant="destructive">unpaid</Badge>
         )}
         {prediction.paidAt && (
           <span className="text-muted-foreground text-xs">

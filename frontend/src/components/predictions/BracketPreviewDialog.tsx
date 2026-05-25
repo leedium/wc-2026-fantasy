@@ -102,9 +102,16 @@ export function BracketPreviewDialog({
                 <Badge variant={predictionQuery.data.submittedAt ? 'secondary' : 'outline'}>
                   {predictionQuery.data.submittedAt ? 'Submitted' : 'Draft'}
                 </Badge>
-                <Badge variant={predictionQuery.data.isPaid ? 'default' : 'outline'}>
-                  {predictionQuery.data.isPaid ? 'Paid' : 'Unpaid'}
-                </Badge>
+                {predictionQuery.data.isPaid ? (
+                  <Badge
+                    variant="default"
+                    className="bg-green-600 hover:bg-green-600/90"
+                  >
+                    Paid
+                  </Badge>
+                ) : (
+                  <Badge variant="destructive">Unpaid</Badge>
+                )}
               </>
             )}
           </DialogTitle>
