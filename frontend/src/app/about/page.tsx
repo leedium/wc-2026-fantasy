@@ -83,7 +83,7 @@ export default function AboutPage() {
               href={ROUTES.charities}
               className="text-primary inline-flex items-center gap-1 text-sm font-medium hover:underline"
             >
-              See our two charity partners
+              See the charities we&rsquo;re supporting
               <ArrowRight className="h-4 w-4" />
             </Link>
           </CardContent>

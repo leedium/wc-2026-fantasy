@@ -75,7 +75,7 @@ export const ROUTES = {
 } as const;
 
 /**
- * Charity partners receiving the {@link PRICING.charityPortionCAD} portion of
+ * Charities receiving the {@link PRICING.charityPortionCAD} portion of
  * each entry. Surfaced on the landing page (DonationsToCharity), the About
  * page, and the dedicated /charities index + detail pages.
  */

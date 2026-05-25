@@ -18,7 +18,7 @@ import { CHARITIES, PRICING } from '@/lib/constants';
 export const metadata: Metadata = {
   title: 'Charities | World Cup 2026',
   description:
-    'Part of every entry goes to charity. Meet our two partners for this tournament — the Canadian Cancer Society and Islamic Relief Canada.',
+    'Part of every entry goes to charity. This tournament we’re donating to the Canadian Cancer Society and Islamic Relief Canada.',
 };
 
 export default function CharitiesPage() {
