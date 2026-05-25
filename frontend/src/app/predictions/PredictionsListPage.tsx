@@ -272,22 +272,22 @@ export function PredictionsListPage() {
                     <Eye className="h-4 w-4" />
                     <span className="sr-only">Preview</span>
                   </Button>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setPendingDelete(p)}
-                    disabled={(isLocked && !isSuperAdmin) || p.isPaid}
-                    title={
-                      p.isPaid
-                        ? 'Ask an admin to mark unpaid before deleting'
-                        : isLocked && !isSuperAdmin
-                          ? 'Predictions are locked'
+                  {(!isLocked || isSuperAdmin) && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setPendingDelete(p)}
+                      disabled={p.isPaid}
+                      title={
+                        p.isPaid
+                          ? 'Ask an admin to mark unpaid before deleting'
                           : 'Delete'
-                    }
-                  >
-                    <Trash2 className="h-4 w-4" />
-                    <span className="sr-only">Delete</span>
-                  </Button>
+                      }
+                    >
+                      <Trash2 className="h-4 w-4" />
+                      <span className="sr-only">Delete</span>
+                    </Button>
+                  )}
                 </div>
               </CardContent>
             </Card>
