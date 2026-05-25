@@ -189,7 +189,45 @@ export async function DELETE(_request: NextRequest, context: RouteContext) {
   } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-  // RLS handles ownership + lock + not-paid. A blocked delete returns 0 rows.
+  // Defense in depth: fetch ownership + lock + paid state before delegating
+  // to RLS, so we can return a precise 403 instead of a generic "Cannot
+  // delete". RLS would reject the same cases (and is the source of truth),
+  // but this gives the UI a useful reason it can surface to the user.
+  const { data: pred } = await supabase
+    .from('predictions')
+    .select(
+      'id, user_id, tournament_id, tournament_payments!prediction_id(prediction_id)'
+    )
+    .eq('id', id)
+    .maybeSingle();
+
+  if (!pred) return NextResponse.json({ error: 'Not found' }, { status: 404 });
+  if (pred.user_id !== user.id) {
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+  }
+  const payments = Array.isArray(pred.tournament_payments)
+    ? pred.tournament_payments
+    : pred.tournament_payments
+      ? [pred.tournament_payments]
+      : [];
+  if (payments.length > 0) {
+    return NextResponse.json(
+      { error: 'Ask an admin to mark this prediction unpaid before deleting.' },
+      { status: 409 }
+    );
+  }
+
+  // Reuse tournament_phase RPC so the lock check matches everywhere else.
+  const { data: phase } = await supabase.rpc('tournament_phase', {
+    tid: pred.tournament_id,
+  });
+  if (phase && phase !== 'phase1') {
+    return NextResponse.json(
+      { error: 'predictions are locked' },
+      { status: 403 }
+    );
+  }
+
   const { error, count } = await supabase
     .from('predictions')
     .delete({ count: 'exact' })
