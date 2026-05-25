@@ -402,18 +402,27 @@ describe('PredictionsPageContent — stepper navigation', () => {
       await screen.findByRole('button', { name: /Continue to Tiebreaker/ })
     );
     expect(screen.getByTestId('tiebreaker-input')).toBeInTheDocument();
-    // Final step shows "Review & submit" instead of "Continue to ...".
-    expect(screen.getByRole('button', { name: /Review & submit/ })).toBeInTheDocument();
+    // Final step shows the submit action inline instead of "Continue to …" —
+    // clicking it triggers the actual submit/save, not just a scroll.
+    expect(
+      screen.getAllByRole('button', { name: /Submit Prediction/i }).length
+    ).toBeGreaterThan(0);
   });
 
-  it('renders all top stepper triggers as disabled when the tournament is locked', async () => {
+  it('renders a read-only view when the tournament is locked', async () => {
+    // Regular users in a locked phase should still be able to *navigate*
+    // between steps to view past picks — only edits/saves are blocked.
+    // The submit/save card is hidden entirely and a read-only notice is
+    // surfaced so the user understands why.
     configureQueries({ tournamentLockTime: new Date(Date.now() - 1000).toISOString() });
     render(<PredictionsPageContent mode="create" />);
 
-    await screen.findByText(/Predictions Locked/);
-    // Only the top row is rendered when not on a knockout step; assert all top tabs are disabled.
+    await screen.findByText(/read-only view of your picks/i);
     const tabs = screen.getAllByRole('tab');
-    tabs.forEach((tab) => expect(tab).toBeDisabled());
+    tabs.forEach((tab) => expect(tab).not.toBeDisabled());
+    expect(screen.queryByRole('button', { name: /Predictions Locked/ })).toBeNull();
+    expect(screen.queryByRole('button', { name: /Save progress/ })).toBeNull();
+    expect(screen.queryByRole('button', { name: /Submit Prediction/ })).toBeNull();
   });
 
   it('lets a super admin advance past Groups when the tournament is locked', async () => {
@@ -429,10 +438,10 @@ describe('PredictionsPageContent — stepper navigation', () => {
     const user = userEvent.setup();
     render(<PredictionsPageContent mode="create" />);
 
-    // Wait for the wizard to hydrate past the skeleton; the badge text
-    // still says "Predictions Locked" on the Submit button so the admin
-    // knows the tournament state, even though nav is unlocked for them.
-    await screen.findByText('Predictions Locked');
+    // Wait for the wizard to hydrate past the skeleton. The "Locked" badge
+    // on the lock-time card is the stable signal — Submit/Save buttons no
+    // longer render outside Phase 1 (phase1_locked is a separate phase).
+    await screen.findByText('Locked');
     expect(screen.getByRole('tab', { name: /Group Stage/ })).not.toBeDisabled();
     expect(screen.getByRole('tab', { name: /Best 3rds/ })).not.toBeDisabled();
 
@@ -565,7 +574,7 @@ describe('PredictionsPageContent — autosave', () => {
 
     render(<PredictionsPageContent mode="create" />);
 
-    await screen.findByText(/Predictions Locked/);
+    await screen.findByText(/read-only view of your picks/i);
     expect(window.localStorage.getItem(DRAFT_KEY)).toBeNull();
   });
 
@@ -624,6 +633,8 @@ describe('PredictionsPageContent — autosave', () => {
     // Provide a prediction name (required to submit).
     await user.type(screen.getByLabelText(/Prediction name/), 'Main');
 
+    // On the final (tiebreaker) step the bottom "Ready to submit?" card
+    // is hidden — the inline stepper Submit is the only submit surface.
     await user.click(screen.getByRole('button', { name: /Submit Prediction/ }));
 
     await waitFor(() => expect(toastSuccess).toHaveBeenCalled());

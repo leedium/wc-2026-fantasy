@@ -180,6 +180,25 @@ export function RegisterForm({ initialReferralCode }: RegisterFormProps = {}) {
 
     setIsSubmitting(true);
 
+    // Belt-and-suspenders: re-check the phase right before signup. The
+    // server-rendered page already gates this, but a tab kept open across
+    // a phase transition could otherwise slip through.
+    try {
+      const phaseRes = await fetch('/api/tournament', { cache: 'no-store' });
+      if (phaseRes.ok) {
+        const phaseJson = (await phaseRes.json()) as { phase?: string };
+        if (phaseJson.phase && phaseJson.phase !== 'phase1') {
+          toast.error('Registration is closed — the tournament has already locked.');
+          setIsSubmitting(false);
+          router.refresh();
+          return;
+        }
+      }
+    } catch {
+      // If the phase check itself fails, fall through and let the auth
+      // call run — the server-rendered gate is still the source of truth.
+    }
+
     const supabase = createSupabaseBrowserClient();
     // Only forward a referral code we've successfully resolved — that way
     // typos / stale links never hit the DB trigger, and we don't leak
