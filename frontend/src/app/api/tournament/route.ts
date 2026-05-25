@@ -45,34 +45,24 @@ export async function GET() {
     knockout_lock_time: string | null;
   };
 
-  // Live entry counts. Mirrors get_leaderboard's eligibility predicate
-  // (supabase/migrations/0036_champion_pick.sql:589-595): payment row with
-  // paid_at <= lock_time. totalEntries counts both cash and free-pick rows;
-  // cashPaidPredictionCount filters is_free = false so the displayed pot
-  // reflects actual money collected (not inflated by referral/loyalty
-  // redemptions).
-  const [totalEntriesRes, cashPaidRes] = await Promise.all([
-    supabase
-      .from('tournament_payments')
-      .select('prediction_id, predictions!inner(tournament_id)', {
-        count: 'exact',
-        head: true,
-      })
-      .eq('predictions.tournament_id', data.id)
-      .lte('paid_at', data.lock_time),
-    supabase
-      .from('tournament_payments')
-      .select('prediction_id, predictions!inner(tournament_id)', {
-        count: 'exact',
-        head: true,
-      })
-      .eq('predictions.tournament_id', data.id)
-      .eq('is_free', false)
-      .lte('paid_at', data.lock_time),
-  ]);
-
-  const totalEntries = totalEntriesRes.count ?? 0;
-  const cashPaidPredictionCount = cashPaidRes.count ?? 0;
+  // Live entry counts via SECURITY DEFINER RPC. A direct count against
+  // tournament_payments returns 0 for logged-out visitors because the
+  // table's RLS is own_or_admin (0016_multi_prediction_rls.sql). The
+  // RPC bypasses RLS and returns only two aggregates — safe for public
+  // display. Eligibility predicate (paid_at <= lock_time, is_free split)
+  // matches get_leaderboard.
+  const potStatsRes = await supabase.rpc('get_tournament_pot_stats', {
+    p_tournament_id: data.id,
+  });
+  if (potStatsRes.error) {
+    return NextResponse.json({ error: potStatsRes.error.message }, { status: 500 });
+  }
+  const potStats = (potStatsRes.data?.[0] ?? { total_entries: 0, cash_paid_count: 0 }) as {
+    total_entries: number;
+    cash_paid_count: number;
+  };
+  const totalEntries = potStats.total_entries;
+  const cashPaidPredictionCount = potStats.cash_paid_count;
   const potTotalCAD = cashPaidPredictionCount * PRICING.entryFeeCAD;
 
   const serverTime =
