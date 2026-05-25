@@ -7,7 +7,6 @@ import { Menu } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { ROUTES } from '@/lib/constants';
 import { AuthMenu } from '@/components/layout/AuthMenu';
-import { HeaderPotTotal } from '@/components/layout/HeaderPotTotal';
 import { ThemeToggle } from '@/components/shared/ThemeToggle';
 import { useAuthContext } from '@/providers/AuthProvider';
 import { useMounted } from '@/hooks/useMounted';
@@ -73,7 +72,6 @@ export function Header() {
         </NavigationMenu>
 
         <div className="hidden items-center gap-4 md:flex">
-          <HeaderPotTotal />
           <ThemeToggle />
           <AuthMenu />
         </div>
@@ -94,7 +92,6 @@ export function Header() {
                 <SheetHeader>
                   <SheetTitle>Navigation</SheetTitle>
                 </SheetHeader>
-                <HeaderPotTotal className="mt-4" />
                 <nav className="mt-6 flex flex-col space-y-4">
                   {navLinks.map((link) => (
                     <Link

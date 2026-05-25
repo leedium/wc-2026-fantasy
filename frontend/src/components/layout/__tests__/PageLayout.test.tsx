@@ -22,9 +22,9 @@ jest.mock('@/hooks/useRewardsStatus', () => ({
   REWARDS_STATUS_QUERY_KEY: ['rewardsStatus'],
 }));
 
-// HeaderPotTotal also calls useQuery — stub it out for the same reason.
-jest.mock('../HeaderPotTotal', () => ({
-  HeaderPotTotal: () => null,
+// PoolStatsBar also calls useQuery — stub it out for the same reason.
+jest.mock('../PoolStatsBar', () => ({
+  PoolStatsBar: () => null,
 }));
 
 import { PageLayout } from '../PageLayout';
