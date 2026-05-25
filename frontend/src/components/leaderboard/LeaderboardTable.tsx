@@ -132,7 +132,9 @@ export function LeaderboardTable({
                         <span className="text-muted-foreground ml-2 text-xs">(You)</span>
                       )}
                     </span>
-                    <span className="text-muted-foreground text-xs">{entry.username}</span>
+                    <span className="text-muted-foreground text-xs">
+                      {entry.email ?? entry.username}
+                    </span>
                   </div>
                 </TableCell>
                 <TableCell className="text-right">

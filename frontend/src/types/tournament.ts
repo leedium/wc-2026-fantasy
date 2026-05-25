@@ -95,6 +95,12 @@ export interface LeaderboardEntry {
   predictionId: string;
   predictionName: string;
   username: string;
+  /**
+   * Owner's email. Present only when the caller is an admin (the API
+   * route swaps in admin_get_leaderboard for admin sessions). Public
+   * /api/leaderboard responses omit this field entirely.
+   */
+  email?: string;
   points: number;
   change: number;
   groupPoints: number;

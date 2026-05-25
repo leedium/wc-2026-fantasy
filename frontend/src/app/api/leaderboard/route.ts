@@ -18,7 +18,24 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ entries: [], total: 0, page, pageSize });
   }
 
-  const { data, error } = await supabase.rpc('get_leaderboard', {
+  // Branch on admin status: admins get a wrapper RPC that also returns
+  // email per entry; everyone else gets the public RPC (no email field).
+  // We check is_admin via profiles since the user's session is already
+  // attached to the cookie client; admin_get_leaderboard double-checks
+  // is_admin() at the DB level so the API can't be tricked.
+  const { data: authData } = await supabase.auth.getUser();
+  let isAdmin = false;
+  if (authData.user) {
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('is_admin')
+      .eq('id', authData.user.id)
+      .maybeSingle();
+    isAdmin = profile?.is_admin === true;
+  }
+
+  const rpcName = isAdmin ? 'admin_get_leaderboard' : 'get_leaderboard';
+  const { data, error } = await supabase.rpc(rpcName, {
     p_tournament_id: tournament.id,
     p_page: page,
     p_page_size: pageSize,
@@ -33,6 +50,7 @@ export async function GET(request: NextRequest) {
     prediction_id: string;
     prediction_name: string;
     username: string;
+    email?: string | null;
     points: number | string;
     group_points: number;
     advancer_points: number | string;
@@ -48,6 +66,7 @@ export async function GET(request: NextRequest) {
       predictionId: row.prediction_id,
       predictionName: row.prediction_name,
       username: row.username,
+      ...(isAdmin && row.email ? { email: row.email } : {}),
       points: Number(row.points),
       change: 0,
       groupPoints: row.group_points,

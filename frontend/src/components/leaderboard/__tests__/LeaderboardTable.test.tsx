@@ -66,4 +66,13 @@ describe('LeaderboardTable', () => {
     expect(screen.getByText('2nd')).toBeInTheDocument();
     expect(screen.getByText('3rd')).toBeInTheDocument();
   });
+
+  it('renders email in place of username when present (admin view)', () => {
+    const adminEntries: LeaderboardEntry[] = [
+      { ...entries[0], email: 'alice@example.com' },
+    ];
+    render(<LeaderboardTable entries={adminEntries} />);
+    expect(screen.getByText('alice@example.com')).toBeInTheDocument();
+    expect(screen.queryByText('alice')).not.toBeInTheDocument();
+  });
 });
