@@ -940,6 +940,12 @@ export function PredictionsPageContent({
   const showReviewSubmit = isLastStep && !lockedReadOnly;
   const showContinue =
     !isLastStep && (lockedReadOnly || !isPhase1LastStep || isSuperAdmin);
+  // In Phase 2 the bottom "Ready to submit?" card goes away — Save progress
+  // moves inline to the stepper bottom row and Submit Prediction lives only
+  // on the last step. Phase 1 keeps the bottom card with its existing
+  // Save progress + (disabled) Submit Prediction layout.
+  const showSaveProgressInline = phase !== 'phase1' && !lockedReadOnly;
+  const showBottomSubmitCard = !lockedReadOnly && !isLastStep && phase === 'phase1';
 
   // Why is the Save Phase 1 Picks button disabled? The button has four
   // silent gates (name validation, current-step completion, lock state,
@@ -1128,6 +1134,19 @@ export function PredictionsPageContent({
             {previousStepLabel ? `Back: ${previousStepLabel}` : 'Back'}
           </Button>
           <div className="flex flex-col items-start gap-2 sm:flex-row sm:items-center">
+            {showSaveProgressInline && (
+              <Button
+                type="button"
+                variant="outline"
+                onClick={handleSaveProgress}
+                disabled={
+                  isLocked || isSubmitting || isSavingProgress || !!nameError
+                }
+                className="sm:w-auto"
+              >
+                {isSavingProgress ? 'Saving…' : 'Save progress'}
+              </Button>
+            )}
             {showSavePhase1 && (
               <div className="flex flex-col items-end gap-1">
                 <Button
@@ -1198,7 +1217,7 @@ export function PredictionsPageContent({
         </div>
       </div>
 
-      {!lockedReadOnly && !isLastStep && (
+      {showBottomSubmitCard && (
         <Card id="submit-predictions-card" className="border-primary/20 bg-primary/5">
           <CardContent className="flex flex-col gap-4 py-6 sm:flex-row sm:items-center sm:justify-between">
             <div>

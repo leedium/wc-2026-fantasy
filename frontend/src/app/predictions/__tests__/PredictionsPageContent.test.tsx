@@ -438,10 +438,10 @@ describe('PredictionsPageContent — stepper navigation', () => {
     const user = userEvent.setup();
     render(<PredictionsPageContent mode="create" />);
 
-    // Wait for the wizard to hydrate past the skeleton; the badge text
-    // still says "Predictions Locked" on the Submit button so the admin
-    // knows the tournament state, even though nav is unlocked for them.
-    await screen.findByText('Predictions Locked');
+    // Wait for the wizard to hydrate past the skeleton. The "Locked" badge
+    // on the lock-time card is the stable signal — Submit/Save buttons no
+    // longer render outside Phase 1 (phase1_locked is a separate phase).
+    await screen.findByText('Locked');
     expect(screen.getByRole('tab', { name: /Group Stage/ })).not.toBeDisabled();
     expect(screen.getByRole('tab', { name: /Best 3rds/ })).not.toBeDisabled();
 
