@@ -31,7 +31,7 @@ import {
 } from '@/hooks/useRewardsStatus';
 import { BracketPreviewDialog } from '@/components/predictions/BracketPreviewDialog';
 import { FreePickBanner } from '@/components/predictions/FreePickBanner';
-import { ROUTES } from '@/lib/constants';
+import { PRICING, ROUTES } from '@/lib/constants';
 
 interface ApiPrediction {
   id: string;
@@ -143,7 +143,20 @@ export function PredictionsListPage() {
         <div>
           <h1 className="mb-2 text-3xl font-bold">Your Predictions</h1>
           <p className="text-muted-foreground">
-            Create as many brackets as you like. Each paid bracket is ranked separately on the leaderboard.
+            Create as many entries as you like. Each paid entry is ranked separately on
+            the leaderboard.
+          </p>
+          <p className="text-muted-foreground mt-2 text-sm">
+            ${PRICING.entryFeeCAD} {PRICING.currency} per entry (an admin marks it paid
+            once you&rsquo;ve sent payment), or earn a free pick through{' '}
+            <Link href={ROUTES.referrals} className="text-primary hover:underline">
+              referrals
+            </Link>{' '}
+            or{' '}
+            <Link href={ROUTES.rewards} className="text-primary hover:underline">
+              loyalty rewards
+            </Link>{' '}
+            and click <strong>Use free credit</strong> on any unpaid entry to apply it.
           </p>
         </div>
         <Button asChild disabled={!canCreate} size="lg">
