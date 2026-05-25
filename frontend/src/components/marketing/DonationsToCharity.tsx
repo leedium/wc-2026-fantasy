@@ -1,7 +1,9 @@
-import { HeartHandshake } from 'lucide-react';
+import Image from 'next/image';
+import Link from 'next/link';
+import { ArrowRight, ExternalLink, HeartHandshake } from 'lucide-react';
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { PRICING } from '@/lib/constants';
+import { CHARITIES, PRICING, ROUTES } from '@/lib/constants';
 
 export function DonationsToCharity() {
   return (
@@ -16,16 +18,51 @@ export function DonationsToCharity() {
             ${PRICING.charityPortionCAD} {PRICING.currency} from every entry
           </CardTitle>
         </CardHeader>
-        <CardContent className="text-muted-foreground space-y-3 text-sm">
+        <CardContent className="text-muted-foreground space-y-6 text-sm">
           <p>
             Each prediction sets aside ${PRICING.charityPortionCAD}{' '}
-            {PRICING.currency} for a charity the pool organizer announces before
-            lock.
+            {PRICING.currency} for charity. This year, the pool is supporting
+            two causes that matter to us.
           </p>
-          <p>
-            Final partner, running total, and impact updates will be published
-            here. Stay tuned.
-          </p>
+          <div className="grid gap-4 sm:grid-cols-2">
+            {CHARITIES.map((charity) => (
+              <div
+                key={charity.slug}
+                className="bg-muted/20 rounded-lg border p-4"
+              >
+                <div className="bg-background mb-3 flex h-20 items-center justify-center rounded p-2">
+                  <Image
+                    src={charity.logo}
+                    alt={`${charity.name} logo`}
+                    width={160}
+                    height={64}
+                    className="max-h-16 w-auto object-contain"
+                  />
+                </div>
+                <div className="text-foreground text-sm font-semibold">
+                  {charity.name}
+                </div>
+                <a
+                  href={charity.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-muted-foreground hover:text-foreground mt-1 inline-flex items-center gap-1 text-xs"
+                >
+                  {charity.displayUrl}
+                  <ExternalLink className="h-3 w-3" />
+                </a>
+              </div>
+            ))}
+          </div>
+          <div className="text-center">
+            <Link
+              href={ROUTES.charities}
+              className="text-primary inline-flex items-center gap-1 text-sm font-medium hover:underline"
+            >
+              See the charities we&rsquo;re supporting
+              <ArrowRight className="h-4 w-4" />
+            </Link>
+          </div>
         </CardContent>
       </Card>
     </section>

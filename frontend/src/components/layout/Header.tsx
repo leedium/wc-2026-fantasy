@@ -27,6 +27,7 @@ const baseNavLinks = [
   { label: 'Leaderboard', href: ROUTES.leaderboard },
   { label: 'Rules & Scoring', href: ROUTES.rules },
   { label: 'About', href: ROUTES.about },
+  { label: 'Charities', href: ROUTES.charities },
 ];
 
 export function Header() {
