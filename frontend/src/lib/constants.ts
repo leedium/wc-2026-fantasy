@@ -92,7 +92,7 @@ export const CHARITIES = [
   {
     slug: 'islamic-relief-canada',
     name: 'Islamic Relief Canada',
-    url: 'https://islamicreliefcanada.org',
+    url: 'https://www.islamicreliefcanada.org/emergencies/palestine-appeal',
     displayUrl: 'islamicreliefcanada.org',
     logo: '/charities/islamic-relief-canada.png',
     tagline:
