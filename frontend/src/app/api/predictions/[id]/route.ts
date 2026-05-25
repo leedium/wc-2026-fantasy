@@ -32,7 +32,7 @@ export async function GET(_request: NextRequest, context: RouteContext) {
   const { data: prediction } = await supabase
     .from('predictions')
     .select(
-      'id, prediction_name, tournament_id, total_goals, champion_team_id, submitted_at, user_id, profiles!user_id(username), tournament_payments!prediction_id(paid_at, is_free)'
+      'id, prediction_name, tournament_id, total_goals, champion_team_id, submitted_at, user_id, tournament_payments!prediction_id(paid_at, is_free)'
     )
     .eq('id', id)
     .maybeSingle();
@@ -40,6 +40,15 @@ export async function GET(_request: NextRequest, context: RouteContext) {
   if (!prediction) {
     return NextResponse.json({ error: 'Not found' }, { status: 404 });
   }
+
+  // predictions.user_id FK is on auth.users, not public.profiles, so the
+  // embed shortcut doesn't resolve — fetch the username with a small
+  // follow-up query gated by the existing RLS on profiles_select_all.
+  const { data: profileRow } = await supabase
+    .from('profiles')
+    .select('username')
+    .eq('id', prediction.user_id)
+    .maybeSingle();
 
   const [groupsRes, knockoutRes, advancersRes] = await Promise.all([
     supabase
@@ -57,10 +66,8 @@ export async function GET(_request: NextRequest, context: RouteContext) {
   ]);
 
   type Payment = { paid_at: string | null; is_free: boolean | null };
-  type ProfileEmbed = { username: string | null } | { username: string | null }[] | null;
   type Pred = typeof prediction & {
     tournament_payments: Payment | Payment[] | null;
-    profiles: ProfileEmbed;
   };
   const p = prediction as Pred;
   const rawPayment = p.tournament_payments;
@@ -69,12 +76,11 @@ export async function GET(_request: NextRequest, context: RouteContext) {
     : Array.isArray(rawPayment)
       ? (rawPayment[0] ?? null)
       : rawPayment;
-  const profile = Array.isArray(p.profiles) ? (p.profiles[0] ?? null) : p.profiles;
 
   return NextResponse.json({
     id: p.id,
     name: p.prediction_name,
-    username: profile?.username ?? null,
+    username: profileRow?.username ?? null,
     tournamentId: p.tournament_id,
     totalGoals: p.total_goals,
     championTeamId: p.champion_team_id,
