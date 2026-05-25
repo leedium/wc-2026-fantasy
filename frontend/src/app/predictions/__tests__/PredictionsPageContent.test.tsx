@@ -633,12 +633,9 @@ describe('PredictionsPageContent — autosave', () => {
     // Provide a prediction name (required to submit).
     await user.type(screen.getByLabelText(/Prediction name/), 'Main');
 
-    // There are two "Submit Prediction" buttons on the final step — the
-    // inline stepper button and the secondary one in the bottom card.
-    // Either one triggers handleSubmit; pick the first.
-    await user.click(
-      screen.getAllByRole('button', { name: /Submit Prediction/ })[0]
-    );
+    // On the final (tiebreaker) step the bottom "Ready to submit?" card
+    // is hidden — the inline stepper Submit is the only submit surface.
+    await user.click(screen.getByRole('button', { name: /Submit Prediction/ }));
 
     await waitFor(() => expect(toastSuccess).toHaveBeenCalled());
     expect(window.localStorage.getItem(DRAFT_KEY)).toBeNull();

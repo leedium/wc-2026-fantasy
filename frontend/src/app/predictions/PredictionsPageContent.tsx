@@ -1198,7 +1198,7 @@ export function PredictionsPageContent({
         </div>
       </div>
 
-      {!lockedReadOnly && (
+      {!lockedReadOnly && !isLastStep && (
         <Card id="submit-predictions-card" className="border-primary/20 bg-primary/5">
           <CardContent className="flex flex-col gap-4 py-6 sm:flex-row sm:items-center sm:justify-between">
             <div>
