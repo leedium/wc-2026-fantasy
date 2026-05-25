@@ -7,6 +7,7 @@ import {
   ChevronRight,
   Clock,
   CircleDollarSign,
+  HeartHandshake,
   Target,
   Trophy,
   Users,
@@ -32,6 +33,7 @@ interface TournamentResponse {
   totalEntries: number;
   cashPaidPredictionCount: number;
   potTotalCAD: number;
+  charityTotalCAD: number;
 }
 
 const POT_FORMATTER = new Intl.NumberFormat('en-CA', {
@@ -126,7 +128,7 @@ export function HomePageContent() {
 
       <section className="py-12">
         <h2 className="mb-8 text-center text-2xl font-bold md:text-3xl">Tournament Overview</h2>
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5">
           <Card>
             <CardHeader className="pb-2">
               <CardDescription className="flex items-center gap-2">
@@ -176,6 +178,24 @@ export function HomePageContent() {
               ) : (
                 <p className="text-2xl font-bold">
                   {POT_FORMATTER.format(tournament?.potTotalCAD ?? 0)}
+                </p>
+              )}
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="pb-2">
+              <CardDescription className="flex items-center gap-2">
+                <HeartHandshake className="h-4 w-4" />
+                Raised for Charity
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {query.isLoading ? (
+                <Skeleton className="h-8 w-20" />
+              ) : (
+                <p className="text-2xl font-bold">
+                  {POT_FORMATTER.format(tournament?.charityTotalCAD ?? 0)}
                 </p>
               )}
             </CardContent>

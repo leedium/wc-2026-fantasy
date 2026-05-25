@@ -64,6 +64,7 @@ export async function GET() {
   const totalEntries = potStats.total_entries;
   const cashPaidPredictionCount = potStats.cash_paid_count;
   const potTotalCAD = cashPaidPredictionCount * PRICING.entryFeeCAD;
+  const charityTotalCAD = cashPaidPredictionCount * PRICING.charityPortionCAD;
 
   const serverTime =
     typeof serverTimeRes.data === 'string'
@@ -97,6 +98,7 @@ export async function GET() {
     totalEntries,
     cashPaidPredictionCount,
     potTotalCAD,
+    charityTotalCAD,
     championTotalGoals: data.champion_total_goals,
     serverTime,
   });
