@@ -587,7 +587,6 @@ export function PredictionsPageContent({
   };
 
   const stepperStatus = (value: Step): StepperStep['status'] => {
-    if (isLocked && !bypassLockNav) return 'locked';
     if (stepStatus[value]) return 'done';
     if (value === currentStep) return 'current';
     return 'upcoming';
@@ -602,9 +601,7 @@ export function PredictionsPageContent({
 
   const topSteps: StepperStep[] = TOP_STEPS.map((value) => {
     let status: StepperStep['status'];
-    if (isLocked && !bypassLockNav) {
-      status = 'locked';
-    } else if (phase2TabsLocked && (value === 'knockout' || value === 'tiebreaker')) {
+    if (phase2TabsLocked && (value === 'knockout' || value === 'tiebreaker')) {
       status = 'locked';
     } else if (value === topValue) {
       status = 'current';
@@ -943,10 +940,14 @@ export function PredictionsPageContent({
   //     phase2Editable).
   const isPhase1LastStep =
     phase === 'phase1' && currentStep === 'champion_pick';
-  const showSavePhase1 = isPhase1LastStep;
-  const showReviewSubmit = isLastStep;
+  // In a locked, read-only view nothing can be saved or submitted, so hide
+  // those buttons entirely. Continue stays visible so users can browse
+  // their picks.
+  const lockedReadOnly = isLocked && !bypassLockNav;
+  const showSavePhase1 = isPhase1LastStep && !lockedReadOnly;
+  const showReviewSubmit = isLastStep && !lockedReadOnly;
   const showContinue =
-    !isLastStep && (!isPhase1LastStep || isSuperAdmin);
+    !isLastStep && (lockedReadOnly || !isPhase1LastStep || isSuperAdmin);
 
   // Why is the Save Phase 1 Picks button disabled? The button has four
   // silent gates (name validation, current-step completion, lock state,
@@ -1008,6 +1009,18 @@ export function PredictionsPageContent({
           lockTime={lockTime}
           isLocked={isLocked}
         />
+      )}
+
+      {lockedReadOnly && (
+        <Card className="mb-6 border-amber-500/40 bg-amber-500/10">
+          <CardContent
+            role="status"
+            className="text-amber-900 dark:text-amber-200 py-3 text-sm"
+          >
+            Predictions are locked — this is a read-only view of your picks. Use the
+            stepper or the Continue / Back buttons to browse between sections.
+          </CardContent>
+        </Card>
       )}
 
       <Card className="mb-6">
@@ -1170,7 +1183,10 @@ export function PredictionsPageContent({
                 type="button"
                 variant={showSavePhase1 ? 'outline' : 'default'}
                 onClick={goToNextStep}
-                disabled={!currentStepComplete || (isLocked && !bypassLockNav)}
+                // In a locked read-only view we keep Continue enabled even if
+                // the step is "incomplete" — the user is just browsing their
+                // past picks and can't edit, so step-completion is moot.
+                disabled={!currentStepComplete && !(isLocked && !bypassLockNav)}
                 className="sm:w-auto"
               >
                 {nextStepLabel ? `Continue to ${nextStepLabel}` : 'Continue'}
@@ -1181,45 +1197,47 @@ export function PredictionsPageContent({
         </div>
       </div>
 
-      <Card id="submit-predictions-card" className="border-primary/20 bg-primary/5">
-        <CardContent className="flex flex-col gap-4 py-6 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <p className="font-semibold">Ready to submit?</p>
-            <p className="text-muted-foreground text-sm">
-              {isPredictionsComplete
-                ? 'Submit puts this bracket on the leaderboard once an admin marks it paid.'
-                : phase === 'phase1'
-                  ? 'Save progress to keep working. You can submit once Phase 2 opens and the knockout bracket is complete.'
-                  : 'Save progress to keep working — or complete every pick to submit.'}
-            </p>
-          </div>
-          <div className="flex flex-col gap-2 sm:flex-row">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={handleSaveProgress}
-              disabled={isLocked || isSubmitting || isSavingProgress || !!nameError}
-              className="min-w-[160px]"
-            >
-              {isSavingProgress ? 'Saving…' : 'Save progress'}
-            </Button>
-            <Button
-              size="lg"
-              onClick={handleSubmit}
-              disabled={!isReadyToSubmit || isLocked || isSubmitting || isSavingProgress}
-              className="min-w-[180px]"
-            >
-              {isSubmitting
-                ? 'Submitting...'
-                : isLocked
-                  ? 'Predictions Locked'
-                  : mode === 'edit'
-                    ? 'Save Changes'
-                    : 'Submit Prediction'}
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
+      {!lockedReadOnly && (
+        <Card id="submit-predictions-card" className="border-primary/20 bg-primary/5">
+          <CardContent className="flex flex-col gap-4 py-6 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <p className="font-semibold">Ready to submit?</p>
+              <p className="text-muted-foreground text-sm">
+                {isPredictionsComplete
+                  ? 'Submit puts this bracket on the leaderboard once an admin marks it paid.'
+                  : phase === 'phase1'
+                    ? 'Save progress to keep working. You can submit once Phase 2 opens and the knockout bracket is complete.'
+                    : 'Save progress to keep working — or complete every pick to submit.'}
+              </p>
+            </div>
+            <div className="flex flex-col gap-2 sm:flex-row">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={handleSaveProgress}
+                disabled={isLocked || isSubmitting || isSavingProgress || !!nameError}
+                className="min-w-[160px]"
+              >
+                {isSavingProgress ? 'Saving…' : 'Save progress'}
+              </Button>
+              <Button
+                size="lg"
+                onClick={handleSubmit}
+                disabled={!isReadyToSubmit || isLocked || isSubmitting || isSavingProgress}
+                className="min-w-[180px]"
+              >
+                {isSubmitting
+                  ? 'Submitting...'
+                  : isLocked
+                    ? 'Predictions Locked'
+                    : mode === 'edit'
+                      ? 'Save Changes'
+                      : 'Submit Prediction'}
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
     </PageLayout>
   );
 }

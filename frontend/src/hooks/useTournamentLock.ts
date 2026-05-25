@@ -41,6 +41,13 @@ export interface TournamentLockState {
   isPhase2Open: boolean;
   /** Milliseconds remaining until the active phase locks (clamped at 0). */
   remainingMs: number;
+  /**
+   * True when the current phase has a real future deadline we can count
+   * down to. False when phase 2 is open but no lock time has been set —
+   * in that case `remainingMs` is 0 but the UI should not render
+   * "0m left" because there is no deadline at all.
+   */
+  hasActiveDeadline: boolean;
   /** True if |skewMs| > 5 minutes — surface a hint to the user. */
   clockSuspect: boolean;
 }
@@ -102,6 +109,7 @@ export function useTournamentLock(): TournamentLockState {
   const isPhase1Open = phase === 'phase1';
   const isPhase2Open = phase === 'phase2_open';
   const isLocked = phase === 'phase1_locked' || phase === 'phase2_locked';
+  const hasActiveDeadline = activeDeadline !== null;
   const clockSuspect = Math.abs(skewMs) > FIVE_MINUTES_MS;
 
   return {
@@ -117,6 +125,7 @@ export function useTournamentLock(): TournamentLockState {
     isPhase1Open,
     isPhase2Open,
     remainingMs,
+    hasActiveDeadline,
     clockSuspect,
   };
 }

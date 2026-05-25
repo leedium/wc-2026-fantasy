@@ -406,14 +406,20 @@ describe('PredictionsPageContent — stepper navigation', () => {
     expect(screen.getByRole('button', { name: /Review & submit/ })).toBeInTheDocument();
   });
 
-  it('renders all top stepper triggers as disabled when the tournament is locked', async () => {
+  it('renders a read-only view when the tournament is locked', async () => {
+    // Regular users in a locked phase should still be able to *navigate*
+    // between steps to view past picks — only edits/saves are blocked.
+    // The submit/save card is hidden entirely and a read-only notice is
+    // surfaced so the user understands why.
     configureQueries({ tournamentLockTime: new Date(Date.now() - 1000).toISOString() });
     render(<PredictionsPageContent mode="create" />);
 
-    await screen.findByText(/Predictions Locked/);
-    // Only the top row is rendered when not on a knockout step; assert all top tabs are disabled.
+    await screen.findByText(/read-only view of your picks/i);
     const tabs = screen.getAllByRole('tab');
-    tabs.forEach((tab) => expect(tab).toBeDisabled());
+    tabs.forEach((tab) => expect(tab).not.toBeDisabled());
+    expect(screen.queryByRole('button', { name: /Predictions Locked/ })).toBeNull();
+    expect(screen.queryByRole('button', { name: /Save progress/ })).toBeNull();
+    expect(screen.queryByRole('button', { name: /Submit Prediction/ })).toBeNull();
   });
 
   it('lets a super admin advance past Groups when the tournament is locked', async () => {
@@ -565,7 +571,7 @@ describe('PredictionsPageContent — autosave', () => {
 
     render(<PredictionsPageContent mode="create" />);
 
-    await screen.findByText(/Predictions Locked/);
+    await screen.findByText(/read-only view of your picks/i);
     expect(window.localStorage.getItem(DRAFT_KEY)).toBeNull();
   });
 

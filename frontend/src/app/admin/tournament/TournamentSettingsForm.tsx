@@ -185,8 +185,30 @@ export function TournamentSettingsForm() {
   const canOpenPhaseTwo = allAdvancersSet && allAssignmentsSet;
   const phase = tournament.data?.phase ?? 'phase1';
 
+  const phaseTwoLockIso = React.useMemo(() => {
+    if (!phaseTwoLockInput.trim()) return null;
+    const ms = new Date(phaseTwoLockInput).getTime();
+    if (Number.isNaN(ms)) return null;
+    return new Date(ms).toISOString();
+  }, [phaseTwoLockInput]);
+
+  const phaseTwoLockInPast = React.useMemo(() => {
+    if (!phaseTwoLockIso) return false;
+    return new Date(phaseTwoLockIso).getTime() <= Date.now();
+  }, [phaseTwoLockIso]);
+
   const togglePhaseTwo = async (unlock: boolean) => {
     if (!tournament.data) return;
+    if (unlock) {
+      if (!phaseTwoLockIso) {
+        toast.error('Pick a Phase 2 lock time first');
+        return;
+      }
+      if (phaseTwoLockInPast) {
+        toast.error('Phase 2 lock time must be in the future');
+        return;
+      }
+    }
     setBusyPhase2(true);
     try {
       const res = await fetch('/api/admin/tournament', {
@@ -195,8 +217,7 @@ export function TournamentSettingsForm() {
         body: JSON.stringify({
           id: tournament.data.id,
           knockoutUnlocked: unlock,
-          knockoutLockTime:
-            unlock && phaseTwoLockInput ? new Date(phaseTwoLockInput).toISOString() : null,
+          knockoutLockTime: unlock ? phaseTwoLockIso : null,
         }),
       });
       if (!res.ok) {
@@ -208,6 +229,43 @@ export function TournamentSettingsForm() {
         queryClient.invalidateQueries({ queryKey: ['tournament'] }),
         queryClient.invalidateQueries({ queryKey: ['admin-advancers'] }),
       ]);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Failed');
+    } finally {
+      setBusyPhase2(false);
+    }
+  };
+
+  // While Phase 2 is open, allow extending/shortening the lock time without
+  // having to close-and-reopen. Goes through the same admin_set_phase_two
+  // RPC with knockoutUnlocked=true.
+  const handleSavePhaseTwoLockTime = async () => {
+    if (!tournament.data) return;
+    if (!phaseTwoLockIso) {
+      toast.error('Pick a Phase 2 lock time first');
+      return;
+    }
+    if (phaseTwoLockInPast) {
+      toast.error('Phase 2 lock time must be in the future');
+      return;
+    }
+    setBusyPhase2(true);
+    try {
+      const res = await fetch('/api/admin/tournament', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id: tournament.data.id,
+          knockoutUnlocked: true,
+          knockoutLockTime: phaseTwoLockIso,
+        }),
+      });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body.error ?? 'Failed');
+      }
+      toast.success('Phase 2 lock time updated');
+      await queryClient.invalidateQueries({ queryKey: ['tournament'] });
     } catch (e) {
       toast.error(e instanceof Error ? e.message : 'Failed');
     } finally {
@@ -352,19 +410,52 @@ export function TournamentSettingsForm() {
             <div className="flex flex-wrap gap-2">
               <Button
                 onClick={() => togglePhaseTwo(true)}
-                disabled={busyPhase2 || !canOpenPhaseTwo || phase === 'phase2_open'}
+                disabled={
+                  busyPhase2 ||
+                  !canOpenPhaseTwo ||
+                  phase === 'phase2_open' ||
+                  !phaseTwoLockIso ||
+                  phaseTwoLockInPast
+                }
                 title={
                   !allAdvancersSet
                     ? 'Set all 8 advancers first'
                     : !allAssignmentsSet
                       ? 'Assign every R32 3rd-place slot first'
-                      : phase === 'phase2_locked'
-                        ? 'Phase 2 lock time has passed — set a new lock time above and click to reopen'
-                        : undefined
+                      : !phaseTwoLockIso
+                        ? 'Pick a Phase 2 lock time first'
+                        : phaseTwoLockInPast
+                          ? 'Phase 2 lock time must be in the future'
+                          : phase === 'phase2_locked'
+                            ? 'Phase 2 lock time has passed — set a new lock time above and click to reopen'
+                            : undefined
                 }
               >
                 {phase === 'phase2_locked' ? 'Reopen Phase 2' : 'Open Phase 2'}
               </Button>
+              {phase === 'phase2_open' && (
+                <Button
+                  variant="secondary"
+                  onClick={handleSavePhaseTwoLockTime}
+                  disabled={
+                    busyPhase2 ||
+                    !phaseTwoLockIso ||
+                    phaseTwoLockInPast ||
+                    phaseTwoLockIso === tournament.data?.knockoutLockTime
+                  }
+                  title={
+                    !phaseTwoLockIso
+                      ? 'Pick a Phase 2 lock time first'
+                      : phaseTwoLockInPast
+                        ? 'Phase 2 lock time must be in the future'
+                        : phaseTwoLockIso === tournament.data?.knockoutLockTime
+                          ? 'Lock time is unchanged'
+                          : undefined
+                  }
+                >
+                  Save Phase 2 lock time
+                </Button>
+              )}
               <Button
                 variant="outline"
                 onClick={() => togglePhaseTwo(false)}
