@@ -1,6 +1,6 @@
 import Image from 'next/image';
 import Link from 'next/link';
-import { ArrowRight, HeartHandshake } from 'lucide-react';
+import { ArrowRight, ExternalLink, HeartHandshake } from 'lucide-react';
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { CHARITIES, PRICING, ROUTES } from '@/lib/constants';
@@ -42,9 +42,15 @@ export function DonationsToCharity() {
                 <div className="text-foreground text-sm font-semibold">
                   {charity.name}
                 </div>
-                <p className="text-muted-foreground mt-1 text-xs leading-relaxed">
-                  {charity.tagline}
-                </p>
+                <a
+                  href={charity.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-muted-foreground hover:text-foreground mt-1 inline-flex items-center gap-1 text-xs"
+                >
+                  {charity.displayUrl}
+                  <ExternalLink className="h-3 w-3" />
+                </a>
               </div>
             ))}
           </div>
