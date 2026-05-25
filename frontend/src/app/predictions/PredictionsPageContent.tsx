@@ -1175,11 +1175,7 @@ export function PredictionsPageContent({
                 }
                 className="sm:w-auto"
               >
-                {isSubmitting
-                  ? 'Submitting…'
-                  : mode === 'edit'
-                    ? 'Save Changes'
-                    : 'Submit Prediction'}
+                {isSubmitting ? 'Submitting…' : 'Submit Prediction'}
                 <ArrowRight className="ml-2 h-4 w-4" />
               </Button>
             )}
@@ -1235,9 +1231,7 @@ export function PredictionsPageContent({
                   ? 'Submitting...'
                   : isLocked
                     ? 'Predictions Locked'
-                    : mode === 'edit'
-                      ? 'Save Changes'
-                      : 'Submit Prediction'}
+                    : 'Submit Prediction'}
               </Button>
             </div>
           </CardContent>
