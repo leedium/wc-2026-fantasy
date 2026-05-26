@@ -106,8 +106,8 @@ export function TournamentSettingsForm() {
       championTotalGoals = null;
     } else {
       const parsed = Number(championGoals);
-      if (!Number.isInteger(parsed) || parsed < 0 || parsed > 50) {
-        toast.error("Champion's total goals must be an integer 0–50");
+      if (!Number.isInteger(parsed) || parsed < 0 || parsed > 200) {
+        toast.error("Champion's total goals must be an integer 0–200");
         return;
       }
       championTotalGoals = parsed;
@@ -316,7 +316,7 @@ export function TournamentSettingsForm() {
                     id="championGoals"
                     type="number"
                     min={0}
-                    max={50}
+                    max={200}
                     step={1}
                     placeholder="Leave blank until tournament ends"
                     value={championGoals}

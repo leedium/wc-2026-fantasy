@@ -1,7 +1,7 @@
 # CLAUDE.md
 
-> **Version:** 3.6.0
-> **Last Updated:** 2026-05-24
+> **Version:** 3.7.0
+> **Last Updated:** 2026-05-26
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
@@ -83,7 +83,7 @@ All schema/policies/RPCs live in `supabase/migrations/`. Run `supabase db reset`
 - **`admin_list_user_referrals(p_user_id)`** — moderation view; returns inbound + outbound referrals for one user.
 - **`referrals_sync_qualification()`** — trigger on `tournament_payments` AFTER INSERT/UPDATE/DELETE. Sets `referrals.qualified_at` when the referee's first non-free payment lands; clears it on delete when the referee has no remaining non-free payments. With the aggregate model in `0039_referrals_threshold.sql`, the clear is unconditional — the `greatest(0, …)` clamp in `get_referral_status` absorbs the rare clawback-after-redeem case (already-redeemed free picks stay sticky on the leaderboard).
 
-### Scoring (v2, in `migrations/0006_scoring_v2.sql`)
+### Scoring (v3, in `migrations/0045_scoring_v3.sql`)
 
 **Group stage** — set-based on the predicted top 2 vs actual top 2:
 - both correct in exact order: `+6` (`+8` for Group I "Group of Death")
@@ -94,20 +94,20 @@ All schema/policies/RPCs live in `supabase/migrations/`. Run `supabase db reset`
 
 3rd / 4th picks are unscored but still required by the form (3rd-place picks for groups A–H seed R32 via `knockout_matches.team_source = '3X'`). Max group points = 11×6 + 8 = **74**.
 
-**Knockout** — per-round, per-advancing-team scoring with a "correct side" bonus. For each team that actually advanced from a deciding match, the user scores the higher tier if they predicted that match's winner correctly, the lower tier if they predicted that team to win some other match in the same stage, else 0:
+**Knockout** — per-round, per-match scoring with a "correct side" bonus. For each team that actually won a match in a given round, the user scores the higher tier if they predicted that exact match's winner, the lower tier if they predicted that team to win some other match in the same round, else 0:
 
-| Round (advancing to)      | deciding stage    | correct slot | wrong slot |
-|---------------------------|-------------------|--------------|------------|
-| Round of 16               | round_of_32       | +5           | +3         |
-| Quarter-finals            | round_of_16       | +6           | +3         |
-| Semi-finals               | quarter_finals    | +8           | +4         |
-| Final                     | semi_finals       | +10          | +5         |
+| Round picked     | matches | correct slot | wrong slot |
+|------------------|---------|--------------|------------|
+| Round of 32      |   16    | +4           | +3         |
+| Round of 16      |    8    | +6           | +4         |
+| Quarter-finals   |    4    | +10          | +6         |
+| Semi-finals      |    2    | +14          | +9         |
 
-Plus flat bonuses on top: champion (M32 winner) `+15`, third-place winner (M31) `+5`. Round of 32 picks aren't scored directly — they decide R16 slots. The legacy `knockout_matches.point_value` column is still in the schema but the v2 RPCs ignore it. Max knockout points = 80 + 48 + 32 + 20 + 15 + 5 = **200**. Helper function `public.knockout_round_scores(tournament_id, stage, correct_pts, wrong_pts)` is shared by `get_leaderboard` and `get_leaderboard_rank`.
+Plus flat bonuses on top: champion (M32 winner) `+15`, third-place winner (M31) `+5`. The legacy `knockout_matches.point_value` column is still in the schema but the v3 RPCs ignore it. Max knockout points = 64 + 48 + 40 + 28 + 15 + 5 = **200**. Per-round point values are sourced from `public.knockout_round_config()` (and the M31/M32/gut bonuses from `scoring_third_place_pts()` / `scoring_champion_pts()` / `scoring_champion_pick_pts()`) so future tweaks only need a single `create or replace` of the config function. Helper `public.knockout_round_scores(tournament_id, stage, correct_pts, wrong_pts)` is unchanged from 0006 and shared by `get_leaderboard` and `get_leaderboard_rank`.
 
 **Gut Feeling Champion (Phase 1)** — `+5` if `predictions.champion_team_id` matches the actual M32 winner. Independent of the bracket Final (M32) pick scoring (`+15`) — users can pick the same team for both (so a correct gut pick + correct bracket Final stacks to `+20`), or split between them. The pick is collected via a dropdown as the final Phase 1 wizard step (after Best 3rds), required at create time, and writable only while the tournament is in `phase1`; once `phase1_locked` (or later) it is frozen.
 
-**Tiebreaker** — closest prediction to the *champion's* total goals across all 8 of their tournament matches (regulation + extra time only; no penalty-shootout goals). Stored on `tournaments.champion_total_goals` (admin-entered when the tournament ends). `predictions.total_goals` is reused with a relaxed CHECK of `between 0 and 50`.
+**Tiebreaker** — closest prediction to the *champion's* total goals across all 8 of their tournament matches (regulation + extra time only; no penalty-shootout goals). Stored on `tournaments.champion_total_goals` (admin-entered when the tournament ends). `predictions.total_goals` is reused with a CHECK of `between 0 and 200`.
 
 **Grand total max: 74 + 10 + 200 + 5 = 289.** (Group 74 + Advancers 10 + Knockout 200 + Champion Pick 5.)
 

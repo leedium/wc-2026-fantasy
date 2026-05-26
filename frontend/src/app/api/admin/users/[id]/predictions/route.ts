@@ -126,8 +126,8 @@ export async function POST(
   if (name.length > PREDICTION_NAME_MAX || !PREDICTION_NAME_REGEX.test(name)) {
     return NextResponse.json({ error: 'predictionName format invalid' }, { status: 400 });
   }
-  if (body.totalGoals != null && (body.totalGoals < 0 || body.totalGoals > 50)) {
-    return NextResponse.json({ error: 'totalGoals must be 0-50' }, { status: 400 });
+  if (body.totalGoals != null && (body.totalGoals < 0 || body.totalGoals > 200)) {
+    return NextResponse.json({ error: 'totalGoals must be 0-200' }, { status: 400 });
   }
   if (!Array.isArray(body.groups) || !Array.isArray(body.knockout)) {
     return NextResponse.json({ error: 'Invalid payload' }, { status: 400 });
