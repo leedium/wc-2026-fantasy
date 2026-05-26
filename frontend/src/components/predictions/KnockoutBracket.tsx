@@ -72,8 +72,8 @@ export const STAGE_ORDER: KnockoutStage[] = [
   'round_of_16',
   'quarter_finals',
   'semi_finals',
-  'final',
   'third_place',
+  'final',
 ];
 
 interface KnockoutBracketProps {
