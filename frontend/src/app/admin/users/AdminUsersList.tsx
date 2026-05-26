@@ -89,7 +89,14 @@ export function AdminUsersList() {
 
   const totalPages = Math.max(1, Math.ceil((query.data?.total ?? 0) / PAGE_SIZE));
 
-  const refetchUsers = () => queryClient.invalidateQueries({ queryKey: ['admin-users'] });
+  // Invalidate both the list and the admin dashboard stats — the stats RPC
+  // counts registrations and renders usernames in top_paid_users, so create
+  // / edit / delete user can leave the dashboard stale otherwise.
+  const refetchUsers = () =>
+    Promise.all([
+      queryClient.invalidateQueries({ queryKey: ['admin-users'] }),
+      queryClient.invalidateQueries({ queryKey: ['admin-stats'] }),
+    ]);
 
   const toggleAdmin = async (user: AdminUser) => {
     try {

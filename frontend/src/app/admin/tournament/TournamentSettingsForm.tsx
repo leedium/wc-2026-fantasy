@@ -143,7 +143,10 @@ export function TournamentSettingsForm() {
         throw new Error(body.error ?? 'Failed to save');
       }
       toast.success('Tournament settings updated');
-      await queryClient.invalidateQueries({ queryKey: ['tournament'] });
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['tournament'] }),
+        queryClient.invalidateQueries({ queryKey: ['admin-stats'] }),
+      ]);
     } catch (e) {
       toast.error(e instanceof Error ? e.message : 'Failed to save');
     } finally {
@@ -172,7 +175,10 @@ export function TournamentSettingsForm() {
         throw new Error(body.error ?? 'Failed to save');
       }
       toast.success('Phase 1 lock time updated');
-      await queryClient.invalidateQueries({ queryKey: ['tournament'] });
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['tournament'] }),
+        queryClient.invalidateQueries({ queryKey: ['admin-stats'] }),
+      ]);
     } catch (e) {
       toast.error(e instanceof Error ? e.message : 'Failed to save');
     } finally {
@@ -242,6 +248,7 @@ export function TournamentSettingsForm() {
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ['tournament'] }),
         queryClient.invalidateQueries({ queryKey: ['admin-advancers'] }),
+        queryClient.invalidateQueries({ queryKey: ['admin-stats'] }),
       ]);
     } catch (e) {
       toast.error(e instanceof Error ? e.message : 'Failed');
@@ -267,10 +274,19 @@ export function TournamentSettingsForm() {
       toast.success('Tournament reset');
       setResetDialogOpen(false);
       setResetConfirm('');
+      // Reset wipes predictions, payments, standings, results, advancers,
+      // bracket, and rewards — invalidate the whole cluster including
+      // admin-users (paid/prediction counts), admin-stats (dashboard),
+      // predictions (user prediction lists), and leaderboard (any cached
+      // viewer/page variants).
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ['tournament'] }),
         queryClient.invalidateQueries({ queryKey: ['admin-advancers'] }),
         queryClient.invalidateQueries({ queryKey: ['admin-r32-bracket'] }),
+        queryClient.invalidateQueries({ queryKey: ['admin-stats'] }),
+        queryClient.invalidateQueries({ queryKey: ['admin-users'] }),
+        queryClient.invalidateQueries({ queryKey: ['predictions'] }),
+        queryClient.invalidateQueries({ queryKey: ['leaderboard'] }),
       ]);
     } catch (e) {
       toast.error(e instanceof Error ? e.message : 'Failed to reset tournament');
@@ -308,7 +324,10 @@ export function TournamentSettingsForm() {
         throw new Error(body.error ?? 'Failed');
       }
       toast.success('Phase 2 lock time updated');
-      await queryClient.invalidateQueries({ queryKey: ['tournament'] });
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['tournament'] }),
+        queryClient.invalidateQueries({ queryKey: ['admin-stats'] }),
+      ]);
     } catch (e) {
       toast.error(e instanceof Error ? e.message : 'Failed');
     } finally {
