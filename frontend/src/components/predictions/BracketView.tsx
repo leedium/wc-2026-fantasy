@@ -147,51 +147,47 @@ export function BracketView({
   const thirdPlace = matchesByStage.third_place[0] ?? null;
 
   return (
-    <div className="space-y-6">
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-5">
-        {COLUMN_STAGES.map(({ stage, label }) => {
-          const stageMatches = matchesByStage[stage] ?? [];
-          if (stageMatches.length === 0) return null;
-          return (
-            <div key={stage} className="space-y-2">
-              <h3 className="text-muted-foreground text-xs font-semibold uppercase tracking-wide">
-                {label}
-              </h3>
-              <div className="space-y-2">
-                {stageMatches.map((m) => (
-                  <MatchNode
-                    key={m.id}
-                    match={m}
-                    matches={matches}
-                    teams={teams}
-                    groupPredictions={groupPredictions}
-                    knockoutPredictions={knockoutPredictions}
-                    bracketAssignments={bracketAssignments}
-                  />
-                ))}
-              </div>
+    <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-5">
+      {COLUMN_STAGES.map(({ stage, label }) => {
+        const stageMatches = matchesByStage[stage] ?? [];
+        if (stageMatches.length === 0) return null;
+        const isFinalColumn = stage === 'final';
+        return (
+          <div key={stage} className="space-y-2">
+            <h3 className="text-muted-foreground text-xs font-semibold uppercase tracking-wide">
+              {label}
+            </h3>
+            <div className="space-y-2">
+              {stageMatches.map((m) => (
+                <MatchNode
+                  key={m.id}
+                  match={m}
+                  matches={matches}
+                  teams={teams}
+                  groupPredictions={groupPredictions}
+                  knockoutPredictions={knockoutPredictions}
+                  bracketAssignments={bracketAssignments}
+                />
+              ))}
             </div>
-          );
-        })}
-      </div>
-
-      {thirdPlace && (
-        <div className="space-y-2">
-          <h3 className="text-muted-foreground text-xs font-semibold uppercase tracking-wide">
-            Third-place play-off
-          </h3>
-          <div className="max-w-xs">
-            <MatchNode
-              match={thirdPlace}
-              matches={matches}
-              teams={teams}
-              groupPredictions={groupPredictions}
-              knockoutPredictions={knockoutPredictions}
-              bracketAssignments={bracketAssignments}
-            />
+            {isFinalColumn && thirdPlace && (
+              <div className="space-y-2 pt-4">
+                <h3 className="text-muted-foreground text-xs font-semibold uppercase tracking-wide">
+                  Third-place play-off
+                </h3>
+                <MatchNode
+                  match={thirdPlace}
+                  matches={matches}
+                  teams={teams}
+                  groupPredictions={groupPredictions}
+                  knockoutPredictions={knockoutPredictions}
+                  bracketAssignments={bracketAssignments}
+                />
+              </div>
+            )}
           </div>
-        </div>
-      )}
+        );
+      })}
     </div>
   );
 }

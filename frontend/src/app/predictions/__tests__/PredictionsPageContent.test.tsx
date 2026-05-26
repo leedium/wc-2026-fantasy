@@ -391,7 +391,7 @@ describe('PredictionsPageContent — stepper navigation', () => {
     // Filling all knockout matches at once satisfies every knockout sub-step.
     await user.click(screen.getByTestId('fill-all-knockout'));
 
-    const stages = ['Round of 16', 'Quarter-finals', 'Semi-finals', 'Final', 'Third Place'];
+    const stages = ['Round of 16', 'Quarter-finals', 'Semi-finals', 'Third Place', 'Final'];
     for (const next of stages) {
       const btn = await screen.findByRole('button', {
         name: new RegExp(`Continue to ${next}`, 'i'),
@@ -608,13 +608,13 @@ describe('PredictionsPageContent — autosave', () => {
     await user.click(screen.getByTestId('fill-champion'));
     await user.click(screen.getByRole('button', { name: /Continue to Round of 32/ }));
     await user.click(screen.getByTestId('fill-all-knockout'));
-    // Walk through R16 → QF → SF → Final → 3rd → Tiebreaker via Continue.
+    // Walk through R16 → QF → SF → 3rd → Final → Tiebreaker via Continue.
     for (const next of [
       'Round of 16',
       'Quarter-finals',
       'Semi-finals',
-      'Final',
       'Third Place',
+      'Final',
       'Tiebreaker',
     ]) {
       await user.click(

@@ -69,8 +69,8 @@ const STEP_ORDER: Step[] = [
   'round_of_16',
   'quarter_finals',
   'semi_finals',
-  'final',
   'third_place',
+  'final',
   'tiebreaker',
 ];
 
@@ -92,8 +92,8 @@ const KNOCKOUT_STAGE_LIST: KnockoutStage[] = [
   'round_of_16',
   'quarter_finals',
   'semi_finals',
-  'final',
   'third_place',
+  'final',
 ];
 
 const SUB_STEP_LABELS: Record<KnockoutStage, string> = {
