@@ -24,16 +24,29 @@ export function resolveTeamSource(
     const [, position, groupId] = groupMatch;
     const groupPrediction = groupPredictions.find((p) => p.groupId === groupId);
     if (!groupPrediction) return null;
+    let resolved: string | null;
     switch (position) {
       case '1':
-        return groupPrediction.positions.first;
+        resolved = groupPrediction.positions.first;
+        break;
       case '2':
-        return groupPrediction.positions.second;
+        resolved = groupPrediction.positions.second;
+        break;
       case '3':
-        return groupPrediction.positions.third;
+        resolved = groupPrediction.positions.third;
+        break;
       default:
         return null;
     }
+    // Admin's bracket assignments are tournament truth. If the user-predicted
+    // team for this slot is already placed by the admin in a 3-XXXXX R32 slot,
+    // that team really finished 3rd in its group and cannot also be its actual
+    // 1st/2nd. Suppress here so the team renders once (in the admin slot) and
+    // this slot shows as TBD instead of duplicating.
+    if (resolved && bracketAssignments.some((a) => a.teamId === resolved)) {
+      return null;
+    }
+    return resolved;
   }
 
   // Best-3rd-of-bundle source: '3-ABCDF' etc. In the new model these strings

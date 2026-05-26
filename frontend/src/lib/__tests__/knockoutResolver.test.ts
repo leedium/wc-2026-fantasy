@@ -98,4 +98,66 @@ describe('resolveTeamSource', () => {
       ).toBeNull();
     });
   });
+
+  describe('admin bracket authoritative-override for top-2 predictions', () => {
+    // When the admin places a team in an R32 3rd-place slot, that team really
+    // finished 3rd in its group, so any user prediction putting that team in a
+    // top-2 slot is falsified by reality. Resolver must return null for the
+    // user-predicted slot so the team renders once (in the admin slot) instead
+    // of duplicating across matches.
+    it('suppresses a user-predicted 1A when the team is also in bracketAssignments', () => {
+      // User predicted 'mex' as 1st of A; admin placed 'mex' in the (M2, 2) 3-XXXXX slot.
+      const assignments: R32BracketAssignment[] = [
+        { matchId: 'M2', slot: 2, teamId: 'mex' },
+      ];
+      expect(
+        resolveTeamSource('1A', matches, groupPredictions, [], assignments)
+      ).toBeNull();
+      // And the admin slot still resolves correctly to the same team.
+      expect(
+        resolveTeamSource('3-ABCDF', matches, groupPredictions, [], assignments)
+      ).toBe('mex');
+    });
+
+    it('suppresses a user-predicted 2B when the team is also in bracketAssignments', () => {
+      // Mirrors the reported bug: user has 'qat' as 2nd of B; admin placed
+      // 'qat' in the (M2, 2) 3-XXXXX slot.
+      const assignments: R32BracketAssignment[] = [
+        { matchId: 'M2', slot: 2, teamId: 'qat' },
+      ];
+      expect(
+        resolveTeamSource('2B', matches, groupPredictions, [], assignments)
+      ).toBeNull();
+    });
+
+    it('suppresses a user-predicted 3A when the team is also in bracketAssignments', () => {
+      // Consistency check: if a 3X source ever points to a team admin has
+      // already placed, the explicit admin slot wins and the 3X slot is null.
+      const assignments: R32BracketAssignment[] = [
+        { matchId: 'M2', slot: 2, teamId: 'rsa' },
+      ];
+      expect(
+        resolveTeamSource('3A', matches, groupPredictions, [], assignments)
+      ).toBeNull();
+    });
+
+    it('does not suppress when there is no overlap', () => {
+      // 'kor' is user's 2nd of A. Admin's bracket has a different team. No conflict.
+      const assignments: R32BracketAssignment[] = [
+        { matchId: 'M2', slot: 2, teamId: 'rsa' },
+      ];
+      expect(
+        resolveTeamSource('1A', matches, groupPredictions, [], assignments)
+      ).toBe('mex');
+      expect(
+        resolveTeamSource('2B', matches, groupPredictions, [], assignments)
+      ).toBe('qat');
+    });
+
+    it('does not suppress when bracketAssignments is empty (Phase 1)', () => {
+      expect(resolveTeamSource('1A', matches, groupPredictions, [], [])).toBe('mex');
+      expect(resolveTeamSource('2B', matches, groupPredictions, [], [])).toBe('qat');
+      expect(resolveTeamSource('3A', matches, groupPredictions, [], [])).toBe('rsa');
+    });
+  });
 });
