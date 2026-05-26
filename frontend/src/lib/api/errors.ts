@@ -55,6 +55,8 @@ const KNOWN_ERROR_FRAGMENTS = [
   'no loyalty credits available',
   'no free picks available',
   'tournament_id is required',
+  // Reset tournament (migration 0046)
+  'tournament not found',
 ] as const;
 
 export function safeMessage(
