@@ -17,6 +17,15 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import { useAuthContext } from '@/providers/AuthProvider';
 import type { KnockoutMatch } from '@/types/tournament';
 
 interface TournamentInfo {
@@ -59,6 +68,8 @@ function toDatetimeLocal(iso: string | null): string {
 
 export function TournamentSettingsForm() {
   const queryClient = useQueryClient();
+  const { profile } = useAuthContext();
+  const isSuperAdmin = profile?.isSuperAdmin ?? false;
   const tournament = useQuery<TournamentInfo>({
     queryKey: ['tournament'],
     queryFn: () => fetchJSON('/api/tournament'),
@@ -87,6 +98,9 @@ export function TournamentSettingsForm() {
   const [savingSettings, setSavingSettings] = React.useState(false);
   const [savingPhase1, setSavingPhase1] = React.useState(false);
   const [busyPhase2, setBusyPhase2] = React.useState(false);
+  const [resetDialogOpen, setResetDialogOpen] = React.useState(false);
+  const [resetConfirm, setResetConfirm] = React.useState('');
+  const [resetting, setResetting] = React.useState(false);
 
   React.useEffect(() => {
     if (!tournament.data) return;
@@ -233,6 +247,35 @@ export function TournamentSettingsForm() {
       toast.error(e instanceof Error ? e.message : 'Failed');
     } finally {
       setBusyPhase2(false);
+    }
+  };
+
+  const handleReset = async () => {
+    if (!tournament.data) return;
+    if (resetConfirm !== 'RESET') return;
+    setResetting(true);
+    try {
+      const res = await fetch('/api/admin/tournament/reset', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: tournament.data.id, confirm: 'RESET' }),
+      });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body.error ?? 'Failed to reset tournament');
+      }
+      toast.success('Tournament reset');
+      setResetDialogOpen(false);
+      setResetConfirm('');
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['tournament'] }),
+        queryClient.invalidateQueries({ queryKey: ['admin-advancers'] }),
+        queryClient.invalidateQueries({ queryKey: ['admin-r32-bracket'] }),
+      ]);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Failed to reset tournament');
+    } finally {
+      setResetting(false);
     }
   };
 
@@ -466,7 +509,86 @@ export function TournamentSettingsForm() {
             </div>
           </CardContent>
         </Card>
+
+        <Card className="border-destructive/40">
+          <CardHeader>
+            <CardTitle className="text-destructive">Danger zone</CardTitle>
+            <p className="text-muted-foreground text-sm">
+              Super-admin only. Wipes every user&apos;s predictions, payments, and reward
+              redemptions for this tournament; clears admin-entered group standings,
+              knockout results, and the R32 bracket; resets Phase 1 / Phase 2 lock times
+              and tournament status. User accounts, profiles, and referral codes are
+              preserved.
+            </p>
+          </CardHeader>
+          <CardContent>
+            <Button
+              variant="destructive"
+              onClick={() => setResetDialogOpen(true)}
+              disabled={!isSuperAdmin || !tournament.data}
+              title={!isSuperAdmin ? 'Super admin only' : undefined}
+            >
+              Reset tournament
+            </Button>
+          </CardContent>
+        </Card>
       </div>
+
+      <Dialog
+        open={resetDialogOpen}
+        onOpenChange={(open) => {
+          setResetDialogOpen(open);
+          if (!open) setResetConfirm('');
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="text-destructive">Reset tournament</DialogTitle>
+            <DialogDescription>
+              This cannot be undone. The following will be deleted for{' '}
+              <span className="font-mono">{tournament.data?.name}</span>:
+            </DialogDescription>
+          </DialogHeader>
+          <ul className="text-muted-foreground list-disc space-y-1 pl-5 text-sm">
+            <li>All user predictions, group picks, knockout picks, advancer picks</li>
+            <li>All payment records (cash + free picks from referrals / loyalty)</li>
+            <li>All reward redemptions for this tournament</li>
+            <li>Admin-entered group standings, knockout results, R32 bracket</li>
+            <li>
+              Phase 1 lock time, Phase 2 lock time, status, and champion total goals are
+              reset
+            </li>
+          </ul>
+          <div className="space-y-1">
+            <Label htmlFor="reset-confirm">
+              Type <span className="font-mono font-semibold">RESET</span> to confirm
+            </Label>
+            <Input
+              id="reset-confirm"
+              autoComplete="off"
+              value={resetConfirm}
+              onChange={(e) => setResetConfirm(e.target.value)}
+              disabled={resetting}
+            />
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setResetDialogOpen(false)}
+              disabled={resetting}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleReset}
+              disabled={resetting || resetConfirm !== 'RESET'}
+            >
+              {resetting ? 'Resetting…' : 'Reset tournament'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </PageLayout>
   );
 }
