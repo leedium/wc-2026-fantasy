@@ -19,9 +19,10 @@ import type {
 } from '@/types/tournament';
 
 // Stage display configuration. `pointsHint` is the per-match badge label.
-// Round-of-32 picks aren't scored directly — they decide R16 slots — so the
-// hint reflects that. Other rounds score the round's advancing teams (correct
-// slot / wrong slot tiers); we surface that as a single hint per match card.
+// Each round's picks score on a correct-slot / wrong-slot tier: you get the
+// higher value if you picked the actual winner of that match, the lower value
+// if you picked the winning team to advance from some other match in the same
+// round. The Final's only payout is the +15 champion bonus.
 export const STAGE_CONFIG: Record<
   KnockoutStage,
   { label: string; shortLabel: string; pointsHint: string; subtitle: string }
@@ -29,26 +30,26 @@ export const STAGE_CONFIG: Record<
   round_of_32: {
     label: 'Round of 32',
     shortLabel: 'R32',
-    pointsHint: 'Sets R16 slot',
-    subtitle: 'Picks here decide which teams sit in your Round of 16 slots — no direct points.',
+    pointsHint: '+4 / +3',
+    subtitle: '+4 if you picked the match winner correctly, +3 if right team but wrong slot.',
   },
   round_of_16: {
     label: 'Round of 16',
     shortLabel: 'R16',
-    pointsHint: '+5 / +3',
-    subtitle: '+5 for each advancing team in the correct slot, +3 if right team but wrong slot.',
+    pointsHint: '+6 / +4',
+    subtitle: '+6 if you picked the match winner correctly, +4 if right team but wrong slot.',
   },
   quarter_finals: {
     label: 'Quarter-finals',
     shortLabel: 'QF',
-    pointsHint: '+6 / +3',
-    subtitle: '+6 for each advancing team in the correct slot, +3 if right team but wrong slot.',
+    pointsHint: '+10 / +6',
+    subtitle: '+10 if you picked the match winner correctly, +6 if right team but wrong slot.',
   },
   semi_finals: {
     label: 'Semi-finals',
     shortLabel: 'SF',
-    pointsHint: '+8 / +4',
-    subtitle: '+8 for each advancing team in the correct slot, +4 if right team but wrong slot.',
+    pointsHint: '+14 / +9',
+    subtitle: '+14 if you picked the match winner correctly, +9 if right team but wrong slot.',
   },
   third_place: {
     label: 'Third Place',
@@ -59,9 +60,8 @@ export const STAGE_CONFIG: Record<
   final: {
     label: 'Final',
     shortLabel: 'Final',
-    pointsHint: '+10 / +5 finalist · +15 champion',
-    subtitle:
-      'Each finalist scores +10 (correct slot) or +5 (wrong slot). Picking the champion correctly adds +15.',
+    pointsHint: '+15 champion',
+    subtitle: '+15 for picking the World Cup champion correctly.',
   },
 };
 
@@ -353,13 +353,12 @@ export function KnockoutBracket({
             round. Complete your group predictions first to see teams in Round of 32.
           </p>
           <p>
-            <strong>Round of 32 picks aren&apos;t scored directly</strong> — they decide which
-            teams sit in your Round of 16 slots. From R16 onward, each advancing team scores in the
-            higher tier if you picked the right winner of the deciding match, the lower tier if you
-            picked them to win some other match in the same stage, otherwise 0.
+            Each round&apos;s picks score on a <strong>correct-slot / wrong-slot</strong> tier:
+            the higher value if you picked the actual winner of that match, the lower value if you
+            picked the winning team to advance from some other match in the same round, otherwise 0.
           </p>
           <p>
-            <strong>Per advancing team:</strong> R16 +5/+3 · QF +6/+3 · SF +8/+4 · Final +10/+5
+            <strong>Per match winner:</strong> R32 +4/+3 · R16 +6/+4 · QF +10/+6 · SF +14/+9
           </p>
           <p>
             <strong>Bonuses:</strong> +15 for the World Cup champion · +5 for the third-place
@@ -370,13 +369,13 @@ export function KnockoutBracket({
 
       {/* Persistent scoring summary. */}
       <div className="text-muted-foreground bg-muted/20 flex flex-wrap items-center gap-x-3 gap-y-1 rounded-md border px-3 py-2 font-mono text-xs">
-        <span>R16 +5/+3</span>
+        <span>R32 +4/+3</span>
         <span>·</span>
-        <span>QF +6/+3</span>
+        <span>R16 +6/+4</span>
         <span>·</span>
-        <span>SF +8/+4</span>
+        <span>QF +10/+6</span>
         <span>·</span>
-        <span>Final +10/+5</span>
+        <span>SF +14/+9</span>
         <span>·</span>
         <span>Champion +15</span>
         <span>·</span>
