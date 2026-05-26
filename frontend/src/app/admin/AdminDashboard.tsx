@@ -108,7 +108,7 @@ function StatCard({
           <Skeleton className="h-8 w-20" />
         ) : (
           <>
-            <p className="text-2xl font-bold">{value}</p>
+            <div className="text-2xl font-bold">{value}</div>
             {subtitle ? (
               <p className="text-muted-foreground mt-1 text-xs">{subtitle}</p>
             ) : null}
