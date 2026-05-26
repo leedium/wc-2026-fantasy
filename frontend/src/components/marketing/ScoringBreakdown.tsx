@@ -73,31 +73,31 @@ export function ScoringBreakdown() {
             <div className="space-y-3">
               <div className="flex items-center justify-between gap-4">
                 <span className="text-muted-foreground">
-                  Round of 16{' '}
-                  <span className="text-muted-foreground/70 text-xs">(per team advancing)</span>
+                  Round of 32{' '}
+                  <span className="text-muted-foreground/70 text-xs">(per match winner)</span>
                 </span>
-                <span className="font-semibold whitespace-nowrap">+5 / +3 pts</span>
+                <span className="font-semibold whitespace-nowrap">+4 / +3 pts</span>
+              </div>
+              <div className="flex items-center justify-between gap-4">
+                <span className="text-muted-foreground">
+                  Round of 16{' '}
+                  <span className="text-muted-foreground/70 text-xs">(per match winner)</span>
+                </span>
+                <span className="font-semibold whitespace-nowrap">+6 / +4 pts</span>
               </div>
               <div className="flex items-center justify-between gap-4">
                 <span className="text-muted-foreground">
                   Quarter-finals{' '}
-                  <span className="text-muted-foreground/70 text-xs">(per team advancing)</span>
+                  <span className="text-muted-foreground/70 text-xs">(per match winner)</span>
                 </span>
-                <span className="font-semibold whitespace-nowrap">+6 / +3 pts</span>
+                <span className="font-semibold whitespace-nowrap">+10 / +6 pts</span>
               </div>
               <div className="flex items-center justify-between gap-4">
                 <span className="text-muted-foreground">
                   Semi-finals{' '}
-                  <span className="text-muted-foreground/70 text-xs">(per team advancing)</span>
+                  <span className="text-muted-foreground/70 text-xs">(per match winner)</span>
                 </span>
-                <span className="font-semibold whitespace-nowrap">+8 / +4 pts</span>
-              </div>
-              <div className="flex items-center justify-between gap-4">
-                <span className="text-muted-foreground">
-                  Final{' '}
-                  <span className="text-muted-foreground/70 text-xs">(per finalist)</span>
-                </span>
-                <span className="font-semibold whitespace-nowrap">+10 / +5 pts</span>
+                <span className="font-semibold whitespace-nowrap">+14 / +9 pts</span>
               </div>
               <div className="flex items-center justify-between gap-4">
                 <span className="text-muted-foreground">Third Place Match Winner</span>
@@ -110,15 +110,8 @@ export function ScoringBreakdown() {
               <div className="bg-muted/50 rounded-md p-3 text-xs">
                 <span className="font-semibold">Correct slot vs. wrong slot:</span>{' '}
                 <span className="text-muted-foreground">
-                  Correct slot = the team advanced from the bracket match you predicted. Wrong
-                  slot = the team advanced, but from a different match in the same round.
-                </span>
-              </div>
-              <div className="bg-muted/50 rounded-md p-3 text-xs">
-                <span className="font-semibold">Round of 32:</span>{' '}
-                <span className="text-muted-foreground">
-                  Picks aren&apos;t scored on their own — they decide which teams sit in your
-                  Round-of-16 slots.
+                  Correct slot = you picked the winner of that exact match. Wrong slot = the
+                  team won, but you had them in a different match in the same round.
                 </span>
               </div>
               <div className="border-t pt-3">

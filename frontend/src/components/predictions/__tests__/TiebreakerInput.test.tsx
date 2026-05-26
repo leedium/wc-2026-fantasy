@@ -42,7 +42,7 @@ describe('TiebreakerInput', () => {
       render(<TiebreakerInput value={null} onChange={mockOnChange} />);
 
       const input = screen.getByLabelText("Champion's Total Goals");
-      expect(input).toHaveAttribute('placeholder', 'Enter a number (0-50)');
+      expect(input).toHaveAttribute('placeholder', 'Enter a number (0-200)');
     });
   });
 
@@ -85,7 +85,7 @@ describe('TiebreakerInput', () => {
       const input = screen.getByLabelText("Champion's Total Goals");
       await user.type(input, '-1');
 
-      expect(screen.getByText(/Goals must be between 0 and 50/i)).toBeInTheDocument();
+      expect(screen.getByText(/Goals must be between 0 and 200/i)).toBeInTheDocument();
       expect(mockOnChange).toHaveBeenLastCalledWith(null);
     });
 
@@ -95,10 +95,22 @@ describe('TiebreakerInput', () => {
       render(<TiebreakerInput value={null} onChange={mockOnChange} />);
 
       const input = screen.getByLabelText("Champion's Total Goals");
-      await user.type(input, '60');
+      await user.type(input, '250');
 
-      expect(screen.getByText(/Goals must be between 0 and 50/i)).toBeInTheDocument();
+      expect(screen.getByText(/Goals must be between 0 and 200/i)).toBeInTheDocument();
       expect(mockOnChange).toHaveBeenLastCalledWith(null);
+    });
+
+    it('should accept values above the old 50 cap', async () => {
+      const user = userEvent.setup();
+      const mockOnChange = jest.fn();
+      render(<TiebreakerInput value={null} onChange={mockOnChange} />);
+
+      const input = screen.getByLabelText("Champion's Total Goals");
+      await user.type(input, '120');
+
+      expect(mockOnChange).toHaveBeenLastCalledWith(120);
+      expect(screen.queryByText(/must be between/i)).not.toBeInTheDocument();
     });
 
     it('should show error for negative numbers', async () => {
@@ -136,7 +148,7 @@ describe('TiebreakerInput', () => {
       const input = screen.getByLabelText("Champion's Total Goals");
 
       // Enter invalid value (above max)
-      await user.type(input, '60');
+      await user.type(input, '250');
       expect(screen.getByText(/Goals must be between/i)).toBeInTheDocument();
 
       // Clear input
@@ -178,7 +190,7 @@ describe('TiebreakerInput', () => {
       render(<TiebreakerInput value={null} onChange={mockOnChange} />);
 
       const input = screen.getByLabelText("Champion's Total Goals");
-      await user.type(input, '60');
+      await user.type(input, '250');
 
       expect(input).toHaveAttribute('aria-invalid', 'true');
     });

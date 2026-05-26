@@ -119,10 +119,10 @@ describe('POST /api/predictions', () => {
 
   it('returns 400 when totalGoals out of range', async () => {
     supabaseMock.auth.getUser.mockResolvedValue({ data: { user: { id: 'u1' } } });
-    const res = await POST(postRequest(basePostBody({ totalGoals: 99 })));
+    const res = await POST(postRequest(basePostBody({ totalGoals: 250 })));
     expect(res.status).toBe(400);
     const body = await res.json();
-    expect(body.error).toMatch(/0-50/);
+    expect(body.error).toMatch(/0-200/);
   });
 
   it('returns 400 when championTeamId missing', async () => {

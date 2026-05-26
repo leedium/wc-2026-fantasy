@@ -32,10 +32,10 @@ export async function PATCH(request: NextRequest) {
     body.championTotalGoals !== null &&
     (!Number.isInteger(body.championTotalGoals) ||
       body.championTotalGoals < 0 ||
-      body.championTotalGoals > 50)
+      body.championTotalGoals > 200)
   ) {
     return NextResponse.json(
-      { error: 'championTotalGoals must be an integer 0-50' },
+      { error: 'championTotalGoals must be an integer 0-200' },
       { status: 400 }
     );
   }

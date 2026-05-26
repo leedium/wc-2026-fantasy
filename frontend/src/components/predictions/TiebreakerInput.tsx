@@ -9,10 +9,10 @@ import { Label } from '@/components/ui/label';
 import { cn } from '@/lib/utils';
 
 // Validation range for the champion's tournament-goal tally.
-// Champion plays 8 matches (3 group + R32 + R16 + QF + SF + Final);
-// realistic range is roughly 5-25, with 0-50 as the hard bound.
+// Champion plays 8 matches; realistic range is roughly 5-25.
+// Hard bound is generous (200) — matches the DB CHECK.
 const MIN_GOALS = 0;
-const MAX_GOALS = 50;
+const MAX_GOALS = 200;
 
 interface TiebreakerInputProps {
   value: number | null;
