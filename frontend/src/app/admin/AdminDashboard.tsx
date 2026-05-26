@@ -123,6 +123,14 @@ export function AdminDashboard() {
   const stats = useQuery<AdminStats>({
     queryKey: ['admin-stats'],
     queryFn: () => fetchJSON('/api/admin/stats'),
+    // Belt-and-suspenders for cache freshness: every mutation that affects
+    // dashboard counts (mark-paid, create/delete user, tournament reset,
+    // tournament/phase lock changes) explicitly invalidates this key.
+    // staleTime: 0 + refetchOnMount: 'always' guarantees navigating to
+    // /admin still refetches even if a new mutation forgets to invalidate.
+    // refetchInterval keeps the page live for long-open sessions.
+    staleTime: 0,
+    refetchOnMount: 'always',
     refetchInterval: 30_000,
   });
   const leaderboard = useQuery<LeaderboardResponse>({

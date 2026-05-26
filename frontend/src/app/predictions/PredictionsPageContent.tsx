@@ -868,13 +868,22 @@ export function PredictionsPageContent({
       }
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ['predictions'] }),
-        queryClient.invalidateQueries({ queryKey: ['prediction', newId] }),
-        // When the admin wizard saves, the user list's `predictionCount`
-        // and `paidPredictionCount` columns (`AdminUsersList`, query key
-        // `['admin-users']`) reflect counts that just changed. Mark the
-        // list stale so the next /admin/users mount refetches.
+        // Prefix invalidation: covers both the wizard's
+        // ['prediction', newId] (loaded for edit mode) and
+        // BracketPreviewDialog's ['prediction', apiBasePath, predictionId].
+        queryClient.invalidateQueries({ queryKey: ['prediction'] }),
+        // When the admin wizard saves, the user list (`['admin-users']`,
+        // prediction counts), the per-user predictions view
+        // (`['admin-user-predictions', userId]`), and the dashboard stats
+        // (`['admin-stats']`, champion-pick distribution) all reflect
+        // counts/values that just changed. Mark them stale so the next
+        // mount refetches.
         ...(usesAdminRoute
-          ? [queryClient.invalidateQueries({ queryKey: ['admin-users'] })]
+          ? [
+              queryClient.invalidateQueries({ queryKey: ['admin-users'] }),
+              queryClient.invalidateQueries({ queryKey: ['admin-user-predictions'] }),
+              queryClient.invalidateQueries({ queryKey: ['admin-stats'] }),
+            ]
           : []),
       ]);
       toast.success(markSubmitted ? 'Prediction submitted' : 'Progress saved');

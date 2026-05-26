@@ -177,15 +177,17 @@ export function AdminUserBracket({ userId }: { userId: string }) {
   const predictions = query.data?.predictions ?? [];
 
   // After any mutation that changes a prediction's payment state or
-  // existence, invalidate BOTH the detail-page query and the user-list
-  // query — `AdminUsersList` displays `predictionCount` /
-  // `paidPredictionCount` columns that go stale otherwise (the list query
-  // key is `['admin-users']`, see AdminUsersList.tsx).
+  // existence, invalidate the detail-page query, the user-list query
+  // (`AdminUsersList` shows `predictionCount` / `paidPredictionCount`),
+  // and the admin dashboard stats (driven by `admin_get_dashboard_stats`,
+  // which counts paid/cash predictions). Skipping `['admin-stats']` here
+  // meant the dashboard stayed stale until its 30s refetchInterval ticked.
   const refresh = React.useCallback(
     () =>
       Promise.all([
         queryClient.invalidateQueries({ queryKey: ['admin-user-predictions', userId] }),
         queryClient.invalidateQueries({ queryKey: ['admin-users'] }),
+        queryClient.invalidateQueries({ queryKey: ['admin-stats'] }),
       ]),
     [queryClient, userId]
   );
