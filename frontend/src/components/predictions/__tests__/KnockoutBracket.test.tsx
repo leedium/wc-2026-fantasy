@@ -71,7 +71,7 @@ describe('KnockoutBracket', () => {
     it('shows the stage subtitle for the active stage', () => {
       renderBracket();
       expect(
-        screen.getByText(/Picks here decide which teams sit in your Round of 16 slots/i)
+        screen.getByText(/\+4 if you picked the match winner correctly/i)
       ).toBeInTheDocument();
     });
 
