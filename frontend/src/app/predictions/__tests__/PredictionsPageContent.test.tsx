@@ -350,10 +350,10 @@ describe('PredictionsPageContent — stepper navigation', () => {
     ).toBeInTheDocument();
   });
 
-  it('surfaces why Save Phase 1 Picks is disabled when the prediction name is empty', async () => {
+  it('surfaces the missing prediction name when Save Phase 1 Picks is clicked', async () => {
     // 8/8 advancers ranked but the prediction-name field is still blank.
-    // The Save button must stay disabled AND explain why, since name
-    // validation is otherwise silent until the input is blurred.
+    // The Save button stays enabled (we let the user click) and clicking
+    // raises a toast + inline error rather than silently doing nothing.
     configureQueries(); // phase 1
     const user = userEvent.setup();
     render(<PredictionsPageContent mode="create" />);
@@ -367,9 +367,12 @@ describe('PredictionsPageContent — stepper navigation', () => {
     await user.click(screen.getByTestId('fill-champion'));
 
     const saveBtn = screen.getByRole('button', { name: /Save Phase 1 Picks/ });
-    expect(saveBtn).toBeDisabled();
-    expect(saveBtn).toHaveAttribute('title', 'Enter a prediction name above first.');
-    expect(screen.getByText('Enter a prediction name above first.')).toBeInTheDocument();
+    expect(saveBtn).toBeEnabled();
+
+    await user.click(saveBtn);
+
+    expect(toastError).toHaveBeenCalledWith('Prediction name is required.');
+    expect(screen.getByRole('alert')).toHaveTextContent('Prediction name is required.');
   });
 
   it('walks through every step with Continue and reaches the tiebreaker (phase 2 open)', async () => {
