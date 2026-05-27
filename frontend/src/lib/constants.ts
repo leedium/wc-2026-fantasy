@@ -72,6 +72,7 @@ export const ROUTES = {
   privacy: '/privacy',
   referrals: '/referrals',
   rewards: '/rewards',
+  support: '/support',
 } as const;
 
 /**
@@ -126,3 +127,29 @@ export const PASSWORD_MIN_LENGTH = 8;
 
 export const PREDICTION_NAME_REGEX = /^[A-Za-z0-9 _\-.''‘’]+$/;
 export const PREDICTION_NAME_MAX = 60;
+
+/**
+ * Support tickets — see `supabase/migrations/0051_support_tickets.sql`.
+ * The subject list is also enforced by the table's CHECK constraint; keep
+ * them in sync. Length constants mirror the same CHECK bounds.
+ */
+export const SUPPORT_TICKET_SUBJECTS = [
+  'account',
+  'settings',
+  'bug',
+  'prediction',
+  'payment',
+] as const;
+
+export type SupportTicketSubject = (typeof SUPPORT_TICKET_SUBJECTS)[number];
+
+export const SUPPORT_TICKET_SUBJECT_LABELS: Record<SupportTicketSubject, string> = {
+  account: 'Account',
+  settings: 'Settings',
+  bug: 'Bug report',
+  prediction: 'Prediction issue',
+  payment: 'Payment',
+};
+
+export const SUPPORT_TICKET_TITLE_MAX = 120;
+export const SUPPORT_TICKET_DESCRIPTION_MAX = 2000;
