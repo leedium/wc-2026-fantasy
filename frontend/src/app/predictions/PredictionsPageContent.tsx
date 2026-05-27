@@ -950,12 +950,13 @@ export function PredictionsPageContent({
   const showReviewSubmit = isLastStep && !lockedReadOnly;
   const showContinue =
     !isLastStep && (lockedReadOnly || !isPhase1LastStep || isSuperAdmin);
-  // In Phase 2 the bottom "Ready to submit?" card goes away — Save progress
-  // moves inline to the stepper bottom row and Submit Prediction lives only
-  // on the last step. Phase 1 keeps the bottom card with its existing
-  // Save progress + (disabled) Submit Prediction layout.
-  const showSaveProgressInline = phase !== 'phase1' && !lockedReadOnly;
-  const showBottomSubmitCard = !lockedReadOnly && !isLastStep && phase === 'phase1';
+  // Save progress is the inline default while the prediction is still
+  // editable — replaced by Save Phase 1 Picks on the Phase 1 last step
+  // and by Submit Prediction on the tiebreaker. Phase 1 used to have a
+  // bottom "Ready to submit?" card with a (useless) Submit button; that
+  // card is gone, so Save progress now shows inline during Phase 1 too.
+  const showSaveProgressInline =
+    !showSavePhase1 && !showReviewSubmit && !lockedReadOnly;
 
   return (
     <PageLayout>
@@ -1189,45 +1190,6 @@ export function PredictionsPageContent({
         </div>
       </div>
 
-      {showBottomSubmitCard && (
-        <Card id="submit-predictions-card" className="border-primary/20 bg-primary/5">
-          <CardContent className="flex flex-col gap-4 py-6 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <p className="font-semibold">Ready to submit?</p>
-              <p className="text-muted-foreground text-sm">
-                {isPredictionsComplete
-                  ? 'Submit puts this bracket on the leaderboard once an admin marks it paid.'
-                  : phase === 'phase1'
-                    ? 'Save progress to keep working. You can submit once Phase 2 opens and the knockout bracket is complete.'
-                    : 'Save progress to keep working — or complete every pick to submit.'}
-              </p>
-            </div>
-            <div className="flex flex-col gap-2 sm:flex-row">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={handleSaveProgress}
-                disabled={isLocked || isSubmitting || isSavingProgress}
-                className="min-w-[160px]"
-              >
-                {isSavingProgress ? 'Saving…' : 'Save progress'}
-              </Button>
-              <Button
-                size="lg"
-                onClick={handleSubmit}
-                disabled={isLocked || isSubmitting || isSavingProgress}
-                className="min-w-[180px]"
-              >
-                {isSubmitting
-                  ? 'Submitting...'
-                  : isLocked
-                    ? 'Predictions Locked'
-                    : 'Submit Prediction'}
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-      )}
     </PageLayout>
   );
 }
