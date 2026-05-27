@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { TeamFlag } from '@/components/shared/TeamFlag';
 import { resolveTeamSource } from '@/lib/knockoutResolver';
-import { formatSourcePair } from '@/lib/matchLabel';
+import { formatSource, formatSourcePair } from '@/lib/matchLabel';
 import { cn } from '@/lib/utils';
 import type {
   GroupPrediction,
@@ -107,7 +107,7 @@ function getTeamDisplay(
 // back to the raw source string.
 function describeSource(source: string): string {
   if (/^3-[A-L]{5}$/.test(source)) return '3rd-place team (TBD)';
-  return source;
+  return formatSource(source);
 }
 
 // Single match card component
