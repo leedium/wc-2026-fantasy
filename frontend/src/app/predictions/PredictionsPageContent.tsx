@@ -1028,7 +1028,10 @@ export function PredictionsPageContent({
             value={predictionName}
             onChange={(e) => handleNameChange(e.target.value)}
             onBlur={() => setPredictionNameTouched(true)}
-            disabled={isLocked || isSubmitting}
+            // Prediction name is a Phase 1 field — freezes once Phase 1
+            // locks, same as group / champion picks. Super admin keeps
+            // edit access via `phase1Editable`.
+            disabled={!phase1Editable || isSubmitting}
             maxLength={PREDICTION_NAME_MAX}
             aria-invalid={showNameError ? true : undefined}
             aria-describedby={
