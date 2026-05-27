@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { TeamFlag } from '@/components/shared/TeamFlag';
 import { resolveTeamSource } from '@/lib/knockoutResolver';
+import { formatSourcePair } from '@/lib/matchLabel';
 import { cn } from '@/lib/utils';
 import type {
   GroupPrediction,
@@ -153,9 +154,14 @@ function MatchCard({
       )}
     >
       <CardHeader className="p-3 pb-2">
-        <div className="flex items-center justify-between">
-          <span className="text-muted-foreground font-mono text-xs">{match.id}</span>
-          <Badge variant="outline" className="text-xs">
+        <div className="flex items-center justify-between gap-2">
+          <div className="text-muted-foreground flex min-w-0 items-center gap-2 font-mono text-xs">
+            <span>{match.id}</span>
+            <span className="truncate opacity-60">
+              {formatSourcePair(match.team1Source, match.team2Source)}
+            </span>
+          </div>
+          <Badge variant="outline" className="shrink-0 text-xs">
             {STAGE_CONFIG[match.stage].pointsHint}
           </Badge>
         </div>

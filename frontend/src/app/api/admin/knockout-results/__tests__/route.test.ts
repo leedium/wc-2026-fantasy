@@ -43,7 +43,7 @@ describe('POST /api/admin/knockout-results', () => {
     supabaseMock.auth.getUser.mockResolvedValue({ data: { user: { id: 'u1' } } });
     mockAdminProfile(false);
     const res = await POST(
-      postReq({ tournamentId: 't1', matchId: 'M1', winnerTeamId: 'a', loserTeamId: 'b' })
+      postReq({ tournamentId: 't1', matchId: 'M73', winnerTeamId: 'a', loserTeamId: 'b' })
     );
     expect(res.status).toBe(403);
   });
@@ -51,7 +51,7 @@ describe('POST /api/admin/knockout-results', () => {
   it('returns 400 when required fields are missing', async () => {
     supabaseMock.auth.getUser.mockResolvedValue({ data: { user: { id: 'u1' } } });
     mockAdminProfile(true);
-    const res = await POST(postReq({ tournamentId: 't1', matchId: 'M1' }));
+    const res = await POST(postReq({ tournamentId: 't1', matchId: 'M73' }));
     expect(res.status).toBe(400);
   });
 
@@ -62,7 +62,7 @@ describe('POST /api/admin/knockout-results', () => {
     const res = await POST(
       postReq({
         tournamentId: 't1',
-        matchId: 'M1',
+        matchId: 'M73',
         winnerTeamId: 'a',
         loserTeamId: 'b',
         totalGoals: 3,
@@ -71,7 +71,7 @@ describe('POST /api/admin/knockout-results', () => {
     expect(res.status).toBe(200);
     expect(supabaseMock.rpc).toHaveBeenCalledWith('admin_set_knockout_result', {
       p_tournament_id: 't1',
-      p_match_id: 'M1',
+      p_match_id: 'M73',
       p_winner_team_id: 'a',
       p_loser_team_id: 'b',
       p_total_goals: 3,

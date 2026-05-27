@@ -17,8 +17,8 @@ describe('BracketView', () => {
       />
     );
 
-    // 32 match nodes total (M1..M32, with M31 being third place).
-    for (let i = 1; i <= 32; i++) {
+    // 32 match nodes total (M73..M104, with M103 being third place).
+    for (let i = 73; i <= 104; i++) {
       expect(screen.getByTestId(`bracket-match-M${i}`)).toBeInTheDocument();
     }
     expect(screen.getByText(/Third-place play-off/i)).toBeInTheDocument();
@@ -33,7 +33,7 @@ describe('BracketView', () => {
         knockoutPredictions={[]}
       />
     );
-    const m1 = screen.getByTestId('bracket-match-M1');
+    const m1 = screen.getByTestId('bracket-match-M73');
     expect(within(m1).getAllByText('TBD').length).toBeGreaterThan(0);
   });
 
@@ -48,7 +48,7 @@ describe('BracketView', () => {
         positions: { first: 'sui', second: 'qat', third: 'bih', fourth: 'can' },
       },
     ];
-    const knockoutPredictions = [{ matchId: 'M1', winnerId: 'mex' }];
+    const knockoutPredictions = [{ matchId: 'M73', winnerId: 'mex' }];
 
     render(
       <BracketView
@@ -59,7 +59,7 @@ describe('BracketView', () => {
       />
     );
 
-    const m1 = screen.getByTestId('bracket-match-M1');
+    const m1 = screen.getByTestId('bracket-match-M73');
     expect(within(m1).getByText('Mexico')).toBeInTheDocument();
     expect(within(m1).getByText('Qatar')).toBeInTheDocument();
   });

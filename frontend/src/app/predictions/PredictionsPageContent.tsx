@@ -531,7 +531,6 @@ export function PredictionsPageContent({
           ? 'Letters, numbers, spaces, and basic punctuation only.'
           : null;
   const showNameError = serverNameError ?? (predictionNameTouched ? nameError : null);
-  const isReadyToSubmit = isPredictionsComplete && !nameError;
 
   const advancerCandidatePool = React.useMemo(() => {
     if (!teams) return [];
@@ -776,7 +775,9 @@ export function PredictionsPageContent({
     if (!tournament) return;
     setPredictionNameTouched(true);
     if (nameError) {
+      toast.error(nameError);
       nameRef.current?.focus();
+      nameRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
       return;
     }
     if (markSubmitted && !isPredictionsComplete) {
@@ -956,22 +957,6 @@ export function PredictionsPageContent({
   const showSaveProgressInline = phase !== 'phase1' && !lockedReadOnly;
   const showBottomSubmitCard = !lockedReadOnly && !isLastStep && phase === 'phase1';
 
-  // Why is the Save Phase 1 Picks button disabled? The button has four
-  // silent gates (name validation, current-step completion, lock state,
-  // in-flight save); without a hint the user is left guessing — especially
-  // when name validation fires before they've touched the field. Surface
-  // it as both a tooltip and a visible note.
-  const savePhase1DisabledReason: string | null =
-    isLocked
-      ? 'Predictions are locked.'
-      : isSavingProgress || isSubmitting
-        ? null
-        : nameError
-          ? 'Enter a prediction name above first.'
-          : !currentStepComplete
-            ? 'Pick your gut-feeling champion above first.'
-            : null;
-
   return (
     <PageLayout>
       {breadcrumb}
@@ -1030,9 +1015,12 @@ export function PredictionsPageContent({
         </Card>
       )}
 
-      <Card className="mb-6">
-        <CardContent className="space-y-2 py-4">
-          <Label htmlFor="prediction-name">Prediction name</Label>
+      <Card className="mb-8">
+        <CardContent className="space-y-3 py-6">
+          <Label htmlFor="prediction-name" className="text-base font-medium">
+            Prediction name
+            <span className="text-destructive ml-0.5" aria-hidden>*</span>
+          </Label>
           <Input
             id="prediction-name"
             ref={nameRef}
@@ -1046,7 +1034,10 @@ export function PredictionsPageContent({
             aria-describedby={
               showNameError ? 'prediction-name-error' : 'prediction-name-help'
             }
-            className={cn(showNameError && 'border-destructive focus-visible:ring-destructive')}
+            className={cn(
+              'h-12 text-base',
+              showNameError && 'border-destructive focus-visible:ring-destructive'
+            )}
             placeholder="e.g. Main bracket"
           />
           {!showNameError && (
@@ -1148,59 +1139,28 @@ export function PredictionsPageContent({
                 type="button"
                 variant="outline"
                 onClick={handleSaveProgress}
-                disabled={
-                  isLocked || isSubmitting || isSavingProgress || !!nameError
-                }
+                disabled={isLocked || isSubmitting || isSavingProgress}
                 className="sm:w-auto"
               >
                 {isSavingProgress ? 'Saving…' : 'Save progress'}
               </Button>
             )}
             {showSavePhase1 && (
-              <div className="flex flex-col items-end gap-1">
-                <Button
-                  type="button"
-                  onClick={handleSavePhase1}
-                  disabled={
-                    !currentStepComplete ||
-                    isLocked ||
-                    isSavingProgress ||
-                    isSubmitting ||
-                    !!nameError
-                  }
-                  title={savePhase1DisabledReason ?? undefined}
-                  aria-describedby={
-                    savePhase1DisabledReason ? 'save-phase1-disabled-hint' : undefined
-                  }
-                  className="sm:w-auto"
-                >
-                  {isSavingProgress ? 'Saving…' : 'Save Phase 1 Picks'}
-                  <ArrowRight className="ml-2 h-4 w-4" />
-                </Button>
-                {savePhase1DisabledReason && (
-                  <p
-                    id="save-phase1-disabled-hint"
-                    className="text-muted-foreground text-xs"
-                  >
-                    {savePhase1DisabledReason}
-                  </p>
-                )}
-              </div>
+              <Button
+                type="button"
+                onClick={handleSavePhase1}
+                disabled={isLocked || isSavingProgress || isSubmitting}
+                className="sm:w-auto"
+              >
+                {isSavingProgress ? 'Saving…' : 'Save Phase 1 Picks'}
+                <ArrowRight className="ml-2 h-4 w-4" />
+              </Button>
             )}
             {showReviewSubmit && (
               <Button
                 type="button"
                 onClick={handleSubmit}
-                disabled={!isReadyToSubmit || isLocked || isSubmitting || isSavingProgress}
-                title={
-                  isReadyToSubmit
-                    ? undefined
-                    : nameError
-                      ? 'Enter a prediction name above first.'
-                      : !isPredictionsComplete
-                        ? 'Complete every section in the stepper before submitting.'
-                        : undefined
-                }
+                disabled={isLocked || isSubmitting || isSavingProgress}
                 className="sm:w-auto"
               >
                 {isSubmitting ? 'Submitting…' : 'Submit Prediction'}
@@ -1244,7 +1204,7 @@ export function PredictionsPageContent({
                 type="button"
                 variant="outline"
                 onClick={handleSaveProgress}
-                disabled={isLocked || isSubmitting || isSavingProgress || !!nameError}
+                disabled={isLocked || isSubmitting || isSavingProgress}
                 className="min-w-[160px]"
               >
                 {isSavingProgress ? 'Saving…' : 'Save progress'}
@@ -1252,7 +1212,7 @@ export function PredictionsPageContent({
               <Button
                 size="lg"
                 onClick={handleSubmit}
-                disabled={!isReadyToSubmit || isLocked || isSubmitting || isSavingProgress}
+                disabled={isLocked || isSubmitting || isSavingProgress}
                 className="min-w-[180px]"
               >
                 {isSubmitting

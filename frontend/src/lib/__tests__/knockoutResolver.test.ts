@@ -18,11 +18,11 @@ const groupPredictions: GroupPrediction[] = [
 ];
 
 const matches: KnockoutMatch[] = [
-  { id: 'M1', stage: 'round_of_32', team1Source: '1A', team2Source: '2B', pointValue: 2 },
-  { id: 'M2', stage: 'round_of_32', team1Source: '1E', team2Source: '3-ABCDF', pointValue: 2 },
-  { id: 'M17', stage: 'round_of_16', team1Source: 'M1', team2Source: 'M2', pointValue: 4 },
-  { id: 'M29', stage: 'semi_finals', team1Source: 'M25', team2Source: 'M26', pointValue: 15 },
-  { id: 'M31', stage: 'third_place', team1Source: 'L-M29', team2Source: 'L-M30', pointValue: 10 },
+  { id: 'M73', stage: 'round_of_32', team1Source: '1A', team2Source: '2B', pointValue: 2 },
+  { id: 'M74', stage: 'round_of_32', team1Source: '1E', team2Source: '3-ABCDF', pointValue: 2 },
+  { id: 'M89', stage: 'round_of_16', team1Source: 'M73', team2Source: 'M74', pointValue: 4 },
+  { id: 'M101', stage: 'semi_finals', team1Source: 'M97', team2Source: 'M98', pointValue: 15 },
+  { id: 'M103', stage: 'third_place', team1Source: 'L-M101', team2Source: 'L-M102', pointValue: 10 },
 ];
 
 describe('resolveTeamSource', () => {
@@ -38,32 +38,32 @@ describe('resolveTeamSource', () => {
 
   it('resolves match-winner references', () => {
     const knockoutPredictions: KnockoutMatchPrediction[] = [
-      { matchId: 'M1', winnerId: 'mex' },
+      { matchId: 'M73', winnerId: 'mex' },
     ];
-    expect(resolveTeamSource('M1', matches, groupPredictions, knockoutPredictions)).toBe('mex');
+    expect(resolveTeamSource('M73', matches, groupPredictions, knockoutPredictions)).toBe('mex');
   });
 
   it('returns null when the predicted winner is missing', () => {
-    expect(resolveTeamSource('M1', matches, groupPredictions, [])).toBeNull();
+    expect(resolveTeamSource('M73', matches, groupPredictions, [])).toBeNull();
   });
 
   it('resolves match-loser references via the contestants', () => {
-    // M1 contestants: 1A (mex), 2B (qat). Predicted winner: mex → loser: qat.
+    // M73 contestants: 1A (mex), 2B (qat). Predicted winner: mex → loser: qat.
     const knockoutPredictions: KnockoutMatchPrediction[] = [
-      { matchId: 'M1', winnerId: 'mex' },
+      { matchId: 'M73', winnerId: 'mex' },
     ];
-    // Build a fake third-place match that consumes L-M1 just to exercise the path.
+    // Build a fake third-place match that consumes L-M73 just to exercise the path.
     const localMatches: KnockoutMatch[] = [
       ...matches,
       {
-        id: 'M99',
+        id: 'M999',
         stage: 'third_place',
-        team1Source: 'L-M1',
-        team2Source: 'L-M1',
+        team1Source: 'L-M73',
+        team2Source: 'L-M73',
         pointValue: 10,
       },
     ];
-    expect(resolveTeamSource('L-M1', localMatches, groupPredictions, knockoutPredictions)).toBe(
+    expect(resolveTeamSource('L-M73', localMatches, groupPredictions, knockoutPredictions)).toBe(
       'qat'
     );
   });
@@ -78,7 +78,7 @@ describe('resolveTeamSource', () => {
     // resolver looks up (matchId, slot) tuple that owns the source.
     it('resolves to the admin-assigned team for the slot', () => {
       const assignments: R32BracketAssignment[] = [
-        { matchId: 'M2', slot: 2, teamId: 'rsa' },
+        { matchId: 'M74', slot: 2, teamId: 'rsa' },
       ];
       expect(
         resolveTeamSource('3-ABCDF', matches, groupPredictions, [], assignments)
@@ -91,7 +91,7 @@ describe('resolveTeamSource', () => {
 
     it('returns null when no match owns the source string', () => {
       const assignments: R32BracketAssignment[] = [
-        { matchId: 'M2', slot: 2, teamId: 'rsa' },
+        { matchId: 'M74', slot: 2, teamId: 'rsa' },
       ];
       expect(
         resolveTeamSource('3-XXXXX', matches, groupPredictions, [], assignments)
@@ -106,9 +106,9 @@ describe('resolveTeamSource', () => {
     // user-predicted slot so the team renders once (in the admin slot) instead
     // of duplicating across matches.
     it('suppresses a user-predicted 1A when the team is also in bracketAssignments', () => {
-      // User predicted 'mex' as 1st of A; admin placed 'mex' in the (M2, 2) 3-XXXXX slot.
+      // User predicted 'mex' as 1st of A; admin placed 'mex' in the (M74, 2) 3-XXXXX slot.
       const assignments: R32BracketAssignment[] = [
-        { matchId: 'M2', slot: 2, teamId: 'mex' },
+        { matchId: 'M74', slot: 2, teamId: 'mex' },
       ];
       expect(
         resolveTeamSource('1A', matches, groupPredictions, [], assignments)
@@ -121,9 +121,9 @@ describe('resolveTeamSource', () => {
 
     it('suppresses a user-predicted 2B when the team is also in bracketAssignments', () => {
       // Mirrors the reported bug: user has 'qat' as 2nd of B; admin placed
-      // 'qat' in the (M2, 2) 3-XXXXX slot.
+      // 'qat' in the (M74, 2) 3-XXXXX slot.
       const assignments: R32BracketAssignment[] = [
-        { matchId: 'M2', slot: 2, teamId: 'qat' },
+        { matchId: 'M74', slot: 2, teamId: 'qat' },
       ];
       expect(
         resolveTeamSource('2B', matches, groupPredictions, [], assignments)
@@ -134,7 +134,7 @@ describe('resolveTeamSource', () => {
       // Consistency check: if a 3X source ever points to a team admin has
       // already placed, the explicit admin slot wins and the 3X slot is null.
       const assignments: R32BracketAssignment[] = [
-        { matchId: 'M2', slot: 2, teamId: 'rsa' },
+        { matchId: 'M74', slot: 2, teamId: 'rsa' },
       ];
       expect(
         resolveTeamSource('3A', matches, groupPredictions, [], assignments)
@@ -144,7 +144,7 @@ describe('resolveTeamSource', () => {
     it('does not suppress when there is no overlap', () => {
       // 'kor' is user's 2nd of A. Admin's bracket has a different team. No conflict.
       const assignments: R32BracketAssignment[] = [
-        { matchId: 'M2', slot: 2, teamId: 'rsa' },
+        { matchId: 'M74', slot: 2, teamId: 'rsa' },
       ];
       expect(
         resolveTeamSource('1A', matches, groupPredictions, [], assignments)
