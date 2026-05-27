@@ -62,10 +62,10 @@ describe('KnockoutBracket', () => {
 
     it('renders only the matches for the active stage', () => {
       renderBracket({ stage: 'quarter_finals', groupPredictions: createCompleteGroupPredictions() });
-      // QF has 4 match cards (M25-M28); R32 has 16 (M1-M16). Only QF should render.
-      expect(screen.getByText('M25')).toBeInTheDocument();
-      expect(screen.queryByText('M1')).not.toBeInTheDocument();
-      expect(screen.queryByText('M17')).not.toBeInTheDocument();
+      // QF has 4 match cards (M97-M100); R32 has 16 (M73-M88). Only QF should render.
+      expect(screen.getByText('M97')).toBeInTheDocument();
+      expect(screen.queryByText('M73')).not.toBeInTheDocument();
+      expect(screen.queryByText('M89')).not.toBeInTheDocument();
     });
 
     it('shows the stage subtitle for the active stage', () => {
@@ -105,7 +105,7 @@ describe('KnockoutBracket', () => {
 
     it('should show team names when group predictions are complete', () => {
       renderBracket({ groupPredictions: createCompleteGroupPredictions() });
-      // Group A first place advances to M1; Group D first place advances to M2.
+      // Group A first place advances to M73; Group D first place advances to M74.
       expect(screen.getByText('Mexico')).toBeInTheDocument();
       expect(screen.getByText('United States')).toBeInTheDocument();
     });
@@ -129,7 +129,7 @@ describe('KnockoutBracket', () => {
       });
       const mexButton = screen.getByRole('button', { name: /MEX.*Mexico/i });
       await user.click(mexButton);
-      expect(onPredictionChange).toHaveBeenCalledWith('M1', 'mex');
+      expect(onPredictionChange).toHaveBeenCalledWith('M73', 'mex');
     });
   });
 });

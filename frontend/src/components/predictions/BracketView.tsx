@@ -5,6 +5,7 @@ import { Trophy } from 'lucide-react';
 
 import { TeamFlag } from '@/components/shared/TeamFlag';
 import { resolveTeamSource } from '@/lib/knockoutResolver';
+import { formatSourcePair } from '@/lib/matchLabel';
 import { cn } from '@/lib/utils';
 import type {
   GroupPrediction,
@@ -85,8 +86,9 @@ function MatchNode({
       className="bg-card border-border w-full rounded-md border text-xs shadow-sm"
       data-testid={`bracket-match-${match.id}`}
     >
-      <div className="text-muted-foreground border-b px-2 py-1 text-[10px] font-medium uppercase tracking-wide">
-        {match.id}
+      <div className="text-muted-foreground border-b px-2 py-1 text-[10px] font-medium tracking-wide">
+        <span>{match.id}</span>
+        <span className="opacity-60"> {formatSourcePair(match.team1Source, match.team2Source)}</span>
       </div>
       {slots.map((slot, idx) => {
         const label = teamLabel(slot.teamId, teams);
@@ -136,8 +138,10 @@ export function BracketView({
     matches.forEach((m) => grouped[m.stage].push(m));
     Object.keys(grouped).forEach((stage) => {
       grouped[stage as KnockoutStage].sort((a, b) => {
-        const aNum = Number(a.id.replace('M', ''));
-        const bNum = Number(b.id.replace('M', ''));
+        // Ids look like "M73".."M104" (FIFA-aligned). Strip the leading
+        // "M" and sort numerically; multi-digit suffixes are intentional.
+        const aNum = Number(a.id.slice(1));
+        const bNum = Number(b.id.slice(1));
         return aNum - bNum;
       });
     });

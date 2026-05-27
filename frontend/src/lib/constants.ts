@@ -13,7 +13,7 @@ export const TOURNAMENT_CONFIG = {
 // Advancers: 8 ranked 3rd-place picks × 1.25 (set + rank) = 10 max.
 // Knockout: per-team correct-side maxes — R16 16×5 + QF 8×6 + SF 4×8 + Final 2×10 = 180 — plus
 // flat bonuses (champion 15, 3rd-place winner 5) = 200.
-// Phase 1 Champions Pick: +5 if `predictions.champion_team_id` matches the actual M32 winner
+// Phase 1 Champions Pick: +5 if `predictions.champion_team_id` matches the actual M104 winner
 // (independent of the bracket Final pick).
 export const SCORING = {
   maxGroupPoints: 74,

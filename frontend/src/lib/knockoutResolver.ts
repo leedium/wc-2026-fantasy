@@ -6,8 +6,8 @@ import type {
 } from '@/types/tournament';
 
 /**
- * Resolves a `team1_source` / `team2_source` reference (e.g. `"1A"`, `"M5"`,
- * `"L-M29"`, `"3-ABCDF"`) to the predicted team id, given the user's group +
+ * Resolves a `team1_source` / `team2_source` reference (e.g. `"1A"`, `"M77"`,
+ * `"L-M101"`, `"3-ABCDF"`) to the predicted team id, given the user's group +
  * knockout picks and the admin-set R32 bracket assignments. Returns null
  * when the picks (or admin assignment) for the source aren't filled in yet.
  */
@@ -65,14 +65,14 @@ export function resolveTeamSource(
     return assignment?.teamId ?? null;
   }
 
-  // Match winner source: 'M1' = the predicted winner of M1.
+  // Match winner source: 'M73' = the predicted winner of match 73.
   if (/^M\d+$/.test(source)) {
     const matchPrediction = knockoutPredictions.find((p) => p.matchId === source);
     return matchPrediction?.winnerId ?? null;
   }
 
-  // Match loser source: 'L-M29' = the loser of M29 (the team that lost in the
-  // user's prediction). Recurse to figure out who the two contestants were.
+  // Match loser source: 'L-M101' = the loser of M101 (the team that lost in
+  // the user's prediction). Recurse to figure out who the two contestants were.
   const loserMatch = source.match(/^L-M(\d+)$/);
   if (loserMatch) {
     const matchId = `M${loserMatch[1]}`;
