@@ -61,16 +61,16 @@ export function ChampionPickForm({
           </span>
         </summary>
         <div className="text-muted-foreground mt-3 space-y-2 text-sm">
-          <p>Select your Phase 1 Champion Pick before the tournament begins.</p>
+          <p>Pick one team to win the whole tournament — your Gut Feeling Champion.</p>
           <p>
-            This pick locks at kickoff of the opening match. Once the playoffs begin, you may
-            submit a new Phase 2 Champion Pick.
+            Required when you create a prediction. It locks when Phase 1 (the group stage)
+            closes and can&apos;t be changed after that.
           </p>
           <p>
             <strong>Bonus:</strong> +{SCORING.championPickBonus} points if your pick wins the
             tournament.
           </p>
-          <p>Separate from your bracket Final pick.</p>
+          <p>Separate from your bracket Final pick — both can score.</p>
         </div>
       </details>
 
