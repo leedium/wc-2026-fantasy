@@ -238,6 +238,9 @@ export function KnockoutResultsEditor({
   const grouped = React.useMemo(() => {
     const map = new Map<KnockoutMatch['stage'], KnockoutMatch[]>();
     for (const m of matches) {
+      // M103 (third-place playoff) is unscored under v4 and not picked by
+      // users, so there's nothing to record a result against.
+      if (m.stage === 'third_place') continue;
       const list = map.get(m.stage) ?? [];
       list.push(m);
       map.set(m.stage, list);
