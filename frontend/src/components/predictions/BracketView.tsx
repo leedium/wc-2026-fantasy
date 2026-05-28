@@ -9,6 +9,7 @@ import { formatSourcePair } from '@/lib/matchLabel';
 import { cn } from '@/lib/utils';
 import type {
   GroupPrediction,
+  GroupStanding,
   KnockoutMatch,
   KnockoutMatchPrediction,
   KnockoutStage,
@@ -22,6 +23,7 @@ interface BracketViewProps {
   groupPredictions: GroupPrediction[];
   knockoutPredictions: KnockoutMatchPrediction[];
   bracketAssignments?: R32BracketAssignment[];
+  groupStandings?: GroupStanding[];
 }
 
 const COLUMN_STAGES: Array<{ stage: KnockoutStage; label: string }> = [
@@ -51,6 +53,7 @@ function MatchNode({
   groupPredictions,
   knockoutPredictions,
   bracketAssignments,
+  groupStandings,
 }: {
   match: KnockoutMatch;
   matches: KnockoutMatch[];
@@ -58,20 +61,23 @@ function MatchNode({
   groupPredictions: GroupPrediction[];
   knockoutPredictions: KnockoutMatchPrediction[];
   bracketAssignments: R32BracketAssignment[];
+  groupStandings: GroupStanding[];
 }) {
   const team1Id = resolveTeamSource(
     match.team1Source,
     matches,
     groupPredictions,
     knockoutPredictions,
-    bracketAssignments
+    bracketAssignments,
+    groupStandings
   );
   const team2Id = resolveTeamSource(
     match.team2Source,
     matches,
     groupPredictions,
     knockoutPredictions,
-    bracketAssignments
+    bracketAssignments,
+    groupStandings
   );
   const winnerId =
     knockoutPredictions.find((p) => p.matchId === match.id)?.winnerId ?? null;
@@ -125,6 +131,7 @@ export function BracketView({
   groupPredictions,
   knockoutPredictions,
   bracketAssignments = [],
+  groupStandings = [],
 }: BracketViewProps) {
   const matchesByStage = React.useMemo(() => {
     const grouped: Record<KnockoutStage, KnockoutMatch[]> = {
@@ -171,6 +178,7 @@ export function BracketView({
                   groupPredictions={groupPredictions}
                   knockoutPredictions={knockoutPredictions}
                   bracketAssignments={bracketAssignments}
+                  groupStandings={groupStandings}
                 />
               ))}
             </div>
@@ -186,6 +194,7 @@ export function BracketView({
                   groupPredictions={groupPredictions}
                   knockoutPredictions={knockoutPredictions}
                   bracketAssignments={bracketAssignments}
+                  groupStandings={groupStandings}
                 />
               </div>
             )}
