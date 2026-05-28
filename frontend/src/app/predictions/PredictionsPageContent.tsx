@@ -62,8 +62,9 @@ type Step =
 
 type TopStep = 'groups' | 'best_thirds' | 'champion_pick' | 'knockout' | 'tiebreaker';
 
-// 'third_place' (M103) sits after the Final: users pick the third-place
-// winner (scored +5) before the tiebreaker.
+// 'third_place' (M103) sits between the semi-finals and the Final: the
+// SF losers are known by then, and users pick the third-place winner
+// (scored +5) just before the championship match.
 const STEP_ORDER: Step[] = [
   'groups',
   'best_thirds',
@@ -72,8 +73,8 @@ const STEP_ORDER: Step[] = [
   'round_of_16',
   'quarter_finals',
   'semi_finals',
-  'final',
   'third_place',
+  'final',
   'tiebreaker',
 ];
 
@@ -95,8 +96,8 @@ const KNOCKOUT_STAGE_LIST: KnockoutStage[] = [
   'round_of_16',
   'quarter_finals',
   'semi_finals',
-  'final',
   'third_place',
+  'final',
 ];
 
 const SUB_STEP_LABELS: Record<KnockoutStage, string> = {

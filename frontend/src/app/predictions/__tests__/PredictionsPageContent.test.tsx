@@ -407,7 +407,7 @@ describe('PredictionsPageContent — stepper navigation', () => {
     // Filling all knockout matches at once satisfies every knockout sub-step.
     await user.click(screen.getByTestId('fill-all-knockout'));
 
-    const stages = ['Round of 16', 'Quarter-finals', 'Semi-finals', 'Final', 'Third Place'];
+    const stages = ['Round of 16', 'Quarter-finals', 'Semi-finals', 'Third Place', 'Final'];
     for (const next of stages) {
       const btn = await screen.findByRole('button', {
         name: new RegExp(`Continue to ${next}`, 'i'),
@@ -624,13 +624,13 @@ describe('PredictionsPageContent — autosave', () => {
     await user.click(screen.getByTestId('fill-champion'));
     await user.click(screen.getByRole('button', { name: /Continue to Round of 32/ }));
     await user.click(screen.getByTestId('fill-all-knockout'));
-    // Walk through R16 → QF → SF → Final → Third Place → Tiebreaker.
+    // Walk through R16 → QF → SF → Third Place → Final → Tiebreaker.
     for (const next of [
       'Round of 16',
       'Quarter-finals',
       'Semi-finals',
-      'Final',
       'Third Place',
+      'Final',
       'Tiebreaker',
     ]) {
       await user.click(
@@ -814,8 +814,8 @@ describe('PredictionsPageContent — autosave', () => {
       'Round of 16',
       'Quarter-finals',
       'Semi-finals',
-      'Final',
       'Third Place',
+      'Final',
       'Tiebreaker',
     ]) {
       await user.click(
@@ -875,10 +875,10 @@ describe('PredictionsPageContent — autosave', () => {
     render(<PredictionsPageContent mode="edit" predictionId="pred-1" initial={initial} />);
 
     // Wizard auto-jumps to R32; fill every match EXCEPT M103, then walk
-    // forward to the Third Place step.
+    // forward to the Third Place step (it sits just before the Final).
     await screen.findByTestId('knockout-bracket');
     await user.click(screen.getByTestId('fill-all-knockout-except-third'));
-    for (const next of ['Round of 16', 'Quarter-finals', 'Semi-finals', 'Final', 'Third Place']) {
+    for (const next of ['Round of 16', 'Quarter-finals', 'Semi-finals', 'Third Place']) {
       await user.click(
         await screen.findByRole('button', {
           name: new RegExp(`Continue to ${next}`, 'i'),
@@ -888,11 +888,12 @@ describe('PredictionsPageContent — autosave', () => {
 
     // On the Third Place step with M103 unpicked, advancing is blocked.
     expect(
-      await screen.findByRole('button', { name: /Continue to Tiebreaker/ })
+      await screen.findByRole('button', { name: /Continue to Final/ })
     ).toBeDisabled();
 
-    // Pick the third-place winner → bracket completes, Continue unlocks.
+    // Pick the third-place winner → step completes, Continue unlocks.
     await user.click(screen.getByTestId('fill-all-knockout'));
+    await user.click(await screen.findByRole('button', { name: /Continue to Final/ }));
     await user.click(
       await screen.findByRole('button', { name: /Continue to Tiebreaker/ })
     );

@@ -68,14 +68,14 @@ export const STAGE_CONFIG: Record<
 
 // Stage order. Used by the parent stepper; the bracket itself now renders one
 // stage at a time controlled by the `stage` prop. 'third_place' (M103) sits
-// after the Final — a required, scored (+5) round.
+// between the semi-finals and the Final — a required, scored (+5) round.
 export const STAGE_ORDER: KnockoutStage[] = [
   'round_of_32',
   'round_of_16',
   'quarter_finals',
   'semi_finals',
-  'final',
   'third_place',
+  'final',
 ];
 
 interface KnockoutBracketProps {
