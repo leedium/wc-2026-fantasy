@@ -494,14 +494,22 @@ export function PredictionsPageContent({
   const championSlots = 1;
   const filledChampion = championTeamId !== null ? 1 : 0;
 
+  const usesAdminRoute = effectiveApiBasePath.startsWith('/api/admin/');
+  // The champion pick is a Phase 1 field — frozen in Phase 2 and the
+  // payload omits it there (see sendPhase1Fields below). Submitting in
+  // Phase 2 must therefore not require it, otherwise a legacy prediction
+  // with champion_team_id = null leaves the user stuck (they can't edit
+  // the field to "complete" it).
+  const championRequired = usesAdminRoute || phase === 'phase1';
+
   const totalSlots =
-    championSlots +
+    (championRequired ? championSlots : 0) +
     totalGroupSlots +
     ADVANCER_COUNT +
     totalKnockoutMatches +
     tiebreakerSlots;
   const filledSlots =
-    filledChampion +
+    (championRequired ? filledChampion : 0) +
     filledGroupSlots +
     completedAdvancers +
     completedKnockoutMatches +
@@ -515,15 +523,14 @@ export function PredictionsPageContent({
     totalKnockoutMatches > 0 && completedKnockoutMatches === totalKnockoutMatches;
   const isTiebreakerComplete = totalGoals !== null;
 
-  const usesAdminRoute = effectiveApiBasePath.startsWith('/api/admin/');
   // Submit ("mark this prediction submitted") requires the bracket to be
-  // fully built — i.e. every section, across both phases, complete. Save
-  // Progress doesn't use this gate; users save partial drafts in either
-  // phase. In Phase 1 the knockout UI is read-only for regular users so
-  // isBracketComplete is naturally false and Submit stays disabled until
-  // Phase 2 opens.
+  // fully built — i.e. every section the user can still edit in the
+  // current phase. Save Progress doesn't use this gate; users save
+  // partial drafts in either phase. In Phase 1 the knockout UI is
+  // read-only for regular users so isBracketComplete is naturally false
+  // and Submit stays disabled until Phase 2 opens.
   const isPredictionsComplete =
-    isChampionPickComplete &&
+    (!championRequired || isChampionPickComplete) &&
     isGroupsComplete &&
     isAdvancersComplete &&
     isBracketComplete &&

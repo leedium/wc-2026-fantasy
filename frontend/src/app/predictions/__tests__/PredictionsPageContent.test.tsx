@@ -751,6 +751,81 @@ describe('PredictionsPageContent — autosave', () => {
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
+  it('Phase 2 submit succeeds for a legacy prediction with null champion_team_id', async () => {
+    // Regression: a regular user in Phase 2 could not submit a prediction
+    // whose champion_team_id was null (allowed by the schema for legacy
+    // rows). The completion gate required the champion pick — but the
+    // user can't edit that field in Phase 2 (it's frozen post-Phase-1),
+    // so they were stuck on "Please complete all predictions before
+    // submitting" with no way out. Submit should ignore the champion
+    // field when the wizard isn't going to send it (Phase 2 regular
+    // user; non-admin route).
+    configureQueries({ phase: 'phase2_open' });
+    const fetchMock = global.fetch as jest.Mock;
+    fetchMock.mockResolvedValue({
+      ok: true,
+      json: async () => ({ predictionId: 'pred-legacy' }),
+    });
+
+    const initial = {
+      id: 'pred-legacy',
+      name: 'Legacy',
+      totalGoals: null,
+      championTeamId: null,
+      submittedAt: new Date(Date.now() - 60_000).toISOString(),
+      isPaid: false,
+      paidAt: null,
+      groups: fixtureGroups.map((g) => ({
+        groupId: g.id,
+        first: g.teams[0].id,
+        second: g.teams[1].id,
+        third: g.teams[2].id,
+        fourth: g.teams[3].id,
+      })),
+      knockout: fixtureKnockoutMatches.map((m) => ({
+        matchId: m.id,
+        winner: 'mex',
+      })),
+      advancers: Array.from({ length: 8 }, (_, i) => ({
+        rank: i + 1,
+        teamId: 'mex',
+      })),
+    };
+
+    const user = userEvent.setup();
+    render(<PredictionsPageContent mode="edit" predictionId="pred-legacy" initial={initial} />);
+
+    // Walk to the tiebreaker step (wizard auto-jumps to R32 in phase2_open).
+    await screen.findByTestId('knockout-bracket');
+    for (const next of ['Round of 16', 'Quarter-finals', 'Semi-finals', 'Final', 'Tiebreaker']) {
+      await user.click(
+        await screen.findByRole('button', {
+          name: new RegExp(`Continue to ${next}`, 'i'),
+        })
+      );
+    }
+    await user.click(screen.getByTestId('set-tiebreaker'));
+
+    await user.click(screen.getByRole('button', { name: /Submit Prediction/ }));
+
+    await waitFor(() => expect(toastSuccess).toHaveBeenCalledWith('Prediction submitted'));
+    expect(toastError).not.toHaveBeenCalledWith(
+      'Please complete all predictions before submitting'
+    );
+    // The submit call must NOT carry championTeamId (Phase 2 regular path
+    // strips Phase 1 fields).
+    const submitCall = fetchMock.mock.calls.find(([, init]) => {
+      try {
+        return JSON.parse((init as RequestInit).body as string).submit === true;
+      } catch {
+        return false;
+      }
+    });
+    expect(submitCall).toBeDefined();
+    const submitBody = JSON.parse((submitCall![1] as RequestInit).body as string);
+    expect(submitBody.championTeamId).toBeUndefined();
+  });
+
   it('does not render a Save progress button in Phase 1', async () => {
     configureQueries(); // phase 1 default
     render(<PredictionsPageContent mode="create" />);
