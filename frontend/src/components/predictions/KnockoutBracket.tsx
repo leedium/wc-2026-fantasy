@@ -67,13 +67,13 @@ export const STAGE_CONFIG: Record<
 };
 
 // Stage order. Used by the parent stepper; the bracket itself now renders one
-// stage at a time controlled by the `stage` prop.
+// stage at a time controlled by the `stage` prop. 'third_place' (M103) is
+// omitted — the match is no longer scored in v4 so the wizard skips it.
 export const STAGE_ORDER: KnockoutStage[] = [
   'round_of_32',
   'round_of_16',
   'quarter_finals',
   'semi_finals',
-  'third_place',
   'final',
 ];
 

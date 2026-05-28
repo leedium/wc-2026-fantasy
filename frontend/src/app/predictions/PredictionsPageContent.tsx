@@ -62,6 +62,9 @@ type Step =
 
 type TopStep = 'groups' | 'best_thirds' | 'champion_pick' | 'knockout' | 'tiebreaker';
 
+// 'third_place' (M103) is intentionally omitted — the match is no longer
+// scored under v4 so users don't pick it. The DB stage enum keeps the value
+// so the bracket / admin results editor can still surface M103 read-only.
 const STEP_ORDER: Step[] = [
   'groups',
   'best_thirds',
@@ -70,7 +73,6 @@ const STEP_ORDER: Step[] = [
   'round_of_16',
   'quarter_finals',
   'semi_finals',
-  'third_place',
   'final',
   'tiebreaker',
 ];
@@ -93,7 +95,6 @@ const KNOCKOUT_STAGE_LIST: KnockoutStage[] = [
   'round_of_16',
   'quarter_finals',
   'semi_finals',
-  'third_place',
   'final',
 ];
 
