@@ -71,13 +71,22 @@ describe('KnockoutBracket', () => {
     it('shows the stage subtitle for the active stage', () => {
       renderBracket();
       expect(
-        screen.getByText(/\+4 if you picked the match winner correctly/i)
+        screen.getByText(/\+5 if you pick the match winner correctly/i)
       ).toBeInTheDocument();
     });
 
     it('should show helper text', () => {
       renderBracket();
       expect(screen.getByText(/Click a team to pick the winner/i)).toBeInTheDocument();
+    });
+
+    it('renders v4 flat per-round badges in the persistent summary', () => {
+      renderBracket();
+      expect(screen.getByText('R32 +5')).toBeInTheDocument();
+      expect(screen.getByText('R16 +8')).toBeInTheDocument();
+      expect(screen.getByText('QF +12')).toBeInTheDocument();
+      expect(screen.getByText('SF +18')).toBeInTheDocument();
+      expect(screen.getByText('Final +30')).toBeInTheDocument();
     });
   });
 

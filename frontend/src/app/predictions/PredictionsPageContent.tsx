@@ -33,6 +33,7 @@ import type {
   AdvancerPrediction,
   Group,
   GroupPrediction,
+  GroupStanding,
   KnockoutMatch,
   KnockoutMatchPrediction,
   KnockoutStage,
@@ -318,6 +319,12 @@ export function PredictionsPageContent({
     queryFn: () => fetchJSON('/api/r32-bracket'),
   });
   const bracketAssignments = bracketQuery.data?.assignments ?? [];
+
+  const groupStandingsQuery = useQuery<{ standings: GroupStanding[] }>({
+    queryKey: ['group-standings'],
+    queryFn: () => fetchJSON('/api/group-standings'),
+  });
+  const groupStandings = groupStandingsQuery.data?.standings ?? [];
 
   const [predictionName, setPredictionName] = React.useState(initial?.name ?? '');
   const [predictionNameTouched, setPredictionNameTouched] = React.useState(false);
@@ -1111,6 +1118,7 @@ export function PredictionsPageContent({
               groupPredictions={groupPredictions}
               knockoutPredictions={knockoutPredictions}
               bracketAssignments={bracketAssignments}
+              groupStandings={groupStandings}
               onPredictionChange={handleKnockoutPredictionChange}
               disabled={!phase2Editable}
               stage={currentStep}

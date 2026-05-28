@@ -9,7 +9,8 @@ interface Body {
   isActive?: boolean;
   championTotalGoals?: number | null;
   /** Phase 2 toggle. When set, routes through admin_set_phase_two RPC which
-   *  validates that all 8 advancers are populated before opening. */
+   *  validates that group_standings + R32 bracket assignments are populated
+   *  before opening. */
   knockoutUnlocked?: boolean;
   knockoutLockTime?: string | null;
 }
@@ -40,8 +41,9 @@ export async function PATCH(request: NextRequest) {
     );
   }
 
-  // Phase 2 toggle has its own RPC (validates advancer count). Run it first
-  // so a failed check leaves the rest of the patch intact.
+  // Phase 2 toggle has its own RPC (validates group_standings + bracket
+  // assignments). Run it first so a failed check leaves the rest of the
+  // patch intact.
   if (body.knockoutUnlocked !== undefined) {
     const { error: phaseError } = await ctx.supabase.rpc('admin_set_phase_two', {
       p_tournament_id: body.id,
@@ -50,7 +52,8 @@ export async function PATCH(request: NextRequest) {
     });
     if (phaseError) {
       const msg = phaseError.message ?? '';
-      const status = msg.includes('all 8 advancers') ? 409 : 400;
+      const status =
+        msg.includes('group standings') || msg.includes('bracket slots') ? 409 : 400;
       return NextResponse.json({ error: safeMessage(phaseError) }, { status });
     }
   }

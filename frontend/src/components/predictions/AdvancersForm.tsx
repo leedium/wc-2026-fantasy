@@ -79,8 +79,8 @@ export function AdvancersForm({
                 first.
               </p>
               <p>
-                <strong>Per pick:</strong> +1 if your team is in the actual top 8;
-                additional +0.25 if it&apos;s at the exact rank. Max <strong>+10 points</strong>{' '}
+                <strong>Per pick:</strong> +2 if your team is in the actual top 8;
+                additional +0.5 if it&apos;s at the exact rank. Max <strong>+20 points</strong>{' '}
                 across all 8 ranks.
               </p>
             </>
