@@ -8,7 +8,6 @@ describe('useAppStore', () => {
         isLoading: false,
         activeModal: null,
         isMobileMenuOpen: false,
-        theme: 'system',
         hasSeenOnboarding: false,
       });
     });
@@ -26,11 +25,6 @@ describe('useAppStore', () => {
     expect(useAppStore.getState().activeModal).toBe('prediction');
     act(() => useAppStore.getState().closeModal());
     expect(useAppStore.getState().activeModal).toBeNull();
-  });
-
-  it('updates theme preference', () => {
-    act(() => useAppStore.getState().setTheme('dark'));
-    expect(useAppStore.getState().theme).toBe('dark');
   });
 
   it('marks onboarding as seen', () => {

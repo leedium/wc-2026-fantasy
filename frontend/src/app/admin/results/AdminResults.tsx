@@ -7,16 +7,11 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { GroupStandingsEditor } from './GroupStandingsEditor';
 import { KnockoutResultsEditor } from './KnockoutResultsEditor';
 import { AdvancersForm } from '../advancers/AdvancersForm';
+import { fetchJSON } from '@/lib/api/fetchJSON';
 import type { Group, KnockoutMatch, Team } from '@/types/tournament';
 
 interface TournamentInfo {
   id: string;
-}
-
-async function fetchJSON<T>(url: string): Promise<T> {
-  const res = await fetch(url);
-  if (!res.ok) throw new Error((await res.json())?.error ?? res.statusText);
-  return res.json();
 }
 
 export function AdminResults() {

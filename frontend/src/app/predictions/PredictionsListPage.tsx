@@ -32,6 +32,7 @@ import {
 import { BracketPreviewDialog } from '@/components/predictions/BracketPreviewDialog';
 import { FreePickBanner } from '@/components/predictions/FreePickBanner';
 import { PRICING, ROUTES } from '@/lib/constants';
+import { fetchJSON } from '@/lib/api/fetchJSON';
 
 interface ApiPrediction {
   id: string;
@@ -46,12 +47,6 @@ interface ApiPrediction {
 interface ApiResponse {
   tournament: { id: string; lockTime: string };
   predictions: ApiPrediction[];
-}
-
-async function fetchJSON<T>(url: string): Promise<T> {
-  const res = await fetch(url);
-  if (!res.ok) throw new Error((await res.json())?.error ?? res.statusText);
-  return res.json();
 }
 
 function formatTime(value: string | null) {

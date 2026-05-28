@@ -23,6 +23,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { BracketPreviewDialog } from '@/components/predictions/BracketPreviewDialog';
+import { fetchJSON } from '@/lib/api/fetchJSON';
 
 interface AdminPrediction {
   id: string;
@@ -45,12 +46,6 @@ interface AdminPredictionsResponse {
   tournament: { id: string; lockTime: string };
   user?: AdminUserSummary;
   predictions: AdminPrediction[];
-}
-
-async function fetchJSON<T>(url: string): Promise<T> {
-  const res = await fetch(url);
-  if (!res.ok) throw new Error((await res.json())?.error ?? res.statusText);
-  return res.json();
 }
 
 function toLocalDatetimeInput(iso: string): string {

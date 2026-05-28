@@ -8,6 +8,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { BracketView } from '@/components/predictions/BracketView';
 import { GroupStandingsResults } from '@/components/results/GroupStandingsResults';
 import { AdvancersResults } from '@/components/results/AdvancersResults';
+import { fetchJSON } from '@/lib/api/fetchJSON';
 import type {
   Group,
   GroupStanding,
@@ -22,12 +23,6 @@ interface KnockoutResultRow {
   winnerTeamId: string | null;
   loserTeamId: string | null;
   totalGoals: number | null;
-}
-
-async function fetchJSON<T>(url: string): Promise<T> {
-  const res = await fetch(url);
-  if (!res.ok) throw new Error((await res.json())?.error ?? res.statusText);
-  return res.json();
 }
 
 function Section({
