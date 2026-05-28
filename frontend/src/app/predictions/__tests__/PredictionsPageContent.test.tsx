@@ -108,7 +108,12 @@ jest.mock('@/components/predictions/KnockoutBracket', () => ({
         type="button"
         data-testid="fill-all-knockout"
         onClick={() => {
-          knockoutPredictions.forEach((m) => onPredictionChange(m.matchId, 'winner'));
+          // Mirror the real bracket: M103 (third-place playoff) has no
+          // pickable UI under v4, so it never gets a winner here. Filling
+          // it would mask the bug where isBracketComplete counts M103.
+          knockoutPredictions
+            .filter((m) => m.matchId !== 'M103')
+            .forEach((m) => onPredictionChange(m.matchId, 'winner'));
         }}
       />
     </div>
@@ -751,15 +756,15 @@ describe('PredictionsPageContent — autosave', () => {
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
-  it('Phase 2 submit succeeds for a legacy prediction with null champion_team_id', async () => {
-    // Regression: a regular user in Phase 2 could not submit a prediction
-    // whose champion_team_id was null (allowed by the schema for legacy
-    // rows). The completion gate required the champion pick — but the
-    // user can't edit that field in Phase 2 (it's frozen post-Phase-1),
-    // so they were stuck on "Please complete all predictions before
-    // submitting" with no way out. Submit should ignore the champion
-    // field when the wizard isn't going to send it (Phase 2 regular
-    // user; non-admin route).
+  it('Phase 2 submit succeeds for a legacy prediction with stale Phase 1 fields', async () => {
+    // Regression: in Phase 2 the submit gate used to require ALL Phase 1
+    // fields to be complete (champion + 12×4 group positions + 8
+    // advancers). Legacy predictions can have null champion, partial
+    // group standings (no 3rd/4th from pre-advancers schema), or zero
+    // advancer rows — none of which a regular user can fix in Phase 2
+    // (the forms are read-only). The two phases are decoupled
+    // everywhere else (server RPC, payload composition, UI editability),
+    // so the submit gate must only check Phase 2 fields.
     configureQueries({ phase: 'phase2_open' });
     const fetchMock = global.fetch as jest.Mock;
     fetchMock.mockResolvedValue({
@@ -771,25 +776,25 @@ describe('PredictionsPageContent — autosave', () => {
       id: 'pred-legacy',
       name: 'Legacy',
       totalGoals: null,
-      championTeamId: null,
+      championTeamId: null, // legacy: no champion picked
       submittedAt: new Date(Date.now() - 60_000).toISOString(),
       isPaid: false,
       paidAt: null,
+      // Partial groups: 1st/2nd only, no 3rd/4th — mirrors pre-advancers
+      // schema where 3rd-place picks weren't collected.
       groups: fixtureGroups.map((g) => ({
         groupId: g.id,
         first: g.teams[0].id,
         second: g.teams[1].id,
-        third: g.teams[2].id,
-        fourth: g.teams[3].id,
+        third: null,
+        fourth: null,
       })),
       knockout: fixtureKnockoutMatches.map((m) => ({
         matchId: m.id,
         winner: 'mex',
       })),
-      advancers: Array.from({ length: 8 }, (_, i) => ({
-        rank: i + 1,
-        teamId: 'mex',
-      })),
+      // No advancer rows at all (legacy pre-0025 prediction).
+      advancers: [],
     };
 
     const user = userEvent.setup();
@@ -824,6 +829,58 @@ describe('PredictionsPageContent — autosave', () => {
     expect(submitCall).toBeDefined();
     const submitBody = JSON.parse((submitCall![1] as RequestInit).body as string);
     expect(submitBody.championTeamId).toBeUndefined();
+  });
+
+  it('Phase 2 submit succeeds with the bracket filled through the UI (M103 excluded)', async () => {
+    // Regression: knockout_matches contains M103 (third-place playoff),
+    // but it has no wizard step under v4 — the real KnockoutBracket
+    // never renders a picker for it. isBracketComplete counted M103 in
+    // totalKnockoutMatches, so completedKnockoutMatches (max = matches
+    // minus M103) could never equal it and Submit was permanently
+    // blocked for every Phase 2 user. The fill-all-knockout mock now
+    // mirrors the real UI by skipping M103.
+    configureQueries({ phase: 'phase2_open' });
+    const fetchMock = global.fetch as jest.Mock;
+    fetchMock.mockResolvedValue({
+      ok: true,
+      json: async () => ({ predictionId: 'pred-1' }),
+    });
+
+    const initial = {
+      id: 'pred-1',
+      name: 'Main',
+      totalGoals: null,
+      championTeamId: 'arg',
+      submittedAt: new Date(Date.now() - 60_000).toISOString(),
+      isPaid: false,
+      paidAt: null,
+      groups: [],
+      knockout: [],
+      advancers: [],
+    };
+
+    const user = userEvent.setup();
+    render(<PredictionsPageContent mode="edit" predictionId="pred-1" initial={initial} />);
+
+    // Wizard auto-jumps to R32; fill every pickable match (mock skips M103),
+    // then walk to the tiebreaker.
+    await screen.findByTestId('knockout-bracket');
+    await user.click(screen.getByTestId('fill-all-knockout'));
+    for (const next of ['Round of 16', 'Quarter-finals', 'Semi-finals', 'Final', 'Tiebreaker']) {
+      await user.click(
+        await screen.findByRole('button', {
+          name: new RegExp(`Continue to ${next}`, 'i'),
+        })
+      );
+    }
+    await user.click(screen.getByTestId('set-tiebreaker'));
+
+    await user.click(screen.getByRole('button', { name: /Submit Prediction/ }));
+
+    await waitFor(() => expect(toastSuccess).toHaveBeenCalledWith('Prediction submitted'));
+    expect(toastError).not.toHaveBeenCalledWith(
+      'Please complete all predictions before submitting'
+    );
   });
 
   it('does not render a Save progress button in Phase 1', async () => {

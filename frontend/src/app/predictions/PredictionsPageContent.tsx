@@ -478,7 +478,19 @@ export function PredictionsPageContent({
     !hydrated;
 
   const totalGroupsCount = groups?.length ?? 0;
-  const totalKnockoutMatches = matches?.length ?? 0;
+  // M103 (third-place playoff) lives in knockout_matches but has no
+  // wizard step under v4 — users never pick it. Counting it would make
+  // isBracketComplete permanently false (totalKnockoutMatches would
+  // always exceed what the UI lets the user fill), so it's excluded from
+  // both the completion check and the progress bar.
+  const pickableKnockoutMatchIds = React.useMemo(
+    () =>
+      new Set(
+        (matches ?? []).filter((m) => m.stage !== 'third_place').map((m) => m.id)
+      ),
+    [matches]
+  );
+  const totalKnockoutMatches = pickableKnockoutMatchIds.size;
   const filledGroupSlots = groupPredictions.reduce(
     (sum, p) => sum + Object.values(p.positions).filter((v) => v !== null).length,
     0
@@ -487,7 +499,9 @@ export function PredictionsPageContent({
   const completedGroups = groupPredictions.filter(
     (p) => Object.values(p.positions).filter((v) => v !== null).length === 4
   ).length;
-  const completedKnockoutMatches = knockoutPredictions.filter((p) => p.winnerId !== null).length;
+  const completedKnockoutMatches = knockoutPredictions.filter(
+    (p) => p.winnerId !== null && pickableKnockoutMatchIds.has(p.matchId)
+  ).length;
   const completedAdvancers = advancerPredictions.filter((a) => !!a.teamId).length;
   const tiebreakerSlots = 1;
   const filledTiebreaker = totalGoals !== null ? 1 : 0;
@@ -495,25 +509,22 @@ export function PredictionsPageContent({
   const filledChampion = championTeamId !== null ? 1 : 0;
 
   const usesAdminRoute = effectiveApiBasePath.startsWith('/api/admin/');
-  // The champion pick is a Phase 1 field — frozen in Phase 2 and the
-  // payload omits it there (see sendPhase1Fields below). Submitting in
-  // Phase 2 must therefore not require it, otherwise a legacy prediction
-  // with champion_team_id = null leaves the user stuck (they can't edit
-  // the field to "complete" it).
-  const championRequired = usesAdminRoute || phase === 'phase1';
+  // The two phases are decoupled end-to-end (server RPC branches on
+  // phase; payload composition strips fields from the other phase; UI
+  // disables the other phase's forms). The submit / progress gates
+  // follow suit: only check the fields this save can actually write.
+  // Otherwise a legacy prediction with stale Phase 1 state (null
+  // champion, missing advancers, partial groups) traps the user — they
+  // can't edit Phase 1 in Phase 2 to satisfy the gate.
+  const requiresPhase1Fields = usesAdminRoute || phase === 'phase1';
+  const requiresPhase2Fields = usesAdminRoute || phase === 'phase2_open';
 
   const totalSlots =
-    (championRequired ? championSlots : 0) +
-    totalGroupSlots +
-    ADVANCER_COUNT +
-    totalKnockoutMatches +
-    tiebreakerSlots;
+    (requiresPhase1Fields ? championSlots + totalGroupSlots + ADVANCER_COUNT : 0) +
+    (requiresPhase2Fields ? totalKnockoutMatches + tiebreakerSlots : 0);
   const filledSlots =
-    (championRequired ? filledChampion : 0) +
-    filledGroupSlots +
-    completedAdvancers +
-    completedKnockoutMatches +
-    filledTiebreaker;
+    (requiresPhase1Fields ? filledChampion + filledGroupSlots + completedAdvancers : 0) +
+    (requiresPhase2Fields ? completedKnockoutMatches + filledTiebreaker : 0);
   const overallPercent = totalSlots > 0 ? Math.round((filledSlots / totalSlots) * 100) : 0;
 
   const isChampionPickComplete = championTeamId !== null;
@@ -523,18 +534,14 @@ export function PredictionsPageContent({
     totalKnockoutMatches > 0 && completedKnockoutMatches === totalKnockoutMatches;
   const isTiebreakerComplete = totalGoals !== null;
 
-  // Submit ("mark this prediction submitted") requires the bracket to be
-  // fully built — i.e. every section the user can still edit in the
-  // current phase. Save Progress doesn't use this gate; users save
-  // partial drafts in either phase. In Phase 1 the knockout UI is
-  // read-only for regular users so isBracketComplete is naturally false
-  // and Submit stays disabled until Phase 2 opens.
+  // Submit ("mark this prediction submitted") requires only the fields
+  // the current phase is responsible for. Phase 1's commit is the
+  // "Save Phase 1 Picks" button; Phase 2's commit is "Submit
+  // Prediction" on the tiebreaker. Each commits its own slice.
   const isPredictionsComplete =
-    (!championRequired || isChampionPickComplete) &&
-    isGroupsComplete &&
-    isAdvancersComplete &&
-    isBracketComplete &&
-    isTiebreakerComplete;
+    (!requiresPhase1Fields ||
+      (isChampionPickComplete && isGroupsComplete && isAdvancersComplete)) &&
+    (!requiresPhase2Fields || (isBracketComplete && isTiebreakerComplete));
 
   const trimmedName = predictionName.trim();
   const nameError =
