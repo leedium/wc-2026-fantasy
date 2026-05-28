@@ -906,11 +906,63 @@ describe('PredictionsPageContent — autosave', () => {
     );
   });
 
-  it('does not render a Save progress button in Phase 1', async () => {
+  it('renders Save progress on a Phase 1 round step', async () => {
     configureQueries(); // phase 1 default
     render(<PredictionsPageContent mode="create" />);
 
+    // Group Stage is a "round" — the user can checkpoint here without
+    // advancing to Best 3rds.
     await screen.findByTestId('fill-all-groups');
+    expect(screen.getByRole('button', { name: /Save progress/i })).toBeInTheDocument();
+  });
+
+  it('Save progress persists in place on a Phase 2 knockout round (no advance)', async () => {
+    // The button exists so a user editing the current round can save
+    // without navigating (auto-save only fires on Continue / Back / tab).
+    configureQueries({ phase: 'phase2_open' });
+    const fetchMock = global.fetch as jest.Mock;
+    fetchMock.mockResolvedValue({
+      ok: true,
+      json: async () => ({ predictionId: 'pred-1' }),
+    });
+
+    const initial = {
+      id: 'pred-1',
+      name: 'Main',
+      totalGoals: null,
+      championTeamId: 'arg',
+      submittedAt: new Date(Date.now() - 60_000).toISOString(),
+      isPaid: false,
+      paidAt: null,
+      groups: [],
+      knockout: [],
+      advancers: [],
+    };
+
+    const user = userEvent.setup();
+    render(<PredictionsPageContent mode="edit" predictionId="pred-1" initial={initial} />);
+
+    // Wizard auto-jumps to R32 in phase2_open.
+    await screen.findByTestId('knockout-bracket');
+    await user.click(screen.getByTestId('fill-all-knockout'));
+
+    await user.click(screen.getByRole('button', { name: /Save progress/i }));
+
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
+    const [url, init] = fetchMock.mock.calls[0];
+    expect(url).toContain('/api/predictions/pred-1');
+    expect(init.method).toBe('PATCH');
+    expect(JSON.parse(init.body).submit).toBe(false);
+    // Still on the same round — Save progress does not navigate.
+    expect(screen.getByTestId('knockout-bracket')).toBeInTheDocument();
+    expect(toastSuccess).toHaveBeenCalledWith('Progress saved');
+  });
+
+  it('does not render Save progress in a locked read-only view', async () => {
+    configureQueries({ tournamentLockTime: new Date(Date.now() - 1000).toISOString() });
+    render(<PredictionsPageContent mode="create" />);
+
+    await screen.findByText(/read-only view of your picks/i);
     expect(screen.queryByRole('button', { name: /Save progress/i })).toBeNull();
   });
 });

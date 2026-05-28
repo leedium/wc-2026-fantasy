@@ -931,6 +931,7 @@ export function PredictionsPageContent({
   const handleSubmit = () => persist({ markSubmitted: true });
   const handleSavePhase1 = () =>
     persist({ markSubmitted: false, redirectTo: redirectAfterSave ?? ROUTES.predictions });
+  const handleSaveProgress = () => persist({ markSubmitted: false });
 
   // Should the wizard auto-save before this navigation? Editable phases
   // (phase1 + phase2_open) and admin edits get auto-save so picks aren't
@@ -1002,10 +1003,14 @@ export function PredictionsPageContent({
   const showReviewSubmit = isLastStep && !lockedReadOnly;
   const showContinue =
     !isLastStep && (lockedReadOnly || !isPhase1LastStep || isSuperAdmin);
-  // Continue / Back / sub-tab clicks auto-save in both editable phases now,
-  // so the wizard no longer surfaces an inline "Save progress" button. The
-  // explicit Save Phase 1 Picks (end-of-phase-1 commit + exit) and Submit
-  // Prediction (final) buttons remain.
+  // Save progress: an explicit "persist now, don't advance" action so a user
+  // can checkpoint the current round (Phase 1 or Phase 2) in place. Auto-save
+  // still fires on Continue / Back / sub-tab; this covers staying put. Hidden
+  // where a dedicated commit button already owns the footer (Phase 1 last
+  // step → Save Phase 1 Picks; final/tiebreaker → Submit Prediction) and in a
+  // locked read-only view. Reuses persist()'s name + champion validation.
+  const showSaveProgressInline =
+    !showSavePhase1 && !showReviewSubmit && !lockedReadOnly;
 
   return (
     <PageLayout>
@@ -1188,6 +1193,17 @@ export function PredictionsPageContent({
             {previousStepLabel ? `Back: ${previousStepLabel}` : 'Back'}
           </Button>
           <div className="flex flex-col items-start gap-2 sm:flex-row sm:items-center">
+            {showSaveProgressInline && (
+              <Button
+                type="button"
+                variant="outline"
+                onClick={handleSaveProgress}
+                disabled={isLocked || isSubmitting || isSavingProgress}
+                className="sm:w-auto"
+              >
+                {isSavingProgress ? 'Saving…' : 'Save progress'}
+              </Button>
+            )}
             {showSavePhase1 && (
               <Button
                 type="button"
