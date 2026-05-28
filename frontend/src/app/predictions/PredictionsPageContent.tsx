@@ -998,8 +998,16 @@ export function PredictionsPageContent({
   // and by Submit Prediction on the tiebreaker. Phase 1 used to have a
   // bottom "Ready to submit?" card with a (useless) Submit button; that
   // card is gone, so Save progress now shows inline during Phase 1 too.
+  // It is also hidden on Phase 2 knockout sub-steps — Continue / Back /
+  // sub-tab clicks already auto-save server-side there, so an explicit
+  // button would just duplicate the action.
+  const isPhase2KnockoutStep =
+    phase === 'phase2_open' && isKnockoutStage(currentStep);
   const showSaveProgressInline =
-    !showSavePhase1 && !showReviewSubmit && !lockedReadOnly;
+    !showSavePhase1 &&
+    !showReviewSubmit &&
+    !lockedReadOnly &&
+    !isPhase2KnockoutStep;
 
   return (
     <PageLayout>
