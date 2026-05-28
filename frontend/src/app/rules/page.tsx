@@ -48,8 +48,8 @@ export default function RulesPage() {
                 </li>
                 <li>
                   <span className="text-foreground font-semibold">Edit until lock.</span> Any
-                  prediction can be edited (or deleted, if unpaid) right up until the
-                  tournament-wide lock time.
+                  prediction can be edited (or deleted, if unpaid) right up until the relevant
+                  phase deadline — see <span className="font-semibold">Lock times</span> below.
                 </li>
                 <li>
                   <span className="text-foreground font-semibold">Gut Feeling Champion.</span>{' '}
@@ -130,16 +130,38 @@ export default function RulesPage() {
       <section className="py-8">
         <Card>
           <CardHeader>
-            <CardTitle>Lock time</CardTitle>
-            <CardDescription>One deadline for the whole tournament.</CardDescription>
+            <CardTitle>Lock times</CardTitle>
+            <CardDescription>Two deadlines — one for each phase.</CardDescription>
           </CardHeader>
           <CardContent>
-            <p className="text-muted-foreground text-sm">
-              The tournament has a single, tournament-wide lock time. Once it passes, no
-              prediction can be created, edited, or deleted — every entry is frozen for
-              scoring. There is no per-match or per-round deadline; submit and adjust as often
-              as you like until the cutoff.
+            <p className="text-muted-foreground mb-4 text-sm">
+              Predictions lock in two phases. Until each phase&apos;s deadline you can adjust
+              those picks as often as you like; once it passes, they&apos;re frozen for scoring.
             </p>
+            <ul className="text-muted-foreground space-y-3 text-sm">
+              <li>
+                <span className="text-foreground font-semibold">
+                  Phase 1 — Group Stage lock.
+                </span>{' '}
+                Freezes your group standings (1st–4th in all 12 groups), your Best 3rds
+                advancer ranking, and your Gut Feeling Champion. Your prediction name locks
+                here too, and no new predictions can be created after this deadline.
+              </li>
+              <li>
+                <span className="text-foreground font-semibold">
+                  Phase 2 — Knockout lock.
+                </span>{' '}
+                Opens once the group results are in and the bracket is set. Until it passes
+                you can still edit your knockout bracket (Round of 32 through the Final,
+                including the third-place match) and your Total Goals tiebreaker. After it
+                locks, every pick is frozen.
+              </li>
+              <li>
+                <span className="text-foreground font-semibold">Between the two locks.</span>{' '}
+                Your group picks, advancers, Gut Feeling Champion, and prediction name stay
+                frozen — only your knockout bracket and tiebreaker remain editable.
+              </li>
+            </ul>
           </CardContent>
         </Card>
       </section>
