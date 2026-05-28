@@ -67,6 +67,14 @@ export interface R32BracketAssignment {
   teamId: string;
 }
 
+export interface GroupStanding {
+  groupId: string;
+  firstTeamId: string | null;
+  secondTeamId: string | null;
+  thirdTeamId: string | null;
+  fourthTeamId: string | null;
+}
+
 export interface Predictions {
   groups: GroupPrediction[];
   knockout: KnockoutMatchPrediction[];

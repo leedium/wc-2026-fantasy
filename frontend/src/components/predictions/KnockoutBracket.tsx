@@ -12,6 +12,7 @@ import { formatSource, formatSourcePair } from '@/lib/matchLabel';
 import { cn } from '@/lib/utils';
 import type {
   GroupPrediction,
+  GroupStanding,
   KnockoutMatch,
   KnockoutMatchPrediction,
   KnockoutStage,
@@ -20,10 +21,9 @@ import type {
 } from '@/types/tournament';
 
 // Stage display configuration. `pointsHint` is the per-match badge label.
-// Each round's picks score on a correct-slot / wrong-slot tier: you get the
-// higher value if you picked the actual winner of that match, the lower value
-// if you picked the winning team to advance from some other match in the same
-// round. The Final's only payout is the +15 champion bonus.
+// Knockout v4: flat per-correct-winner scoring, no wrong-slot bonus. The
+// Final pays out +30 for picking the right champion; the third-place match
+// is no longer scored.
 export const STAGE_CONFIG: Record<
   KnockoutStage,
   { label: string; shortLabel: string; pointsHint: string; subtitle: string }
@@ -31,49 +31,49 @@ export const STAGE_CONFIG: Record<
   round_of_32: {
     label: 'Round of 32',
     shortLabel: 'R32',
-    pointsHint: '+4 / +3',
-    subtitle: '+4 if you picked the match winner correctly, +3 if right team but wrong slot.',
+    pointsHint: '+5',
+    subtitle: '+5 if you pick the match winner correctly.',
   },
   round_of_16: {
     label: 'Round of 16',
     shortLabel: 'R16',
-    pointsHint: '+6 / +4',
-    subtitle: '+6 if you picked the match winner correctly, +4 if right team but wrong slot.',
+    pointsHint: '+8',
+    subtitle: '+8 if you pick the match winner correctly.',
   },
   quarter_finals: {
     label: 'Quarter-finals',
     shortLabel: 'QF',
-    pointsHint: '+10 / +6',
-    subtitle: '+10 if you picked the match winner correctly, +6 if right team but wrong slot.',
+    pointsHint: '+12',
+    subtitle: '+12 if you pick the match winner correctly.',
   },
   semi_finals: {
     label: 'Semi-finals',
     shortLabel: 'SF',
-    pointsHint: '+14 / +9',
-    subtitle: '+14 if you picked the match winner correctly, +9 if right team but wrong slot.',
+    pointsHint: '+18',
+    subtitle: '+18 if you pick the match winner correctly.',
   },
   third_place: {
     label: 'Third Place',
     shortLabel: '3rd',
-    pointsHint: '+5',
-    subtitle: '+5 for predicting the third-place match winner correctly.',
+    pointsHint: 'not scored',
+    subtitle: 'Third-place match is not scored — pick a winner for completeness.',
   },
   final: {
     label: 'Final',
     shortLabel: 'Final',
-    pointsHint: '+15 champion',
-    subtitle: '+15 for picking the World Cup champion correctly.',
+    pointsHint: '+30 champion',
+    subtitle: '+30 for picking the World Cup champion correctly.',
   },
 };
 
 // Stage order. Used by the parent stepper; the bracket itself now renders one
-// stage at a time controlled by the `stage` prop.
+// stage at a time controlled by the `stage` prop. 'third_place' (M103) is
+// omitted — the match is no longer scored in v4 so the wizard skips it.
 export const STAGE_ORDER: KnockoutStage[] = [
   'round_of_32',
   'round_of_16',
   'quarter_finals',
   'semi_finals',
-  'third_place',
   'final',
 ];
 
@@ -83,6 +83,7 @@ interface KnockoutBracketProps {
   groupPredictions: GroupPrediction[];
   knockoutPredictions: KnockoutMatchPrediction[];
   bracketAssignments?: R32BracketAssignment[];
+  groupStandings?: GroupStanding[];
   onPredictionChange: (matchId: string, winnerId: string | null) => void;
   disabled?: boolean;
   stage: KnockoutStage;
@@ -102,11 +103,11 @@ function getTeamDisplay(
 }
 
 // Friendly placeholder for an unresolved team source. 3rd-place slots
-// (legacy "3-XXXXX" strings) read as "3rd-place team (TBD)" since FIFA
-// decides bracket placement after group stage; group/match sources fall
-// back to the raw source string.
+// (legacy "3-XXXXX" strings) read as "3rd-place team (TBD)" until the admin
+// publishes the bracket assignment; group/match sources fall back to the raw
+// source string.
 function describeSource(source: string): string {
-  if (/^3-[A-L]{5}$/.test(source)) return '3rd-place team (TBD)';
+  if (/^3-[A-L]+$/.test(source)) return '3rd-place team (TBD)';
   return formatSource(source);
 }
 
@@ -221,6 +222,7 @@ function StageSection({
   groupPredictions,
   knockoutPredictions,
   bracketAssignments,
+  groupStandings,
   onPredictionChange,
   disabled,
 }: {
@@ -231,6 +233,7 @@ function StageSection({
   groupPredictions: GroupPrediction[];
   knockoutPredictions: KnockoutMatchPrediction[];
   bracketAssignments: R32BracketAssignment[];
+  groupStandings: GroupStanding[];
   onPredictionChange: (matchId: string, winnerId: string | null) => void;
   disabled?: boolean;
 }) {
@@ -284,14 +287,16 @@ function StageSection({
             allMatches,
             groupPredictions,
             knockoutPredictions,
-            bracketAssignments
+            bracketAssignments,
+            groupStandings
           );
           const team2Id = resolveTeamSource(
             match.team2Source,
             allMatches,
             groupPredictions,
             knockoutPredictions,
-            bracketAssignments
+            bracketAssignments,
+            groupStandings
           );
           const prediction = knockoutPredictions.find((p) => p.matchId === match.id);
           const selectedWinnerId = prediction?.winnerId ?? null;
@@ -320,6 +325,7 @@ export function KnockoutBracket({
   groupPredictions,
   knockoutPredictions,
   bracketAssignments = [],
+  groupStandings = [],
   onPredictionChange,
   disabled = false,
   stage,
@@ -356,36 +362,33 @@ export function KnockoutBracket({
         <div className="text-muted-foreground mt-3 space-y-2 text-sm">
           <p>
             Click a team to pick the winner of each match. Winners automatically advance to the next
-            round. Complete your group predictions first to see teams in Round of 32.
+            round.
           </p>
           <p>
-            Each round&apos;s picks score on a <strong>correct-slot / wrong-slot</strong> tier:
-            the higher value if you picked the actual winner of that match, the lower value if you
-            picked the winning team to advance from some other match in the same round, otherwise 0.
+            Each correct match winner scores the round&apos;s flat value. Wrong picks score 0 —
+            there&apos;s no partial credit for picking the right team in the wrong slot.
           </p>
           <p>
-            <strong>Per match winner:</strong> R32 +4/+3 · R16 +6/+4 · QF +10/+6 · SF +14/+9
+            <strong>Per match winner:</strong> R32 +5 · R16 +8 · QF +12 · SF +18
           </p>
           <p>
-            <strong>Bonuses:</strong> +15 for the World Cup champion · +5 for the third-place
-            match winner.
+            <strong>Final:</strong> +30 for picking the World Cup champion. The third-place match
+            is not scored.
           </p>
         </div>
       </details>
 
       {/* Persistent scoring summary. */}
       <div className="text-muted-foreground bg-muted/20 flex flex-wrap items-center gap-x-3 gap-y-1 rounded-md border px-3 py-2 font-mono text-xs">
-        <span>R32 +4/+3</span>
+        <span>R32 +5</span>
         <span>·</span>
-        <span>R16 +6/+4</span>
+        <span>R16 +8</span>
         <span>·</span>
-        <span>QF +10/+6</span>
+        <span>QF +12</span>
         <span>·</span>
-        <span>SF +14/+9</span>
+        <span>SF +18</span>
         <span>·</span>
-        <span>Champion +15</span>
-        <span>·</span>
-        <span>3rd-place +5</span>
+        <span>Final +30</span>
       </div>
 
       <StageSection
@@ -396,6 +399,7 @@ export function KnockoutBracket({
         groupPredictions={groupPredictions}
         knockoutPredictions={knockoutPredictions}
         bracketAssignments={bracketAssignments}
+        groupStandings={groupStandings}
         onPredictionChange={onPredictionChange}
         disabled={disabled}
       />

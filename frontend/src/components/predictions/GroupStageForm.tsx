@@ -226,16 +226,16 @@ export function GroupStageForm({
             </p>
             <p>
               <strong>Scoring uses only the top two finishers.</strong> 3rd and 4th picks
-              aren&apos;t scored, but your 3rd-place picks for groups A–H seed your Round of 32
-              bracket.
+              aren&apos;t scored as part of the group total; your 3rd-place picks feed the
+              separate Best 3rds step.
             </p>
             <p>
-              <strong>Per group:</strong> +6 for both top-two correct in exact order · +4 if both
-              correct but swapped · +3 for one correct in the right slot · +2 for one correct in
-              the wrong slot · 0 otherwise.
+              <strong>Per group:</strong> +12 for both top-two correct in exact order · +8 if
+              both correct but swapped · +5 per correct team in its correct slot · 0 otherwise.
+              Right team in the wrong slot does not score.
             </p>
             <p>
-              <strong>Group I (&ldquo;Group of Death&rdquo;)</strong> pays a +8 bonus instead of +6
+              <strong>Group I (&ldquo;Group of Death&rdquo;)</strong> pays +18 instead of +12
               when both top-two finishers are predicted in exact order.
             </p>
           </div>

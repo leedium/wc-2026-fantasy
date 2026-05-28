@@ -41,11 +41,15 @@ const KNOWN_ERROR_FRAGMENTS = [
   'advancer rank set must be',
   'not a 3rd-place team',
   'team is already assigned to',
-  // R32 bracket assignment (migration 0026)
+  // R32 bracket assignment (migrations 0026 + 0052)
   'is not in the top-8 advancers',
+  'is not a 3rd-place finisher in any of the groups',
   'is not a 3rd-place slot',
   'unknown r32 match',
+  'malformed 3rd-place source',
   'all r32 3rd-place bracket slots',
+  // Phase 2 gate (migration 0052)
+  'all 12 group standings must be entered',
   // Referrals (migration 0035)
   'no referral credits available',
   'not your prediction',

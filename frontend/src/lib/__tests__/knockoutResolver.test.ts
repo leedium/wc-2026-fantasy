@@ -1,6 +1,7 @@
 import { resolveTeamSource } from '../knockoutResolver';
 import type {
   GroupPrediction,
+  GroupStanding,
   KnockoutMatch,
   KnockoutMatchPrediction,
   R32BracketAssignment,
@@ -158,6 +159,62 @@ describe('resolveTeamSource', () => {
       expect(resolveTeamSource('1A', matches, groupPredictions, [], [])).toBe('mex');
       expect(resolveTeamSource('2B', matches, groupPredictions, [], [])).toBe('qat');
       expect(resolveTeamSource('3A', matches, groupPredictions, [], [])).toBe('rsa');
+    });
+  });
+
+  describe('Phase 2 path: groupStandings overrides groupPredictions', () => {
+    // Once the admin enters real group standings, the resolver should use those
+    // for "1A" / "2A" / "3A" sources — not the user's Phase 1 guesses. This is
+    // the bracket-decoupling change in scoring v4 (migration 0052).
+    const adminStandings: GroupStanding[] = [
+      {
+        groupId: 'A',
+        firstTeamId: 'rsa', // user predicted mex, actual rsa
+        secondTeamId: 'cze',
+        thirdTeamId: 'kor',
+        fourthTeamId: 'mex',
+      },
+      {
+        groupId: 'B',
+        firstTeamId: 'can',
+        secondTeamId: 'bih',
+        thirdTeamId: 'sui',
+        fourthTeamId: 'qat',
+      },
+    ];
+
+    it('uses admin standings when present (Phase 2)', () => {
+      expect(
+        resolveTeamSource('1A', matches, groupPredictions, [], [], adminStandings)
+      ).toBe('rsa');
+      expect(
+        resolveTeamSource('2A', matches, groupPredictions, [], [], adminStandings)
+      ).toBe('cze');
+      expect(
+        resolveTeamSource('3B', matches, groupPredictions, [], [], adminStandings)
+      ).toBe('sui');
+    });
+
+    it('falls back to user picks when no standings for that group', () => {
+      // Standings only cover A + B; group C source falls back to user predictions
+      // (or null if user has none).
+      expect(
+        resolveTeamSource('1C', matches, groupPredictions, [], [], adminStandings)
+      ).toBeNull();
+    });
+
+    it('still respects admin-bracket override after standings lookup', () => {
+      // Admin standings put rsa as 1A. If admin then placed rsa in a 3-XXXXX
+      // bracket slot too, the 1A slot must collapse to TBD to avoid dupes.
+      const assignments: R32BracketAssignment[] = [
+        { matchId: 'M74', slot: 2, teamId: 'rsa' },
+      ];
+      expect(
+        resolveTeamSource('1A', matches, groupPredictions, [], assignments, adminStandings)
+      ).toBeNull();
+      expect(
+        resolveTeamSource('3-ABCDF', matches, groupPredictions, [], assignments, adminStandings)
+      ).toBe('rsa');
     });
   });
 });

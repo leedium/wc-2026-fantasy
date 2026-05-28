@@ -51,6 +51,10 @@ interface BracketResponse {
   assignments: Array<{ matchId: string; slot: 1 | 2; teamId: string }>;
 }
 
+interface GroupStandingRow {
+  group_id: string;
+}
+
 const STATUSES = ['upcoming', 'group_stage', 'knockout', 'completed'] as const;
 
 async function fetchJSON<T>(url: string): Promise<T> {
@@ -75,9 +79,9 @@ export function TournamentSettingsForm() {
     queryFn: () => fetchJSON('/api/tournament'),
   });
 
-  // Phase 2 toggle pre-flight checks: all 8 advancers + all R32 3rd-place
-  // bracket slots must be assigned. These queries mirror the ones the
-  // /admin/advancers page used to own when it hosted the Phase 2 controls.
+  // Phase 2 toggle pre-flight checks: all 12 group standings + all R32
+  // 3rd-place bracket slots must be assigned (advancers are no longer a
+  // Phase 2 gate — they're scoring inputs that can be filled any time).
   const advancersQuery = useQuery<AdvancersResponse>({
     queryKey: ['admin-advancers'],
     queryFn: () => fetchJSON('/api/admin/third-place-advancers'),
@@ -89,6 +93,13 @@ export function TournamentSettingsForm() {
   const matchesQuery = useQuery<KnockoutMatch[]>({
     queryKey: ['knockout-matches'],
     queryFn: () => fetchJSON('/api/knockout-matches'),
+  });
+  const tournamentIdForStandings = tournament.data?.id ?? null;
+  const standingsQuery = useQuery<GroupStandingRow[]>({
+    queryKey: ['admin-group-standings', tournamentIdForStandings],
+    queryFn: () =>
+      fetchJSON(`/api/admin/group-standings?tournamentId=${tournamentIdForStandings}`),
+    enabled: !!tournamentIdForStandings,
   });
 
   const [status, setStatus] = React.useState<TournamentInfo['status']>('upcoming');
@@ -189,6 +200,7 @@ export function TournamentSettingsForm() {
   // Phase 2 derived state.
   const advancersCount = advancersQuery.data?.advancers.length ?? 0;
   const assignmentsCount = bracketQuery.data?.assignments.length ?? 0;
+  const standingsCount = standingsQuery.data?.length ?? 0;
   const thirdPlaceSlotCount = React.useMemo(() => {
     let n = 0;
     for (const m of matchesQuery.data ?? []) {
@@ -199,10 +211,10 @@ export function TournamentSettingsForm() {
     return n;
   }, [matchesQuery.data]);
 
-  const allAdvancersSet = advancersCount === 8;
+  const allStandingsSet = standingsCount === 12;
   const allAssignmentsSet =
     thirdPlaceSlotCount > 0 && assignmentsCount === thirdPlaceSlotCount;
-  const canOpenPhaseTwo = allAdvancersSet && allAssignmentsSet;
+  const canOpenPhaseTwo = allStandingsSet && allAssignmentsSet;
   const phase = tournament.data?.phase ?? 'phase1';
 
   const phaseTwoLockIso = React.useMemo(() => {
@@ -448,8 +460,9 @@ export function TournamentSettingsForm() {
                 : phase === 'phase2_locked'
                   ? 'closed (lock time has passed — set a new lock time to reopen)'
                   : 'closed'}
-              . {advancersCount}/8 advancers set ·{' '}
-              {assignmentsCount}/{thirdPlaceSlotCount || 8} bracket slots assigned.
+              . {standingsCount}/12 group standings ·{' '}
+              {assignmentsCount}/{thirdPlaceSlotCount || 8} bracket slots assigned ·{' '}
+              {advancersCount}/8 advancers (scoring only).
             </p>
           </CardHeader>
           <CardContent className="space-y-3">
@@ -465,8 +478,9 @@ export function TournamentSettingsForm() {
               />
               <p className="text-muted-foreground text-xs">
                 When knockout predictions freeze. Set + click Open Phase 2 to start the knockout
-                window. Advancers + R32 bracket assignments must be filled on the{' '}
-                <span className="font-mono">/admin/advancers</span> tab first.
+                window. Group standings + R32 bracket assignments must be filled on the{' '}
+                <span className="font-mono">/admin/results</span> and{' '}
+                <span className="font-mono">/admin/advancers</span> tabs first.
               </p>
             </div>
             <div className="flex flex-wrap gap-2">
@@ -480,8 +494,8 @@ export function TournamentSettingsForm() {
                   phaseTwoLockInPast
                 }
                 title={
-                  !allAdvancersSet
-                    ? 'Set all 8 advancers first'
+                  !allStandingsSet
+                    ? 'Enter all 12 group standings first'
                     : !allAssignmentsSet
                       ? 'Assign every R32 3rd-place slot first'
                       : !phaseTwoLockIso

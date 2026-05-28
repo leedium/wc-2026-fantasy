@@ -23,19 +23,19 @@ export function ScoringBreakdown() {
             <div className="space-y-3">
               <div className="flex items-center justify-between">
                 <span className="text-muted-foreground">Both top 2, exact order</span>
-                <span className="font-semibold">+6 points</span>
+                <span className="font-semibold">+12 points</span>
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-muted-foreground">Both top 2, swapped</span>
-                <span className="font-semibold">+4 points</span>
+                <span className="font-semibold">+8 points</span>
               </div>
               <div className="flex items-center justify-between">
-                <span className="text-muted-foreground">One correct, in correct slot</span>
-                <span className="font-semibold">+3 points</span>
+                <span className="text-muted-foreground">Single team in its correct slot</span>
+                <span className="font-semibold">+5 points</span>
               </div>
               <div className="flex items-center justify-between">
-                <span className="text-muted-foreground">One correct, in wrong slot</span>
-                <span className="font-semibold">+2 points</span>
+                <span className="text-muted-foreground">Right team, wrong slot</span>
+                <span className="font-semibold">+0 points</span>
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-muted-foreground">None correct</span>
@@ -44,8 +44,8 @@ export function ScoringBreakdown() {
               <div className="bg-muted/50 rounded-md p-3 text-sm">
                 <span className="font-semibold">Group of Death (Group I):</span>{' '}
                 <span className="text-muted-foreground">
-                  Both top 2 in exact order pays <span className="font-semibold">+8</span> instead
-                  of +6.
+                  Both top 2 in exact order pays <span className="font-semibold">+18</span>{' '}
+                  instead of +12.
                 </span>
               </div>
               <div className="border-t pt-3">
@@ -65,8 +65,8 @@ export function ScoringBreakdown() {
               Knockout Stage
             </CardTitle>
             <CardDescription>
-              Each round, every team that advances scores you points — more if you had them in
-              the right slot.
+              Each round, every match winner you pick correctly scores a flat value. Wrong picks
+              score 0 — no partial credit for the right team in the wrong slot.
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -76,43 +76,36 @@ export function ScoringBreakdown() {
                   Round of 32{' '}
                   <span className="text-muted-foreground/70 text-xs">(per match winner)</span>
                 </span>
-                <span className="font-semibold whitespace-nowrap">+4 / +3 pts</span>
+                <span className="font-semibold whitespace-nowrap">+5 pts</span>
               </div>
               <div className="flex items-center justify-between gap-4">
                 <span className="text-muted-foreground">
                   Round of 16{' '}
                   <span className="text-muted-foreground/70 text-xs">(per match winner)</span>
                 </span>
-                <span className="font-semibold whitespace-nowrap">+6 / +4 pts</span>
+                <span className="font-semibold whitespace-nowrap">+8 pts</span>
               </div>
               <div className="flex items-center justify-between gap-4">
                 <span className="text-muted-foreground">
                   Quarter-finals{' '}
                   <span className="text-muted-foreground/70 text-xs">(per match winner)</span>
                 </span>
-                <span className="font-semibold whitespace-nowrap">+10 / +6 pts</span>
+                <span className="font-semibold whitespace-nowrap">+12 pts</span>
               </div>
               <div className="flex items-center justify-between gap-4">
                 <span className="text-muted-foreground">
                   Semi-finals{' '}
                   <span className="text-muted-foreground/70 text-xs">(per match winner)</span>
                 </span>
-                <span className="font-semibold whitespace-nowrap">+14 / +9 pts</span>
+                <span className="font-semibold whitespace-nowrap">+18 pts</span>
               </div>
               <div className="flex items-center justify-between gap-4">
-                <span className="text-muted-foreground">Third Place Match Winner</span>
-                <span className="font-semibold">+5 pts</span>
+                <span className="text-muted-foreground">Final / World Cup Champion</span>
+                <span className="font-semibold">+30 pts</span>
               </div>
               <div className="flex items-center justify-between gap-4">
-                <span className="text-muted-foreground">World Cup Champion</span>
-                <span className="font-semibold">+15 pts</span>
-              </div>
-              <div className="bg-muted/50 rounded-md p-3 text-xs">
-                <span className="font-semibold">Correct slot vs. wrong slot:</span>{' '}
-                <span className="text-muted-foreground">
-                  Correct slot = you picked the winner of that exact match. Wrong slot = the
-                  team won, but you had them in a different match in the same round.
-                </span>
+                <span className="text-muted-foreground">Third Place Match</span>
+                <span className="font-semibold">not scored</span>
               </div>
               <div className="border-t pt-3">
                 <div className="flex items-center justify-between font-semibold">
@@ -142,17 +135,17 @@ export function ScoringBreakdown() {
               <span className="text-muted-foreground">
                 Team in the actual top 8 (any rank)
               </span>
-              <span className="font-semibold">+1 pt</span>
+              <span className="font-semibold">+2 pts</span>
             </div>
             <div className="flex items-center justify-between">
               <span className="text-muted-foreground">Team at the exact correct rank</span>
-              <span className="font-semibold">+0.25 pts</span>
+              <span className="font-semibold">+0.5 pts</span>
             </div>
             <div className="bg-muted/50 rounded-md p-3 text-xs">
               <span className="font-semibold">Bonuses stack:</span>{' '}
               <span className="text-muted-foreground">
                 a team in the correct rank earns the full <span className="font-semibold">
-                  +1.25
+                  +2.5
                 </span>{' '}
                 (set + rank).
               </span>
@@ -197,8 +190,8 @@ export function ScoringBreakdown() {
               <span className="font-semibold">Independent of your bracket.</span>{' '}
               <span className="text-muted-foreground">
                 This is a separate gut-feeling call from your bracket Final pick. If both end up
-                right, you get the full <span className="font-semibold">+15</span> bracket champion
-                bonus <span className="italic">and</span> the{' '}
+                right, you get the full <span className="font-semibold">+30</span> bracket Final
+                value <span className="italic">and</span> the{' '}
                 <span className="font-semibold">+{SCORING.championPickBonus}</span> gut bonus.
               </span>
             </div>

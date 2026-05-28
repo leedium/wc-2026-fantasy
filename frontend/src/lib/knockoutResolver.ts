@@ -1,5 +1,6 @@
 import type {
   GroupPrediction,
+  GroupStanding,
   KnockoutMatch,
   KnockoutMatchPrediction,
   R32BracketAssignment,
@@ -7,53 +8,78 @@ import type {
 
 /**
  * Resolves a `team1_source` / `team2_source` reference (e.g. `"1A"`, `"M77"`,
- * `"L-M101"`, `"3-ABCDF"`) to the predicted team id, given the user's group +
- * knockout picks and the admin-set R32 bracket assignments. Returns null
- * when the picks (or admin assignment) for the source aren't filled in yet.
+ * `"L-M101"`, `"3-ABCDF"`) to the predicted team id.
+ *
+ * Group-position sources resolve from `groupStandings` (admin's actual top-4)
+ * when present — this is the Phase 2 path, where the bracket reflects what
+ * really happened, not what the user predicted in Phase 1. When standings are
+ * absent (Phase 1 preview), the resolver falls back to the user's own
+ * `groupPredictions` so the bracket still renders something meaningful while
+ * the group stage is unfinished.
+ *
+ * Returns null when the source can't yet be resolved.
  */
 export function resolveTeamSource(
   source: string,
   matches: KnockoutMatch[],
   groupPredictions: GroupPrediction[],
   knockoutPredictions: KnockoutMatchPrediction[],
-  bracketAssignments: R32BracketAssignment[] = []
+  bracketAssignments: R32BracketAssignment[] = [],
+  groupStandings: GroupStanding[] = []
 ): string | null {
   // Group position source: '1A' = 1st in Group A, '2B' = 2nd in Group B, etc.
   const groupMatch = source.match(/^([123])([A-L])$/);
   if (groupMatch) {
     const [, position, groupId] = groupMatch;
-    const groupPrediction = groupPredictions.find((p) => p.groupId === groupId);
-    if (!groupPrediction) return null;
-    let resolved: string | null;
-    switch (position) {
-      case '1':
-        resolved = groupPrediction.positions.first;
-        break;
-      case '2':
-        resolved = groupPrediction.positions.second;
-        break;
-      case '3':
-        resolved = groupPrediction.positions.third;
-        break;
-      default:
-        return null;
+    const standing = groupStandings.find((s) => s.groupId === groupId);
+    let resolved: string | null = null;
+    if (standing) {
+      // Phase 2 path: prefer admin-entered standings as the source of truth.
+      switch (position) {
+        case '1':
+          resolved = standing.firstTeamId;
+          break;
+        case '2':
+          resolved = standing.secondTeamId;
+          break;
+        case '3':
+          resolved = standing.thirdTeamId;
+          break;
+        default:
+          return null;
+      }
+    } else {
+      // Phase 1 preview path: fall back to the user's group prediction.
+      const groupPrediction = groupPredictions.find((p) => p.groupId === groupId);
+      if (!groupPrediction) return null;
+      switch (position) {
+        case '1':
+          resolved = groupPrediction.positions.first;
+          break;
+        case '2':
+          resolved = groupPrediction.positions.second;
+          break;
+        case '3':
+          resolved = groupPrediction.positions.third;
+          break;
+        default:
+          return null;
+      }
     }
-    // Admin's bracket assignments are tournament truth. If the user-predicted
-    // team for this slot is already placed by the admin in a 3-XXXXX R32 slot,
-    // that team really finished 3rd in its group and cannot also be its actual
-    // 1st/2nd. Suppress here so the team renders once (in the admin slot) and
-    // this slot shows as TBD instead of duplicating.
+    // Admin's bracket assignments are tournament truth. If the team resolved
+    // for this slot is already placed by the admin in a 3-XXXXX R32 slot,
+    // suppress here so the team renders once (in the admin slot) and this
+    // slot shows as TBD instead of duplicating.
     if (resolved && bracketAssignments.some((a) => a.teamId === resolved)) {
       return null;
     }
     return resolved;
   }
 
-  // Best-3rd-of-bundle source: '3-ABCDF' etc. In the new model these strings
-  // are decorative — FIFA decides which advancer fills each slot. The admin
-  // records the assignment in r32_bracket_assignments and we look it up by
-  // the (matchId, slot) tuple that owns this source string.
-  if (/^3-[A-L]{5}$/.test(source)) {
+  // Best-3rd-of-bundle source: '3-ABCDF' etc. The admin records each slot's
+  // actual advancer in r32_bracket_assignments — look it up by the
+  // (matchId, slot) tuple that owns this source string.
+  if (/^3-[A-L]+$/.test(source)) {
     const match = matches.find(
       (m) => m.team1Source === source || m.team2Source === source
     );
@@ -85,14 +111,16 @@ export function resolveTeamSource(
       matches,
       groupPredictions,
       knockoutPredictions,
-      bracketAssignments
+      bracketAssignments,
+      groupStandings
     );
     const team2Id = resolveTeamSource(
       match.team2Source,
       matches,
       groupPredictions,
       knockoutPredictions,
-      bracketAssignments
+      bracketAssignments,
+      groupStandings
     );
 
     if (matchPrediction.winnerId === team1Id) return team2Id;
