@@ -45,6 +45,7 @@ import { ADVANCER_COUNT } from '@/lib/constants';
 import { autofillGroupPredictionsByFifaRanking } from '@/lib/fifaRankings';
 import { applyGroupPositionChange } from '@/lib/groupSwap';
 import { AdvancersForm } from '@/components/predictions/AdvancersForm';
+import { fetchJSON } from '@/lib/api/fetchJSON';
 
 type PositionKey = 'first' | 'second' | 'third' | 'fourth';
 
@@ -195,12 +196,6 @@ interface PredictionsPageContentProps {
   redirectAfterSave?: string;
   /** Optional breadcrumb rendered above the title (used by admin pages). */
   breadcrumb?: React.ReactNode;
-}
-
-async function fetchJSON<T>(url: string): Promise<T> {
-  const res = await fetch(url);
-  if (!res.ok) throw new Error((await res.json())?.error ?? res.statusText);
-  return res.json();
 }
 
 function formatTimeRemaining(lockTime: Date): string {

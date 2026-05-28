@@ -26,6 +26,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { useAuthContext } from '@/providers/AuthProvider';
+import { fetchJSON } from '@/lib/api/fetchJSON';
 import type { KnockoutMatch } from '@/types/tournament';
 
 interface TournamentInfo {
@@ -56,12 +57,6 @@ interface GroupStandingRow {
 }
 
 const STATUSES = ['upcoming', 'group_stage', 'knockout', 'completed'] as const;
-
-async function fetchJSON<T>(url: string): Promise<T> {
-  const res = await fetch(url);
-  if (!res.ok) throw new Error((await res.json())?.error ?? res.statusText);
-  return res.json();
-}
 
 function toDatetimeLocal(iso: string | null): string {
   if (!iso) return '';

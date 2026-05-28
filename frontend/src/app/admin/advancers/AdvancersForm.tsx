@@ -16,6 +16,7 @@ import {
 } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
 import { TeamFlag } from '@/components/shared/TeamFlag';
+import { fetchJSON } from '@/lib/api/fetchJSON';
 import type {
   AdvancerPrediction,
   KnockoutMatch,
@@ -42,12 +43,6 @@ interface GroupStandingRow {
 }
 
 const CLEAR_VALUE = '__CLEAR__';
-
-async function fetchJSON<T>(url: string): Promise<T> {
-  const res = await fetch(url);
-  if (!res.ok) throw new Error((await res.json())?.error ?? res.statusText);
-  return res.json();
-}
 
 type R32SourceShape =
   | { kind: 'group'; position: 1 | 2 | 3; groupId: string }

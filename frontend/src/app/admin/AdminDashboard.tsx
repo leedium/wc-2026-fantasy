@@ -24,6 +24,7 @@ import { TeamFlag } from '@/components/shared/TeamFlag';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
+import { fetchJSON } from '@/lib/api/fetchJSON';
 import type { LeaderboardEntry, Team } from '@/types/tournament';
 
 interface AdminStats {
@@ -57,12 +58,6 @@ interface AdminStats {
 interface LeaderboardResponse {
   entries: LeaderboardEntry[];
   total: number;
-}
-
-async function fetchJSON<T>(url: string): Promise<T> {
-  const res = await fetch(url);
-  if (!res.ok) throw new Error((await res.json())?.error ?? res.statusText);
-  return res.json();
 }
 
 const CAD = new Intl.NumberFormat('en-CA', {

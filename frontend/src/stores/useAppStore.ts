@@ -10,7 +10,6 @@ interface UIState {
 }
 
 interface PreferencesState {
-  theme: 'light' | 'dark' | 'system';
   hasSeenOnboarding: boolean;
 }
 
@@ -20,7 +19,6 @@ interface AppActions {
   closeModal: () => void;
   toggleMobileMenu: () => void;
   closeMobileMenu: () => void;
-  setTheme: (theme: PreferencesState['theme']) => void;
   setHasSeenOnboarding: (hasSeen: boolean) => void;
   resetUIState: () => void;
 }
@@ -34,7 +32,6 @@ const initialUIState: UIState = {
 };
 
 const initialPreferencesState: PreferencesState = {
-  theme: 'system',
   hasSeenOnboarding: false,
 };
 
@@ -55,7 +52,6 @@ export const useAppStore = create<AppState>()(
             'toggleMobileMenu'
           ),
         closeMobileMenu: () => set({ isMobileMenuOpen: false }, false, 'closeMobileMenu'),
-        setTheme: (theme) => set({ theme }, false, 'setTheme'),
         setHasSeenOnboarding: (hasSeen) =>
           set({ hasSeenOnboarding: hasSeen }, false, 'setHasSeenOnboarding'),
         resetUIState: () => set({ ...initialUIState }, false, 'resetUIState'),
@@ -63,7 +59,6 @@ export const useAppStore = create<AppState>()(
       {
         name: 'wc2026-app-store',
         partialize: (state) => ({
-          theme: state.theme,
           hasSeenOnboarding: state.hasSeenOnboarding,
         }),
       }
@@ -78,5 +73,4 @@ export const useAppStore = create<AppState>()(
 export const useIsLoading = () => useAppStore((state) => state.isLoading);
 export const useActiveModal = () => useAppStore((state) => state.activeModal);
 export const useIsMobileMenuOpen = () => useAppStore((state) => state.isMobileMenuOpen);
-export const useTheme = () => useAppStore((state) => state.theme);
 export const useHasSeenOnboarding = () => useAppStore((state) => state.hasSeenOnboarding);
