@@ -730,17 +730,20 @@ export function PredictionsPageContent({
 
   const handleTopChange = (value: string) => {
     if (!TOP_STEPS.includes(value as TopStep)) return;
-    if (value === 'champion_pick') return goToStep('champion_pick');
-    if (value === 'groups') return goToStep('groups');
-    if (value === 'best_thirds') return goToStep('best_thirds');
-    if (value === 'tiebreaker') return goToStep('tiebreaker');
-    const target = KNOCKOUT_STAGE_LIST.find((s) => !stageCompletion[s]) ?? 'round_of_32';
-    goToStep(target);
+    navigateWithAutosave(() => {
+      if (value === 'champion_pick') return goToStep('champion_pick');
+      if (value === 'groups') return goToStep('groups');
+      if (value === 'best_thirds') return goToStep('best_thirds');
+      if (value === 'tiebreaker') return goToStep('tiebreaker');
+      const target =
+        KNOCKOUT_STAGE_LIST.find((s) => !stageCompletion[s]) ?? 'round_of_32';
+      goToStep(target);
+    });
   };
 
   const handleSubChange = (value: string) => {
     if (!KNOCKOUT_STAGE_LIST.includes(value as KnockoutStage)) return;
-    goToStep(value as Step);
+    navigateWithAutosave(() => goToStep(value as Step));
   };
 
   // After any step transition (top-tab, sub-tab, Continue button), scroll the
@@ -760,37 +763,38 @@ export function PredictionsPageContent({
 
   const goToNextStep = () => {
     const idx = STEP_ORDER.indexOf(currentStep);
-    if (idx >= 0 && idx < STEP_ORDER.length - 1) {
-      goToStep(STEP_ORDER[idx + 1]);
-    }
+    if (idx < 0 || idx >= STEP_ORDER.length - 1) return;
+    navigateWithAutosave(() => goToStep(STEP_ORDER[idx + 1]));
   };
 
   const goToPreviousStep = () => {
     const idx = STEP_ORDER.indexOf(currentStep);
-    if (idx > 0) {
-      goToStep(STEP_ORDER[idx - 1]);
-    }
+    if (idx <= 0) return;
+    navigateWithAutosave(() => goToStep(STEP_ORDER[idx - 1]));
   };
 
   const persist = async ({
     markSubmitted,
     redirectTo,
+    silent,
   }: {
     markSubmitted: boolean;
     /** Override navigation after a successful save-progress (not Submit). */
     redirectTo?: string;
-  }) => {
-    if (!tournament) return;
+    /** Suppress the "Progress saved" toast (e.g. nav-triggered autosaves). */
+    silent?: boolean;
+  }): Promise<boolean> => {
+    if (!tournament) return false;
     setPredictionNameTouched(true);
     if (nameError) {
       toast.error(nameError);
       nameRef.current?.focus();
       nameRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      return;
+      return false;
     }
     if (markSubmitted && !isPredictionsComplete) {
       toast.error('Please complete all predictions before submitting');
-      return;
+      return false;
     }
     // The submit_predictions RPC requires champion_team_id whenever Phase 1
     // writes are involved (create, or any Phase 1 edit). Guard before the
@@ -800,7 +804,7 @@ export function PredictionsPageContent({
     if (willSendPhase1 && !championTeamId) {
       toast.error('Pick a champion before saving');
       goToStep('champion_pick');
-      return;
+      return false;
     }
 
     if (markSubmitted) setIsSubmitting(true);
@@ -895,7 +899,9 @@ export function PredictionsPageContent({
             ]
           : []),
       ]);
-      toast.success(markSubmitted ? 'Prediction submitted' : 'Progress saved');
+      if (!silent) {
+        toast.success(markSubmitted ? 'Prediction submitted' : 'Progress saved');
+      }
 
       if (markSubmitted) {
         router.push(redirectAfterSave ?? ROUTES.predictions);
@@ -906,8 +912,10 @@ export function PredictionsPageContent({
         // saves update the same draft instead of creating new ones.
         router.replace(`${ROUTES.predictions}/${encodeURIComponent(newId)}`);
       }
+      return true;
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Failed to save');
+      return false;
     } finally {
       setIsSubmitting(false);
       setIsSavingProgress(false);
@@ -918,6 +926,33 @@ export function PredictionsPageContent({
   const handleSavePhase1 = () =>
     persist({ markSubmitted: false, redirectTo: redirectAfterSave ?? ROUTES.predictions });
   const handleSaveProgress = () => persist({ markSubmitted: false });
+
+  // Should the wizard auto-save before this navigation? Phase 2 regular flow
+  // and admin edits get auto-save so picks aren't marooned in localStorage
+  // between sub-step transitions. Phase 1 regular flow keeps its explicit
+  // "Save Phase 1 Picks" button — we don't want to trigger creates on partial
+  // Phase 1 state.
+  const needsAutosaveOnNav = (): boolean => {
+    if (isLocked) return false;
+    if (isSavingProgress || isSubmitting) return false;
+    if (!usesAdminRoute && phase !== 'phase2_open') return false;
+    if (mode === 'create' && nameError) return false;
+    return true;
+  };
+
+  // Run the autosave + navigate-on-success flow. Stays sync (microtask-free)
+  // when no save is needed, so tests using fake timers don't have to advance
+  // microtasks for every Continue / Back click.
+  const navigateWithAutosave = (navigate: () => void) => {
+    if (!needsAutosaveOnNav()) {
+      navigate();
+      return;
+    }
+    void (async () => {
+      const ok = await persist({ markSubmitted: false, silent: true });
+      if (ok) navigate();
+    })();
+  };
 
   if (isLoading || !tournament || !groups || !teams || !matches) {
     return (
@@ -1140,7 +1175,7 @@ export function PredictionsPageContent({
             type="button"
             variant="ghost"
             onClick={goToPreviousStep}
-            disabled={isFirstStep}
+            disabled={isFirstStep || isSavingProgress || isSubmitting}
             className="sm:w-auto"
           >
             <ArrowLeft className="mr-2 h-4 w-4" />
@@ -1188,10 +1223,18 @@ export function PredictionsPageContent({
                 // In a locked read-only view we keep Continue enabled even if
                 // the step is "incomplete" — the user is just browsing their
                 // past picks and can't edit, so step-completion is moot.
-                disabled={!currentStepComplete && !(isLocked && !bypassLockNav)}
+                disabled={
+                  (!currentStepComplete && !(isLocked && !bypassLockNav)) ||
+                  isSavingProgress ||
+                  isSubmitting
+                }
                 className="sm:w-auto"
               >
-                {nextStepLabel ? `Continue to ${nextStepLabel}` : 'Continue'}
+                {isSavingProgress
+                  ? 'Saving…'
+                  : nextStepLabel
+                    ? `Continue to ${nextStepLabel}`
+                    : 'Continue'}
                 <ArrowRight className="ml-2 h-4 w-4" />
               </Button>
             )}
