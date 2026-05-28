@@ -3,7 +3,7 @@
 import * as React from 'react';
 import Link from 'next/link';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { CheckCircle2, Clock, Eye, FileEdit, Gift, Plus, Trash2 } from 'lucide-react';
+import { ArrowRight, CheckCircle2, Clock, Eye, FileEdit, Gift, Plus, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 
 import { PageLayout } from '@/components/layout/PageLayout';
@@ -159,19 +159,27 @@ export function PredictionsListPage() {
             and click <strong>Use free credit</strong> on any unpaid entry to apply it.
           </p>
         </div>
-        <Button asChild disabled={!canCreate} size="lg">
-          <Link
-            href={
-              canCreate ? `${ROUTES.predictions}/${NEW_PREDICTION_SENTINEL}` : '#'
-            }
-            aria-disabled={!canCreate}
-            title={
-              isLocked && !isSuperAdmin ? 'Predictions are locked' : undefined
-            }
-          >
-            <Plus className="mr-2 h-4 w-4" /> New prediction
-          </Link>
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button asChild variant="outline" size="lg">
+            <Link href={ROUTES.results}>
+              View live results
+              <ArrowRight className="ml-2 h-4 w-4" />
+            </Link>
+          </Button>
+          <Button asChild disabled={!canCreate} size="lg">
+            <Link
+              href={
+                canCreate ? `${ROUTES.predictions}/${NEW_PREDICTION_SENTINEL}` : '#'
+              }
+              aria-disabled={!canCreate}
+              title={
+                isLocked && !isSuperAdmin ? 'Predictions are locked' : undefined
+              }
+            >
+              <Plus className="mr-2 h-4 w-4" /> New prediction
+            </Link>
+          </Button>
+        </div>
       </div>
 
       <div className="mb-4">

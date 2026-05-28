@@ -3,7 +3,7 @@
 import * as React from 'react';
 import Link from 'next/link';
 import { useQuery } from '@tanstack/react-query';
-import { Search, Trophy, Users } from 'lucide-react';
+import { ArrowRight, Search, Trophy, Users } from 'lucide-react';
 
 import { PageLayout } from '@/components/layout/PageLayout';
 import { LeaderboardTable } from '@/components/leaderboard/LeaderboardTable';
@@ -163,25 +163,33 @@ export function LeaderboardPageContent() {
             )}
           </div>
         </div>
-        {user && !hasRankedEntry && !isLoading && !meQuery.isLoading && (
-          <Card className="border-dashed">
-            <CardContent className="py-3">
-              <p className="text-muted-foreground text-sm">
-                You haven&apos;t submitted predictions yet.
-              </p>
-            </CardContent>
-          </Card>
-        )}
-        {!user && !isLoading && (
-          <Card className="border-dashed">
-            <CardContent className="py-3 text-sm">
-              <Link href={ROUTES.login} className="text-primary hover:underline">
-                Sign in
-              </Link>{' '}
-              to see your rank.
-            </CardContent>
-          </Card>
-        )}
+        <div className="flex items-center gap-3">
+          <Button variant="outline" size="sm" asChild>
+            <Link href={ROUTES.results}>
+              View live results
+              <ArrowRight className="ml-2 h-4 w-4" />
+            </Link>
+          </Button>
+          {user && !hasRankedEntry && !isLoading && !meQuery.isLoading && (
+            <Card className="border-dashed">
+              <CardContent className="py-3">
+                <p className="text-muted-foreground text-sm">
+                  You haven&apos;t submitted predictions yet.
+                </p>
+              </CardContent>
+            </Card>
+          )}
+          {!user && !isLoading && (
+            <Card className="border-dashed">
+              <CardContent className="py-3 text-sm">
+                <Link href={ROUTES.login} className="text-primary hover:underline">
+                  Sign in
+                </Link>{' '}
+                to see your rank.
+              </CardContent>
+            </Card>
+          )}
+        </div>
       </div>
 
       <Card className="mb-6">
