@@ -374,7 +374,7 @@ export function KnockoutBracket({
           </p>
           <p>
             <strong>Final:</strong> +30 for picking the World Cup champion. The third-place match
-            is not scored.
+            scores +5.
           </p>
         </div>
       </details>
@@ -390,6 +390,8 @@ export function KnockoutBracket({
         <span>SF +18</span>
         <span>·</span>
         <span>Final +30</span>
+        <span>·</span>
+        <span>3rd +5</span>
       </div>
 
       <StageSection

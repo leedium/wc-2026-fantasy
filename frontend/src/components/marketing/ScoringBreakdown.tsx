@@ -105,7 +105,7 @@ export function ScoringBreakdown() {
               </div>
               <div className="flex items-center justify-between gap-4">
                 <span className="text-muted-foreground">Third Place Match</span>
-                <span className="font-semibold">not scored</span>
+                <span className="font-semibold">+5 pts</span>
               </div>
               <div className="border-t pt-3">
                 <div className="flex items-center justify-between font-semibold">
