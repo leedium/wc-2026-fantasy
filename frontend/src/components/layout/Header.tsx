@@ -8,7 +8,6 @@ import { cn } from '@/lib/utils';
 import { ROUTES } from '@/lib/constants';
 import { AuthMenu } from '@/components/layout/AuthMenu';
 import { ThemeToggle } from '@/components/shared/ThemeToggle';
-import { useAuthContext } from '@/providers/AuthProvider';
 import { useMounted } from '@/hooks/useMounted';
 import {
   NavigationMenu,
@@ -20,10 +19,11 @@ import {
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
 
-const baseNavLinks = [
+const navLinks = [
   { label: 'Home', href: ROUTES.home },
   { label: 'Predictions', href: ROUTES.predictions },
   { label: 'Leaderboard', href: ROUTES.leaderboard },
+  { label: 'Results', href: ROUTES.results },
   { label: 'Rules & Scoring', href: ROUTES.rules },
   { label: 'About', href: ROUTES.about },
   { label: 'Charities', href: ROUTES.charities },
@@ -31,11 +31,7 @@ const baseNavLinks = [
 
 export function Header() {
   const pathname = usePathname();
-  const { profile } = useAuthContext();
   const mounted = useMounted();
-  const navLinks = profile?.isAdmin
-    ? [...baseNavLinks, { label: 'Admin', href: ROUTES.admin }]
-    : baseNavLinks;
 
   const isActive = (href: string) => {
     if (href === ROUTES.home) {

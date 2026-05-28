@@ -3,7 +3,7 @@
 import * as React from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Gift, LogOut, Settings, Trophy, User as UserIcon } from 'lucide-react';
+import { Gift, LogOut, Settings, Shield, Trophy, User as UserIcon } from 'lucide-react';
 import { toast } from 'sonner';
 
 import { Button } from '@/components/ui/button';
@@ -145,6 +145,19 @@ export function AuthMenu() {
               Account settings
             </Link>
           </Button>
+          {profile?.isAdmin && (
+            <Button
+              variant="outline"
+              size="sm"
+              className="w-full justify-start gap-2"
+              asChild
+            >
+              <Link href={ROUTES.admin}>
+                <Shield className="h-4 w-4" />
+                Admin
+              </Link>
+            </Button>
+          )}
           <Button
             variant="outline"
             size="sm"

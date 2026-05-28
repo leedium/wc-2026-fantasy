@@ -61,6 +61,7 @@ export const ROUTES = {
   home: '/',
   predictions: '/predictions',
   leaderboard: '/leaderboard',
+  results: '/results',
   login: '/login',
   register: '/register',
   forgotPassword: '/forgot-password',

@@ -53,4 +53,19 @@ describe('middleware', () => {
     expect(location).toContain('/login');
     expect(location).toContain('next=%2Fadmin%2Fusers');
   });
+
+  it('redirects unauthenticated users from /results to /login', async () => {
+    getUserMock.mockResolvedValue({ data: { user: null } });
+    const res = await middleware(makeRequest('/results'));
+    expect(res.status).toBe(307);
+    const location = res.headers.get('location')!;
+    expect(location).toContain('/login');
+    expect(location).toContain('next=%2Fresults');
+  });
+
+  it('allows authenticated users through /results', async () => {
+    getUserMock.mockResolvedValue({ data: { user: { id: 'abc' } } });
+    const res = await middleware(makeRequest('/results'));
+    expect(res.status).toBe(200);
+  });
 });
