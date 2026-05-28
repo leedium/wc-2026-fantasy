@@ -108,9 +108,17 @@ jest.mock('@/components/predictions/KnockoutBracket', () => ({
         type="button"
         data-testid="fill-all-knockout"
         onClick={() => {
-          // Mirror the real bracket: M103 (third-place playoff) has no
-          // pickable UI under v4, so it never gets a winner here. Filling
-          // it would mask the bug where isBracketComplete counts M103.
+          // Fill every knockout match including M103 (third-place playoff),
+          // which is a required, scored round again.
+          knockoutPredictions.forEach((m) => onPredictionChange(m.matchId, 'winner'));
+        }}
+      />
+      <button
+        type="button"
+        data-testid="fill-all-knockout-except-third"
+        onClick={() => {
+          // Fill everything except M103 — used to assert the third-place
+          // round gates bracket completion.
           knockoutPredictions
             .filter((m) => m.matchId !== 'M103')
             .forEach((m) => onPredictionChange(m.matchId, 'winner'));
@@ -399,7 +407,7 @@ describe('PredictionsPageContent — stepper navigation', () => {
     // Filling all knockout matches at once satisfies every knockout sub-step.
     await user.click(screen.getByTestId('fill-all-knockout'));
 
-    const stages = ['Round of 16', 'Quarter-finals', 'Semi-finals', 'Final'];
+    const stages = ['Round of 16', 'Quarter-finals', 'Semi-finals', 'Third Place', 'Final'];
     for (const next of stages) {
       const btn = await screen.findByRole('button', {
         name: new RegExp(`Continue to ${next}`, 'i'),
@@ -616,12 +624,12 @@ describe('PredictionsPageContent — autosave', () => {
     await user.click(screen.getByTestId('fill-champion'));
     await user.click(screen.getByRole('button', { name: /Continue to Round of 32/ }));
     await user.click(screen.getByTestId('fill-all-knockout'));
-    // Walk through R16 → QF → SF → Final → Tiebreaker via Continue.
-    // 3rd-place (M103) is no longer a wizard step (unscored under v4).
+    // Walk through R16 → QF → SF → Third Place → Final → Tiebreaker.
     for (const next of [
       'Round of 16',
       'Quarter-finals',
       'Semi-finals',
+      'Third Place',
       'Final',
       'Tiebreaker',
     ]) {
@@ -802,7 +810,14 @@ describe('PredictionsPageContent — autosave', () => {
 
     // Walk to the tiebreaker step (wizard auto-jumps to R32 in phase2_open).
     await screen.findByTestId('knockout-bracket');
-    for (const next of ['Round of 16', 'Quarter-finals', 'Semi-finals', 'Final', 'Tiebreaker']) {
+    for (const next of [
+      'Round of 16',
+      'Quarter-finals',
+      'Semi-finals',
+      'Third Place',
+      'Final',
+      'Tiebreaker',
+    ]) {
       await user.click(
         await screen.findByRole('button', {
           name: new RegExp(`Continue to ${next}`, 'i'),
@@ -831,14 +846,11 @@ describe('PredictionsPageContent — autosave', () => {
     expect(submitBody.championTeamId).toBeUndefined();
   });
 
-  it('Phase 2 submit succeeds with the bracket filled through the UI (M103 excluded)', async () => {
-    // Regression: knockout_matches contains M103 (third-place playoff),
-    // but it has no wizard step under v4 — the real KnockoutBracket
-    // never renders a picker for it. isBracketComplete counted M103 in
-    // totalKnockoutMatches, so completedKnockoutMatches (max = matches
-    // minus M103) could never equal it and Submit was permanently
-    // blocked for every Phase 2 user. The fill-all-knockout mock now
-    // mirrors the real UI by skipping M103.
+  it('Phase 2: the third-place (M103) round gates bracket completion', async () => {
+    // M103 (third-place playoff) is a required, scored (+5) knockout
+    // round again. Filling every other knockout match but leaving M103
+    // unpicked must leave the bracket incomplete — Continue off the Third
+    // Place step stays disabled until M103 has a winner.
     configureQueries({ phase: 'phase2_open' });
     const fetchMock = global.fetch as jest.Mock;
     fetchMock.mockResolvedValue({
@@ -862,19 +874,30 @@ describe('PredictionsPageContent — autosave', () => {
     const user = userEvent.setup();
     render(<PredictionsPageContent mode="edit" predictionId="pred-1" initial={initial} />);
 
-    // Wizard auto-jumps to R32; fill every pickable match (mock skips M103),
-    // then walk to the tiebreaker.
+    // Wizard auto-jumps to R32; fill every match EXCEPT M103, then walk
+    // forward to the Third Place step (it sits just before the Final).
     await screen.findByTestId('knockout-bracket');
-    await user.click(screen.getByTestId('fill-all-knockout'));
-    for (const next of ['Round of 16', 'Quarter-finals', 'Semi-finals', 'Final', 'Tiebreaker']) {
+    await user.click(screen.getByTestId('fill-all-knockout-except-third'));
+    for (const next of ['Round of 16', 'Quarter-finals', 'Semi-finals', 'Third Place']) {
       await user.click(
         await screen.findByRole('button', {
           name: new RegExp(`Continue to ${next}`, 'i'),
         })
       );
     }
-    await user.click(screen.getByTestId('set-tiebreaker'));
 
+    // On the Third Place step with M103 unpicked, advancing is blocked.
+    expect(
+      await screen.findByRole('button', { name: /Continue to Final/ })
+    ).toBeDisabled();
+
+    // Pick the third-place winner → step completes, Continue unlocks.
+    await user.click(screen.getByTestId('fill-all-knockout'));
+    await user.click(await screen.findByRole('button', { name: /Continue to Final/ }));
+    await user.click(
+      await screen.findByRole('button', { name: /Continue to Tiebreaker/ })
+    );
+    await user.click(screen.getByTestId('set-tiebreaker'));
     await user.click(screen.getByRole('button', { name: /Submit Prediction/ }));
 
     await waitFor(() => expect(toastSuccess).toHaveBeenCalledWith('Prediction submitted'));

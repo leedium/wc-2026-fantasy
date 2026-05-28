@@ -55,8 +55,8 @@ export const STAGE_CONFIG: Record<
   third_place: {
     label: 'Third Place',
     shortLabel: '3rd',
-    pointsHint: 'not scored',
-    subtitle: 'Third-place match is not scored — pick a winner for completeness.',
+    pointsHint: '+5',
+    subtitle: '+5 if you pick the third-place winner correctly.',
   },
   final: {
     label: 'Final',
@@ -67,13 +67,14 @@ export const STAGE_CONFIG: Record<
 };
 
 // Stage order. Used by the parent stepper; the bracket itself now renders one
-// stage at a time controlled by the `stage` prop. 'third_place' (M103) is
-// omitted — the match is no longer scored in v4 so the wizard skips it.
+// stage at a time controlled by the `stage` prop. 'third_place' (M103) sits
+// between the semi-finals and the Final — a required, scored (+5) round.
 export const STAGE_ORDER: KnockoutStage[] = [
   'round_of_32',
   'round_of_16',
   'quarter_finals',
   'semi_finals',
+  'third_place',
   'final',
 ];
 
