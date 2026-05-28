@@ -1,21 +1,23 @@
--- 0054_group_wrong_slot_scoring.sql
+-- 0054_group_scoring_rebalance.sql
 --
--- Restores a +2 "single team in the wrong slot" award to the group-stage
--- scoring. Scoring v4 (0051) zeroed this case; the product decision is to
--- bring it back as a consolation, mirroring the v3 behavior.
+-- Rebalances group-stage scoring to its final values, superseding scoring v4
+-- (0051). Per group, the predicted top 2 vs the actual top 2 score:
+--   exact pair      = 10  (15 for Group I "Group of Death")
+--   reversed pair   = 7
+--   single team in its correct slot = 5
+--   single team in the wrong slot   = 2   (v4 zeroed this; now a consolation)
+--   nothing correct = 0
+-- Max group total = 11×10 + 15 = 125 (all-exact, Group I premium).
 --
--- The award fires ONLY when the higher combinations all miss: a group is not
--- exact (12 / 18 for Group I) and not swapped (8). Inside that else branch the
--- predicted pair is neither exact nor swapped, so at most one of the two picks
--- can be in the actual top 2. The ordered CASE therefore returns 5 (single
--- team in its correct slot), else 2 (single team in the wrong slot), else 0 —
--- mutually exclusive, no double counting, and identical to 0051's output for
--- every non-wrong-slot case. Max group total is unchanged at 150 (all-exact).
+-- The wrong-slot award fires only inside the else branch (group not exact, not
+-- reversed). There at most one of the two picks can be in the actual top 2, so
+-- the ordered CASE returns 5 (correct slot), else 2 (wrong slot), else 0 —
+-- mutually exclusive, no double counting.
 --
 -- The group_scores CTE is inlined in both get_leaderboard and
--- get_leaderboard_rank, so both are re-emitted verbatim from 0051 with only
--- that CTE's else branch changed. admin_get_leaderboard (0042) wraps
--- get_leaderboard, so it inherits the change.
+-- get_leaderboard_rank, so both are re-emitted from 0051 with only that CTE's
+-- group CASE changed. admin_get_leaderboard (0042) wraps get_leaderboard, so it
+-- inherits the change.
 
 -- ========== get_leaderboard ==========
 
@@ -53,9 +55,9 @@ as $$
             coalesce(sum(
                 case
                     when gp.first_team_id = gs.first_team_id and gp.second_team_id = gs.second_team_id
-                        then case when gp.group_id = 'I' then 18 else 12 end
+                        then case when gp.group_id = 'I' then 15 else 10 end
                     when gp.first_team_id = gs.second_team_id and gp.second_team_id = gs.first_team_id
-                        then 8
+                        then 7
                     else
                         case
                             when gp.first_team_id = gs.first_team_id then 5   -- single team, correct slot
@@ -247,9 +249,9 @@ as $$
             coalesce(sum(
                 case
                     when gp.first_team_id = gs.first_team_id and gp.second_team_id = gs.second_team_id
-                        then case when gp.group_id = 'I' then 18 else 12 end
+                        then case when gp.group_id = 'I' then 15 else 10 end
                     when gp.first_team_id = gs.second_team_id and gp.second_team_id = gs.first_team_id
-                        then 8
+                        then 7
                     else
                         case
                             when gp.first_team_id = gs.first_team_id then 5   -- single team, correct slot

@@ -9,20 +9,20 @@ export const TOURNAMENT_CONFIG = {
   totalMatches: 104,
 } as const;
 
-// Scoring v4 (migration 0051) + third-place restored (migration 0053):
-// Group stage: 11 standard groups × 12 (exact-order top-2) + Group I "Group of Death" exact-order
-//   = 132 + 18 = 150. Reversed = 8, single correct in slot = 5, wrong slot = 0.
+// Scoring v4 (migration 0051) + third-place restored (0053) + group rebalance (0054):
+// Group stage: 11 standard groups × 10 (exact-order top-2) + Group I "Group of Death" exact-order 15
+//   = 110 + 15 = 125. Reversed = 7, single correct in slot = 5, single in wrong slot = 2.
 // Advancers: 8 ranked 3rd-place picks × 2.5 (set + rank) = 20 max.
 // Knockout (flat, no wrong-slot bonus): R32 16×5 + R16 8×8 + QF 4×12 + SF 2×18 + Final 1×30
 //   + third-place match (M103) 1×5 = 80 + 64 + 48 + 36 + 30 + 5 = 263.
 // Phase 1 Champions Pick: +5 if `predictions.champion_team_id` matches the actual M104 winner
 // (independent of the bracket Final pick).
 export const SCORING = {
-  maxGroupPoints: 150,
+  maxGroupPoints: 125,
   maxAdvancerPoints: 20,
   maxKnockoutPoints: 263,
   championPickBonus: 5,
-  maxTotalPoints: 438,
+  maxTotalPoints: 413,
 } as const;
 
 /**
