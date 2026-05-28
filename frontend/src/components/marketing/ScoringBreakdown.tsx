@@ -34,8 +34,8 @@ export function ScoringBreakdown() {
                 <span className="font-semibold">+5 points</span>
               </div>
               <div className="flex items-center justify-between">
-                <span className="text-muted-foreground">Right team, wrong slot</span>
-                <span className="font-semibold">+0 points</span>
+                <span className="text-muted-foreground">Single team in wrong slot</span>
+                <span className="font-semibold">+2 points</span>
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-muted-foreground">None correct</span>

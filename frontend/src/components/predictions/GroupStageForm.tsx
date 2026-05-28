@@ -231,8 +231,8 @@ export function GroupStageForm({
             </p>
             <p>
               <strong>Per group:</strong> +12 for both top-two correct in exact order · +8 if
-              both correct but swapped · +5 per correct team in its correct slot · 0 otherwise.
-              Right team in the wrong slot does not score.
+              both correct but swapped · +5 per correct team in its correct slot · +2 for a
+              single team in the wrong slot · 0 otherwise.
             </p>
             <p>
               <strong>Group I (&ldquo;Group of Death&rdquo;)</strong> pays +18 instead of +12
