@@ -478,7 +478,19 @@ export function PredictionsPageContent({
     !hydrated;
 
   const totalGroupsCount = groups?.length ?? 0;
-  const totalKnockoutMatches = matches?.length ?? 0;
+  // M103 (third-place playoff) lives in knockout_matches but has no
+  // wizard step under v4 — users never pick it. Counting it would make
+  // isBracketComplete permanently false (totalKnockoutMatches would
+  // always exceed what the UI lets the user fill), so it's excluded from
+  // both the completion check and the progress bar.
+  const pickableKnockoutMatchIds = React.useMemo(
+    () =>
+      new Set(
+        (matches ?? []).filter((m) => m.stage !== 'third_place').map((m) => m.id)
+      ),
+    [matches]
+  );
+  const totalKnockoutMatches = pickableKnockoutMatchIds.size;
   const filledGroupSlots = groupPredictions.reduce(
     (sum, p) => sum + Object.values(p.positions).filter((v) => v !== null).length,
     0
@@ -487,7 +499,9 @@ export function PredictionsPageContent({
   const completedGroups = groupPredictions.filter(
     (p) => Object.values(p.positions).filter((v) => v !== null).length === 4
   ).length;
-  const completedKnockoutMatches = knockoutPredictions.filter((p) => p.winnerId !== null).length;
+  const completedKnockoutMatches = knockoutPredictions.filter(
+    (p) => p.winnerId !== null && pickableKnockoutMatchIds.has(p.matchId)
+  ).length;
   const completedAdvancers = advancerPredictions.filter((a) => !!a.teamId).length;
   const tiebreakerSlots = 1;
   const filledTiebreaker = totalGoals !== null ? 1 : 0;

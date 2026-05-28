@@ -108,7 +108,12 @@ jest.mock('@/components/predictions/KnockoutBracket', () => ({
         type="button"
         data-testid="fill-all-knockout"
         onClick={() => {
-          knockoutPredictions.forEach((m) => onPredictionChange(m.matchId, 'winner'));
+          // Mirror the real bracket: M103 (third-place playoff) has no
+          // pickable UI under v4, so it never gets a winner here. Filling
+          // it would mask the bug where isBracketComplete counts M103.
+          knockoutPredictions
+            .filter((m) => m.matchId !== 'M103')
+            .forEach((m) => onPredictionChange(m.matchId, 'winner'));
         }}
       />
     </div>
@@ -824,6 +829,58 @@ describe('PredictionsPageContent — autosave', () => {
     expect(submitCall).toBeDefined();
     const submitBody = JSON.parse((submitCall![1] as RequestInit).body as string);
     expect(submitBody.championTeamId).toBeUndefined();
+  });
+
+  it('Phase 2 submit succeeds with the bracket filled through the UI (M103 excluded)', async () => {
+    // Regression: knockout_matches contains M103 (third-place playoff),
+    // but it has no wizard step under v4 — the real KnockoutBracket
+    // never renders a picker for it. isBracketComplete counted M103 in
+    // totalKnockoutMatches, so completedKnockoutMatches (max = matches
+    // minus M103) could never equal it and Submit was permanently
+    // blocked for every Phase 2 user. The fill-all-knockout mock now
+    // mirrors the real UI by skipping M103.
+    configureQueries({ phase: 'phase2_open' });
+    const fetchMock = global.fetch as jest.Mock;
+    fetchMock.mockResolvedValue({
+      ok: true,
+      json: async () => ({ predictionId: 'pred-1' }),
+    });
+
+    const initial = {
+      id: 'pred-1',
+      name: 'Main',
+      totalGoals: null,
+      championTeamId: 'arg',
+      submittedAt: new Date(Date.now() - 60_000).toISOString(),
+      isPaid: false,
+      paidAt: null,
+      groups: [],
+      knockout: [],
+      advancers: [],
+    };
+
+    const user = userEvent.setup();
+    render(<PredictionsPageContent mode="edit" predictionId="pred-1" initial={initial} />);
+
+    // Wizard auto-jumps to R32; fill every pickable match (mock skips M103),
+    // then walk to the tiebreaker.
+    await screen.findByTestId('knockout-bracket');
+    await user.click(screen.getByTestId('fill-all-knockout'));
+    for (const next of ['Round of 16', 'Quarter-finals', 'Semi-finals', 'Final', 'Tiebreaker']) {
+      await user.click(
+        await screen.findByRole('button', {
+          name: new RegExp(`Continue to ${next}`, 'i'),
+        })
+      );
+    }
+    await user.click(screen.getByTestId('set-tiebreaker'));
+
+    await user.click(screen.getByRole('button', { name: /Submit Prediction/ }));
+
+    await waitFor(() => expect(toastSuccess).toHaveBeenCalledWith('Prediction submitted'));
+    expect(toastError).not.toHaveBeenCalledWith(
+      'Please complete all predictions before submitting'
+    );
   });
 
   it('does not render a Save progress button in Phase 1', async () => {
