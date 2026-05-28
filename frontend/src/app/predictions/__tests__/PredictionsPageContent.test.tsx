@@ -689,4 +689,73 @@ describe('PredictionsPageContent — autosave', () => {
     // Silent autosave: no "Progress saved" toast.
     expect(toastSuccess).not.toHaveBeenCalled();
   });
+
+  it('Phase 1 nav triggers a silent server save once the champion is picked', async () => {
+    configureQueries(); // phase 1 default
+    const fetchMock = global.fetch as jest.Mock;
+    fetchMock.mockResolvedValue({
+      ok: true,
+      json: async () => ({ predictionId: 'pred-new' }),
+    });
+
+    const user = userEvent.setup();
+    render(<PredictionsPageContent mode="create" />);
+
+    await user.type(screen.getByLabelText(/Prediction name/), 'Main');
+    await user.click(await screen.findByTestId('fill-all-groups'));
+    await user.click(screen.getByRole('button', { name: /Continue to Best 3rds/ }));
+    await user.click(screen.getByTestId('fill-all-bundles'));
+    await user.click(
+      screen.getByRole('button', { name: /Continue to Gut Feeling Champion/ })
+    );
+    // No champion yet — Continue/Back nav up to this point must not fire
+    // a server save (RPC requires champion_team_id in Phase 1).
+    expect(fetchMock).not.toHaveBeenCalled();
+
+    await user.click(screen.getByTestId('fill-champion'));
+    // Phase 1 champion_pick has no Continue for regular users; Back to
+    // Best 3rds still goes through navigateWithAutosave.
+    await user.click(screen.getByRole('button', { name: /Back: Best 3rds/ }));
+
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
+    const [url, init] = fetchMock.mock.calls[0];
+    expect(url).toBe('/api/predictions');
+    expect(init.method).toBe('POST');
+    const body = JSON.parse(init.body);
+    expect(body.submit).toBe(false);
+    expect(body.championTeamId).toBe('team-arg');
+    expect(body.groups.length).toBeGreaterThan(0);
+    // Silent autosave: no "Progress saved" toast.
+    expect(toastSuccess).not.toHaveBeenCalled();
+  });
+
+  it('Phase 1 nav skips the server save until the champion is picked', async () => {
+    configureQueries(); // phase 1 default
+    const fetchMock = global.fetch as jest.Mock;
+    fetchMock.mockResolvedValue({
+      ok: true,
+      json: async () => ({ predictionId: 'pred-new' }),
+    });
+
+    const user = userEvent.setup();
+    render(<PredictionsPageContent mode="create" />);
+
+    await user.type(screen.getByLabelText(/Prediction name/), 'Main');
+    await user.click(await screen.findByTestId('fill-all-groups'));
+    await user.click(screen.getByRole('button', { name: /Continue to Best 3rds/ }));
+    await user.click(screen.getByTestId('fill-all-bundles'));
+    await user.click(
+      screen.getByRole('button', { name: /Continue to Gut Feeling Champion/ })
+    );
+
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it('does not render a Save progress button in Phase 1', async () => {
+    configureQueries(); // phase 1 default
+    render(<PredictionsPageContent mode="create" />);
+
+    await screen.findByTestId('fill-all-groups');
+    expect(screen.queryByRole('button', { name: /Save progress/i })).toBeNull();
+  });
 });

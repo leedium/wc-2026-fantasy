@@ -925,18 +925,21 @@ export function PredictionsPageContent({
   const handleSubmit = () => persist({ markSubmitted: true });
   const handleSavePhase1 = () =>
     persist({ markSubmitted: false, redirectTo: redirectAfterSave ?? ROUTES.predictions });
-  const handleSaveProgress = () => persist({ markSubmitted: false });
 
-  // Should the wizard auto-save before this navigation? Phase 2 regular flow
-  // and admin edits get auto-save so picks aren't marooned in localStorage
-  // between sub-step transitions. Phase 1 regular flow keeps its explicit
-  // "Save Phase 1 Picks" button — we don't want to trigger creates on partial
-  // Phase 1 state.
+  // Should the wizard auto-save before this navigation? Editable phases
+  // (phase1 + phase2_open) and admin edits get auto-save so picks aren't
+  // marooned in localStorage between sub-step transitions. In Phase 1 we
+  // still skip the save when champion_team_id is unset — the RPC requires
+  // it, so we wait until the user reaches the Champion Pick step (the
+  // draft preserves their other picks in the meantime).
   const needsAutosaveOnNav = (): boolean => {
     if (isLocked) return false;
     if (isSavingProgress || isSubmitting) return false;
-    if (!usesAdminRoute && phase !== 'phase2_open') return false;
+    const isEditablePhase = phase === 'phase1' || phase === 'phase2_open';
+    if (!usesAdminRoute && !isEditablePhase) return false;
     if (mode === 'create' && nameError) return false;
+    const willSendPhase1 = usesAdminRoute || phase === 'phase1';
+    if (willSendPhase1 && !championTeamId) return false;
     return true;
   };
 
@@ -993,21 +996,10 @@ export function PredictionsPageContent({
   const showReviewSubmit = isLastStep && !lockedReadOnly;
   const showContinue =
     !isLastStep && (lockedReadOnly || !isPhase1LastStep || isSuperAdmin);
-  // Save progress is the inline default while the prediction is still
-  // editable — replaced by Save Phase 1 Picks on the Phase 1 last step
-  // and by Submit Prediction on the tiebreaker. Phase 1 used to have a
-  // bottom "Ready to submit?" card with a (useless) Submit button; that
-  // card is gone, so Save progress now shows inline during Phase 1 too.
-  // It is also hidden on Phase 2 knockout sub-steps — Continue / Back /
-  // sub-tab clicks already auto-save server-side there, so an explicit
-  // button would just duplicate the action.
-  const isPhase2KnockoutStep =
-    phase === 'phase2_open' && isKnockoutStage(currentStep);
-  const showSaveProgressInline =
-    !showSavePhase1 &&
-    !showReviewSubmit &&
-    !lockedReadOnly &&
-    !isPhase2KnockoutStep;
+  // Continue / Back / sub-tab clicks auto-save in both editable phases now,
+  // so the wizard no longer surfaces an inline "Save progress" button. The
+  // explicit Save Phase 1 Picks (end-of-phase-1 commit + exit) and Submit
+  // Prediction (final) buttons remain.
 
   return (
     <PageLayout>
@@ -1190,17 +1182,6 @@ export function PredictionsPageContent({
             {previousStepLabel ? `Back: ${previousStepLabel}` : 'Back'}
           </Button>
           <div className="flex flex-col items-start gap-2 sm:flex-row sm:items-center">
-            {showSaveProgressInline && (
-              <Button
-                type="button"
-                variant="outline"
-                onClick={handleSaveProgress}
-                disabled={isLocked || isSubmitting || isSavingProgress}
-                className="sm:w-auto"
-              >
-                {isSavingProgress ? 'Saving…' : 'Save progress'}
-              </Button>
-            )}
             {showSavePhase1 && (
               <Button
                 type="button"
