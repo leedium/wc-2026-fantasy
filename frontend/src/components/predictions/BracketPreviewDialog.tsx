@@ -18,6 +18,7 @@ import { TeamFlag } from '@/components/shared/TeamFlag';
 import { fetchJSON } from '@/lib/api/fetchJSON';
 import type {
   Group,
+  GroupStanding,
   KnockoutMatch,
   R32BracketAssignment,
   Team,
@@ -87,8 +88,22 @@ export function BracketPreviewDialog({
   });
   const bracketAssignments = bracketQuery.data?.assignments ?? [];
 
+  // Phase 2: the editor builds the bracket against admin-entered standings, so
+  // the R32 slots must resolve from the same standings here (with the user's
+  // group predictions as the Phase 1 fallback) or the stored winners won't line
+  // up with the slots and nothing highlights in the Round of 32.
+  const standingsQuery = useQuery<{ standings: GroupStanding[] }>({
+    queryKey: ['group-standings'],
+    enabled: open,
+    queryFn: () => fetchJSON('/api/group-standings'),
+  });
+
   const ready =
-    predictionQuery.data && matchesQuery.data && teamsQuery.data && groupsQuery.data;
+    predictionQuery.data &&
+    matchesQuery.data &&
+    teamsQuery.data &&
+    groupsQuery.data &&
+    standingsQuery.data;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -158,6 +173,7 @@ export function BracketPreviewDialog({
                 winnerId: k.winner,
               }))}
               bracketAssignments={bracketAssignments}
+              groupStandings={standingsQuery.data?.standings ?? []}
             />
           </>
         )}
