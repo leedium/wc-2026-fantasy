@@ -751,15 +751,15 @@ describe('PredictionsPageContent — autosave', () => {
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
-  it('Phase 2 submit succeeds for a legacy prediction with null champion_team_id', async () => {
-    // Regression: a regular user in Phase 2 could not submit a prediction
-    // whose champion_team_id was null (allowed by the schema for legacy
-    // rows). The completion gate required the champion pick — but the
-    // user can't edit that field in Phase 2 (it's frozen post-Phase-1),
-    // so they were stuck on "Please complete all predictions before
-    // submitting" with no way out. Submit should ignore the champion
-    // field when the wizard isn't going to send it (Phase 2 regular
-    // user; non-admin route).
+  it('Phase 2 submit succeeds for a legacy prediction with stale Phase 1 fields', async () => {
+    // Regression: in Phase 2 the submit gate used to require ALL Phase 1
+    // fields to be complete (champion + 12×4 group positions + 8
+    // advancers). Legacy predictions can have null champion, partial
+    // group standings (no 3rd/4th from pre-advancers schema), or zero
+    // advancer rows — none of which a regular user can fix in Phase 2
+    // (the forms are read-only). The two phases are decoupled
+    // everywhere else (server RPC, payload composition, UI editability),
+    // so the submit gate must only check Phase 2 fields.
     configureQueries({ phase: 'phase2_open' });
     const fetchMock = global.fetch as jest.Mock;
     fetchMock.mockResolvedValue({
@@ -771,25 +771,25 @@ describe('PredictionsPageContent — autosave', () => {
       id: 'pred-legacy',
       name: 'Legacy',
       totalGoals: null,
-      championTeamId: null,
+      championTeamId: null, // legacy: no champion picked
       submittedAt: new Date(Date.now() - 60_000).toISOString(),
       isPaid: false,
       paidAt: null,
+      // Partial groups: 1st/2nd only, no 3rd/4th — mirrors pre-advancers
+      // schema where 3rd-place picks weren't collected.
       groups: fixtureGroups.map((g) => ({
         groupId: g.id,
         first: g.teams[0].id,
         second: g.teams[1].id,
-        third: g.teams[2].id,
-        fourth: g.teams[3].id,
+        third: null,
+        fourth: null,
       })),
       knockout: fixtureKnockoutMatches.map((m) => ({
         matchId: m.id,
         winner: 'mex',
       })),
-      advancers: Array.from({ length: 8 }, (_, i) => ({
-        rank: i + 1,
-        teamId: 'mex',
-      })),
+      // No advancer rows at all (legacy pre-0025 prediction).
+      advancers: [],
     };
 
     const user = userEvent.setup();
