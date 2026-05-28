@@ -66,6 +66,9 @@ export function KnockoutResultsEditor({
 }) {
   const queryClient = useQueryClient();
 
+  // No `initialData` here — pairing it with the global `staleTime: 60s` makes
+  // React Query treat the empty seed as fresh and skip the mount fetch, so
+  // saved results never appear until a manual invalidation (e.g. after a save).
   const results = useQuery<KnockoutResultRow[]>({
     queryKey: ['knockout-results', tournamentId],
     queryFn: async () => {
@@ -75,7 +78,6 @@ export function KnockoutResultsEditor({
       if (res && res.ok) return res.json();
       return [];
     },
-    initialData: [],
   });
 
   const standings = useQuery<GroupStandingRow[]>({
@@ -87,7 +89,6 @@ export function KnockoutResultsEditor({
       if (res && res.ok) return res.json();
       return [];
     },
-    initialData: [],
   });
 
   const bracket = useQuery<BracketAssignmentsResponse>({
