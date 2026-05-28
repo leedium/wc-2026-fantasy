@@ -158,6 +158,33 @@ interface DraftData {
   championTeamId: string | null;
 }
 
+// Canonical, order-insensitive serialization of a prediction's picks, used to
+// detect whether anything changed since the last save (so nav auto-save can
+// skip the DB round-trip when nothing did). Sorting + trimming means a
+// mismatch can only ever cause an unnecessary save, never a lost one.
+function serializePicks(d: DraftData): string {
+  return JSON.stringify({
+    predictionName: d.predictionName.trim(),
+    championTeamId: d.championTeamId,
+    totalGoals: d.totalGoals,
+    groups: [...d.groupPredictions]
+      .sort((a, b) => a.groupId.localeCompare(b.groupId))
+      .map((g) => [
+        g.groupId,
+        g.positions.first,
+        g.positions.second,
+        g.positions.third,
+        g.positions.fourth,
+      ]),
+    advancers: [...d.advancerPredictions]
+      .sort((a, b) => a.rank - b.rank)
+      .map((a) => [a.rank, a.teamId]),
+    knockout: [...d.knockoutPredictions]
+      .sort((a, b) => a.matchId.localeCompare(b.matchId))
+      .map((k) => [k.matchId, k.winnerId]),
+  });
+}
+
 interface PredictionsPageContentProps {
   mode: 'create' | 'edit';
   predictionId?: string;
@@ -354,6 +381,9 @@ export function PredictionsPageContent({
   const userInteractedRef = React.useRef(false);
   const initialStepSet = React.useRef(false);
   const nameRef = React.useRef<HTMLInputElement>(null);
+  // Serialized picks as last known on the server. Nav auto-save compares
+  // against this and skips the DB round-trip when nothing changed.
+  const lastSavedSnapshotRef = React.useRef<string | null>(null);
 
   // Once we know the phase and have hydrated, jump straight to Round of 32
   // when phase 2 is open — group + advancer + champion picks are frozen at
@@ -453,6 +483,17 @@ export function PredictionsPageContent({
     setChampionTeamId(championSeed);
     setPredictionName(nameSeed);
     setHydrated(true);
+
+    // Baseline = the SERVER state (seeds before any draft override), so
+    // draft-restored unsaved changes count as dirty and save on first nav.
+    lastSavedSnapshotRef.current = serializePicks({
+      predictionName: initial?.name ?? '',
+      championTeamId: initial?.championTeamId ?? null,
+      totalGoals: initial?.totalGoals ?? null,
+      groupPredictions: seedGroups,
+      advancerPredictions: seedAdvancers,
+      knockoutPredictions: seedKnockout,
+    });
 
     if (restoredFromDraft) {
       toast.info('Restored your unsaved draft', {
@@ -813,6 +854,17 @@ export function PredictionsPageContent({
       return false;
     }
 
+    // Snapshot of the full picks being saved — becomes the new "last saved"
+    // baseline on success so a subsequent unchanged nav skips the round-trip.
+    const savedSnapshot = serializePicks({
+      predictionName: trimmedName,
+      championTeamId,
+      totalGoals,
+      groupPredictions,
+      advancerPredictions,
+      knockoutPredictions,
+    });
+
     if (markSubmitted) setIsSubmitting(true);
     else setIsSavingProgress(true);
     try {
@@ -881,6 +933,7 @@ export function PredictionsPageContent({
       const data = (await res.json().catch(() => ({}))) as { predictionId?: string };
       const newId = data.predictionId ?? predictionId;
 
+      lastSavedSnapshotRef.current = savedSnapshot;
       clearDraft();
       if (mode === 'create' && user?.id && tournament.id) {
         clearDraftForPrediction(user.id, tournament.id, NEW_PREDICTION_SENTINEL);
@@ -947,6 +1000,17 @@ export function PredictionsPageContent({
     if (mode === 'create' && nameError) return false;
     const willSendPhase1 = usesAdminRoute || phase === 'phase1';
     if (willSendPhase1 && !championTeamId) return false;
+    // Nothing changed since the last save — skip the DB round-trip; the
+    // caller (navigateWithAutosave) just navigates.
+    const currentSnapshot = serializePicks({
+      predictionName,
+      championTeamId,
+      totalGoals,
+      groupPredictions,
+      advancerPredictions,
+      knockoutPredictions,
+    });
+    if (currentSnapshot === lastSavedSnapshotRef.current) return false;
     return true;
   };
 

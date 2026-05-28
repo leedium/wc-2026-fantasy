@@ -703,6 +703,77 @@ describe('PredictionsPageContent — autosave', () => {
     expect(toastSuccess).not.toHaveBeenCalled();
   });
 
+  it('Phase 2 Continue does NOT save when nothing changed', async () => {
+    // Change-detection: navigating across rounds without editing should not
+    // hit the DB — the wizard just advances. Baseline is the server state
+    // seeded at hydration (a fully-filled bracket here).
+    configureQueries({ phase: 'phase2_open' });
+    const fetchMock = global.fetch as jest.Mock;
+    fetchMock.mockResolvedValue({
+      ok: true,
+      json: async () => ({ predictionId: 'pred-1' }),
+    });
+
+    const initial = {
+      id: 'pred-1',
+      name: 'Main',
+      totalGoals: 7,
+      championTeamId: 'arg',
+      submittedAt: new Date(Date.now() - 60_000).toISOString(),
+      isPaid: false,
+      paidAt: null,
+      groups: [],
+      knockout: fixtureKnockoutMatches.map((m) => ({ matchId: m.id, winner: 'mex' })),
+      advancers: [],
+    };
+
+    const user = userEvent.setup();
+    render(<PredictionsPageContent mode="edit" predictionId="pred-1" initial={initial} />);
+
+    // Wizard auto-jumps to R32; bracket is already complete from `initial`.
+    await screen.findByTestId('knockout-bracket');
+    await user.click(screen.getByRole('button', { name: /Continue to Round of 16/ }));
+
+    // Advanced to R16 without a server round-trip.
+    await screen.findByRole('button', { name: /Continue to Quarter-finals/ });
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it('Phase 2 Continue saves once a pick changes (dirty after a clean baseline)', async () => {
+    // Same fully-filled baseline, but editing a pick makes it dirty, so the
+    // next nav DOES persist.
+    configureQueries({ phase: 'phase2_open' });
+    const fetchMock = global.fetch as jest.Mock;
+    fetchMock.mockResolvedValue({
+      ok: true,
+      json: async () => ({ predictionId: 'pred-1' }),
+    });
+
+    const initial = {
+      id: 'pred-1',
+      name: 'Main',
+      totalGoals: 7,
+      championTeamId: 'arg',
+      submittedAt: new Date(Date.now() - 60_000).toISOString(),
+      isPaid: false,
+      paidAt: null,
+      groups: [],
+      knockout: fixtureKnockoutMatches.map((m) => ({ matchId: m.id, winner: 'mex' })),
+      advancers: [],
+    };
+
+    const user = userEvent.setup();
+    render(<PredictionsPageContent mode="edit" predictionId="pred-1" initial={initial} />);
+
+    await screen.findByTestId('knockout-bracket');
+    // Re-fill all knockout winners to a different value → dirty vs baseline.
+    await user.click(screen.getByTestId('fill-all-knockout'));
+    await user.click(screen.getByRole('button', { name: /Continue to Round of 16/ }));
+
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
+    expect(JSON.parse(fetchMock.mock.calls[0][1].body).submit).toBe(false);
+  });
+
   it('Phase 1 nav triggers a silent server save once the champion is picked', async () => {
     configureQueries(); // phase 1 default
     const fetchMock = global.fetch as jest.Mock;
