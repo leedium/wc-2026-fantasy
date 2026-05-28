@@ -23,19 +23,19 @@ export function ScoringBreakdown() {
             <div className="space-y-3">
               <div className="flex items-center justify-between">
                 <span className="text-muted-foreground">Both top 2, exact order</span>
-                <span className="font-semibold">+12 points</span>
+                <span className="font-semibold">+10 points</span>
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-muted-foreground">Both top 2, swapped</span>
-                <span className="font-semibold">+8 points</span>
+                <span className="font-semibold">+7 points</span>
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-muted-foreground">Single team in its correct slot</span>
                 <span className="font-semibold">+5 points</span>
               </div>
               <div className="flex items-center justify-between">
-                <span className="text-muted-foreground">Right team, wrong slot</span>
-                <span className="font-semibold">+0 points</span>
+                <span className="text-muted-foreground">Single team in wrong slot</span>
+                <span className="font-semibold">+2 points</span>
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-muted-foreground">None correct</span>
@@ -44,8 +44,8 @@ export function ScoringBreakdown() {
               <div className="bg-muted/50 rounded-md p-3 text-sm">
                 <span className="font-semibold">Group of Death (Group I):</span>{' '}
                 <span className="text-muted-foreground">
-                  Both top 2 in exact order pays <span className="font-semibold">+18</span>{' '}
-                  instead of +12.
+                  Both top 2 in exact order pays <span className="font-semibold">+15</span>{' '}
+                  instead of +10.
                 </span>
               </div>
               <div className="border-t pt-3">
