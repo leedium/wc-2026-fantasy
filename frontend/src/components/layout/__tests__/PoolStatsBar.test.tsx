@@ -70,14 +70,36 @@ describe('isPoolStatsVisiblePath', () => {
 });
 
 describe('PoolStatsBar', () => {
-  it('renders pot and charity totals on a tournament-facing page', async () => {
+  it('renders the pot total and a per-charity breakdown on a tournament-facing page', async () => {
     mockPathname = '/predictions';
-    mockTournamentResponse(1240, 206);
+    mockTournamentResponse(1240, 206); // 206 / 2 charities = 103 each
     render(wrap(<PoolStatsBar />));
     await waitFor(() => expect(screen.getByRole('status')).toBeInTheDocument());
     const bar = screen.getByRole('status');
     expect(bar).toHaveTextContent(/\$1,240/);
-    expect(bar).toHaveTextContent(/\$206/);
+    expect(bar).toHaveTextContent('Charity Total:');
+
+    // Each charity's half-share shows (no standalone aggregate $206).
+    expect(bar).not.toHaveTextContent(/\$206/);
+    expect(screen.getAllByText('$103')).toHaveLength(2);
+
+    // Each logo carries alt text and links to its internal detail page.
+    expect(screen.getByAltText('Canadian Cancer Society logo')).toBeInTheDocument();
+    expect(screen.getByAltText('Islamic Relief Canada logo')).toBeInTheDocument();
+    expect(
+      screen.getByRole('link', { name: /Canadian Cancer Society: \$103 for charity/ })
+    ).toHaveAttribute('href', '/charities/canadian-cancer-society');
+    expect(
+      screen.getByRole('link', { name: /Islamic Relief Canada: \$103 for charity/ })
+    ).toHaveAttribute('href', '/charities/islamic-relief-canada');
+  });
+
+  it('shows cents on the per-charity share when the total splits unevenly', async () => {
+    mockPathname = '/predictions';
+    mockTournamentResponse(210, 35); // 35 / 2 = 17.50 each
+    render(wrap(<PoolStatsBar />));
+    await waitFor(() => expect(screen.getByRole('status')).toBeInTheDocument());
+    expect(screen.getAllByText('$17.50')).toHaveLength(2);
   });
 
   it('renders nothing on an admin route', () => {

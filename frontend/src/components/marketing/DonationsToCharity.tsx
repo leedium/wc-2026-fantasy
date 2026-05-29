@@ -30,7 +30,7 @@ export function DonationsToCharity() {
                 key={charity.slug}
                 className="bg-muted/20 rounded-lg border p-4"
               >
-                <div className="bg-background mb-3 flex h-20 items-center justify-center rounded p-2">
+                <div className="border-border mb-3 flex h-20 items-center justify-center rounded border bg-white p-2">
                   <Image
                     src={charity.logo}
                     alt={`${charity.name} logo`}

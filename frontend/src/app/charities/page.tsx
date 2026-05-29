@@ -43,7 +43,7 @@ export default function CharitiesPage() {
           {CHARITIES.map((charity) => (
             <Card key={charity.slug} className="flex flex-col">
               <CardHeader>
-                <div className="bg-muted/30 mb-4 flex h-32 items-center justify-center rounded-lg p-4">
+                <div className="border-border mb-4 flex h-32 items-center justify-center rounded-lg border bg-white p-4">
                   <Image
                     src={charity.logo}
                     alt={`${charity.name} logo`}
