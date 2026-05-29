@@ -53,10 +53,9 @@ export default function RulesPage() {
                 </li>
                 <li>
                   <span className="text-foreground font-semibold">Gut Feeling Champion.</span>{' '}
-                  Phase 1 ends with a single &ldquo;gut-feeling&rdquo; pick — one team you call
-                  to win the whole thing. It&apos;s required to submit, locked once Phase 1
-                  closes, and scored independently of your bracket Final pick (so both can
-                  pay out). See <span className="font-semibold">Scoring Breakdown</span> below.
+                  Before the tournament begins, select the team you think will win the tournament. This pick locks at kickoff of the opening match.
+                  Once the playoffs begin, you may submit a new Champion Pick.
+                  <p>Bonus: You will earn +5 points if this Original Pick wins the tournament. See <span className="font-semibold">Scoring Breakdown</span> below.</p>
                 </li>
                 <li>
                   <span className="text-foreground font-semibold">

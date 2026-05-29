@@ -30,7 +30,7 @@ describe('ChampionPickForm', () => {
       <ChampionPickForm teams={sampleTeams} value="arg" onChange={jest.fn()} />
     );
     expect(screen.getByText('Set')).toBeInTheDocument();
-    expect(screen.getByText(/Your champion:/i)).toBeInTheDocument();
+    expect(screen.getByText(/Your gut feeling champion:/i)).toBeInTheDocument();
     // Argentina renders in both the Select trigger value and the summary line,
     // so assert by count rather than uniqueness.
     expect(screen.getAllByText('Argentina').length).toBeGreaterThanOrEqual(1);

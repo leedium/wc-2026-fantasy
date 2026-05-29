@@ -84,7 +84,7 @@ export function ChampionPickForm({
         <CardHeader className="pb-3">
           <CardTitle className="flex items-center gap-2 text-base">
             <Trophy className="h-4 w-4 text-amber-500" aria-hidden />
-            Your champion
+            Your gut feeling champion
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">
@@ -110,7 +110,7 @@ export function ChampionPickForm({
           </select>
           {pickedTeam && (
             <p className="text-muted-foreground flex flex-wrap items-center gap-1.5 text-xs">
-              Your champion:
+              Your gut feeling champion:
               <TeamFlag code={pickedTeam.code} />
               <span className="text-foreground font-medium">{pickedTeam.name}</span>
               from Group {pickedTeam.group}
