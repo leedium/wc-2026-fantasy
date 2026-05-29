@@ -181,6 +181,7 @@ Admin-controlled v1: an admin (`profiles.is_admin = true`) submits final group s
 ## Workflow Notes
 
 - **Run tests / typecheck before declaring done**: `cd frontend && npm test && npm run typecheck && npm run lint`. The suite covers the proxy auth gate, API routes, AuthProvider, and prediction forms; if you change schema, RLS, or RPC contracts, the API route tests will catch most regressions.
+- **Never verify against production.** Do not run, test, or validate changes against the production environment (prod URLs, prod Supabase, prod data) unless the user explicitly instructs you to, or you ask for and receive permission first. Automated tests, typecheck/lint, and local runs are the default verification path. Do not assume a "low-risk display fix" may be verified on prod — confirm with the user every time.
 - **Migrations are append-only** in this repo style. Don't edit prior migration files — add a new `000N_*.sql`. (Current migrations are still numbered 0001–0004 because they're pre-deploy; once you've run against a real Supabase project, treat them as frozen.)
 - **Don't trust the client**: any new mutation must validate at the RPC boundary, not in the route handler.
 - **Never import `lib/supabase/admin.ts` from a client component** — service-role key would leak.
