@@ -40,6 +40,30 @@ describe('GroupStandingsResults', () => {
     expect(card).toHaveTextContent('South Africa');
     expect(card).toHaveTextContent('Czechia');
   });
+
+  it('hides the status badge when showStatusBadge is false (prediction view)', () => {
+    const standings: GroupStanding[] = [
+      {
+        groupId: 'A',
+        firstTeamId: 'mex',
+        secondTeamId: 'kor',
+        thirdTeamId: 'rsa',
+        fourthTeamId: 'cze',
+      },
+    ];
+    render(
+      <GroupStandingsResults
+        groups={fixtureGroups}
+        teams={fixtureTeams}
+        standings={standings}
+        showStatusBadge={false}
+      />
+    );
+    expect(screen.queryByText('Final')).not.toBeInTheDocument();
+    expect(screen.queryByText('Pending')).not.toBeInTheDocument();
+    // Finishers still render — only the results-only status badge is gone.
+    expect(screen.getByTestId('group-result-A')).toHaveTextContent('Mexico');
+  });
 });
 
 describe('AdvancersResults', () => {

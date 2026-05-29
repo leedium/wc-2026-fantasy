@@ -12,6 +12,12 @@ export interface GroupStandingsResultsProps {
   groups: Group[];
   teams: Team[];
   standings: GroupStanding[];
+  /**
+   * Show the per-group "Final"/"Pending" status badge. Defaults to true for
+   * the official /results view. Set false when rendering a user's predictions
+   * (e.g. the bracket preview), where that results-only status has no meaning.
+   */
+  showStatusBadge?: boolean;
 }
 
 const POSITIONS = [
@@ -25,6 +31,7 @@ export function GroupStandingsResults({
   groups,
   teams,
   standings,
+  showStatusBadge = true,
 }: GroupStandingsResultsProps) {
   const teamById = React.useMemo(
     () => new Map(teams.map((t) => [t.id, t])),
@@ -46,13 +53,14 @@ export function GroupStandingsResults({
             <CardHeader className="pb-3">
               <div className="flex items-center justify-between">
                 <CardTitle className="text-base">{group.name}</CardTitle>
-                {posted ? (
-                  <Badge variant="default" className="bg-green-600">
-                    Final
-                  </Badge>
-                ) : (
-                  <Badge variant="secondary">Pending</Badge>
-                )}
+                {showStatusBadge &&
+                  (posted ? (
+                    <Badge variant="default" className="bg-green-600">
+                      Final
+                    </Badge>
+                  ) : (
+                    <Badge variant="secondary">Pending</Badge>
+                  ))}
               </div>
             </CardHeader>
             <CardContent className="space-y-2">

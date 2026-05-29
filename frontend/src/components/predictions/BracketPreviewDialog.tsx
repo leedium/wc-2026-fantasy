@@ -14,6 +14,8 @@ import {
 } from '@/components/ui/dialog';
 import { Skeleton } from '@/components/ui/skeleton';
 import { BracketView } from '@/components/predictions/BracketView';
+import { GroupStandingsResults } from '@/components/results/GroupStandingsResults';
+import { AdvancersResults } from '@/components/results/AdvancersResults';
 import { TeamFlag } from '@/components/shared/TeamFlag';
 import { fetchJSON } from '@/lib/api/fetchJSON';
 import type {
@@ -41,6 +43,7 @@ interface PredictionDetail {
     fourth: string | null;
   }>;
   knockout: Array<{ matchId: string; winner: string | null }>;
+  advancers: Array<{ rank: number; teamId: string }>;
 }
 
 export interface BracketPreviewDialogProps {
@@ -130,7 +133,8 @@ export function BracketPreviewDialog({
             )}
           </DialogTitle>
           <DialogDescription>
-            Read-only preview of the bracket as predicted. Empty slots show as TBD.
+            Read-only preview of this prediction — Phase 1 group-stage and best-3rd picks,
+            then the Phase 2 knockout bracket. Empty slots show as TBD.
           </DialogDescription>
         </DialogHeader>
 
@@ -156,29 +160,66 @@ export function BracketPreviewDialog({
               totalGoals={predictionQuery.data!.totalGoals}
               teams={teamsQuery.data!}
             />
-            <BracketView
-              matches={matchesQuery.data!}
-              teams={teamsQuery.data!}
-              groupPredictions={(predictionQuery.data!.groups ?? []).map((g) => ({
-                groupId: g.groupId,
-                positions: {
-                  first: g.first,
-                  second: g.second,
-                  third: g.third,
-                  fourth: g.fourth,
-                },
-              }))}
-              knockoutPredictions={(predictionQuery.data!.knockout ?? []).map((k) => ({
-                matchId: k.matchId,
-                winnerId: k.winner,
-              }))}
-              bracketAssignments={bracketAssignments}
-              groupStandings={standingsQuery.data?.standings ?? []}
-            />
+
+            <PreviewSection title="Phase 1 — Group Stage">
+              <GroupStandingsResults
+                groups={groupsQuery.data!}
+                teams={teamsQuery.data!}
+                standings={(predictionQuery.data!.groups ?? []).map((g) => ({
+                  groupId: g.groupId,
+                  firstTeamId: g.first,
+                  secondTeamId: g.second,
+                  thirdTeamId: g.third,
+                  fourthTeamId: g.fourth,
+                }))}
+                showStatusBadge={false}
+              />
+            </PreviewSection>
+
+            <PreviewSection title="Phase 1 — Best 3rd-Place Advancers">
+              <AdvancersResults
+                advancers={predictionQuery.data!.advancers ?? []}
+                teams={teamsQuery.data!}
+              />
+            </PreviewSection>
+
+            <PreviewSection title="Phase 2 — Knockout Bracket">
+              <BracketView
+                matches={matchesQuery.data!}
+                teams={teamsQuery.data!}
+                // The preview resolves the bracket strictly from the admin's
+                // standings (Phase 2). The user's Phase-1 group picks are shown
+                // in the section above, so we deliberately omit them here —
+                // group slots render as TBD until standings are posted rather
+                // than as a what-if shape derived from those picks.
+                groupPredictions={[]}
+                knockoutPredictions={(predictionQuery.data!.knockout ?? []).map((k) => ({
+                  matchId: k.matchId,
+                  winnerId: k.winner,
+                }))}
+                bracketAssignments={bracketAssignments}
+                groupStandings={standingsQuery.data?.standings ?? []}
+              />
+            </PreviewSection>
           </>
         )}
       </DialogContent>
     </Dialog>
+  );
+}
+
+function PreviewSection({
+  title,
+  children,
+}: {
+  title: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <section className="space-y-3">
+      <h3 className="text-sm font-semibold">{title}</h3>
+      {children}
+    </section>
   );
 }
 
