@@ -1,0 +1,29 @@
+#!/bin/sh
+# Block direct pushes to protected branches. All changes go through a PR.
+# Bypass intentionally with: git push --no-verify  (don't make a habit of it)
+#
+# This hook is tracked in the repo. Activate it once per clone with:
+#     git config core.hooksPath .githooks
+
+protected="main"
+remote="$1"
+
+while read -r local_ref local_sha remote_ref remote_sha; do
+	case "$remote_ref" in
+	refs/heads/*)
+		branch=${remote_ref#refs/heads/}
+		for p in $protected; do
+			if [ "$branch" = "$p" ]; then
+				echo >&2 "✋ pre-push: direct push to '$p' on '$remote' is blocked."
+				echo >&2 "   Create a feature branch and open a PR instead:"
+				echo >&2 "     git switch -c my-feature"
+				echo >&2 "     git push -u origin my-feature"
+				echo >&2 "   (override with --no-verify if you really must)"
+				exit 1
+			fi
+		done
+		;;
+	esac
+done
+
+exit 0

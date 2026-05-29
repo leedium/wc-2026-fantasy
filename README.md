@@ -67,6 +67,19 @@ SUPABASE_SERVICE_ROLE_KEY=
 NEXT_PUBLIC_APP_URL=http://localhost:3000
 ```
 
+### Git hooks (one-time, per clone)
+
+This repo ships a tracked `pre-push` hook that blocks accidental direct pushes to `main`
+(all changes go through a PR). Git hooks aren't enabled automatically on clone — activate
+them once with:
+
+```bash
+git config core.hooksPath .githooks
+```
+
+Bypass intentionally with `git push --no-verify`. `main` is also protected server-side on
+GitHub, so this is just for faster local feedback.
+
 ## Frontend scripts
 
 Run from `frontend/`:
