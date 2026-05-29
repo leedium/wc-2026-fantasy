@@ -79,7 +79,7 @@ export default async function CharityDetailPage({
       </div>
 
       <section className="py-8 text-center md:py-12">
-        <div className="bg-muted/30 mx-auto mb-6 flex h-40 w-full max-w-md items-center justify-center rounded-lg p-6">
+        <div className="border-border mx-auto mb-6 flex h-40 w-full max-w-md items-center justify-center rounded-lg border bg-white p-6">
           <Image
             src={charity.logo}
             alt={`${charity.name} logo`}
