@@ -44,7 +44,18 @@ export interface CascadeResult {
  * The third-place match (`L-M101` / `L-M102` loser sources) is handled the same
  * way — preserving the "loser-of-M101 side" yields the correct swap when a
  * semi-final flips.
+ *
+ * Only the changed match's own bracket subtree is touched, and only picks that
+ * sat on a slot fed by the changed chain are moved. Matches on unrelated
+ * branches — and picks that were already stale (sitting on neither resolved
+ * slot) — are left exactly as they were, so changing one match never disturbs
+ * another branch or surfaces a pre-existing invalid pick.
  */
+
+/** True when `source` feeds from `matchId` — directly (`M101`) or as its loser (`L-M101`). */
+function referencesMatch(source: string, matchId: string): boolean {
+  return source === matchId || source === `L-${matchId}`;
+}
 export function cascadeKnockoutPick(
   changedMatchId: string,
   newWinnerId: string | null,
@@ -90,12 +101,27 @@ export function cascadeKnockoutPick(
 
   const changedMatch = matches.find((m) => m.id === changedMatchId);
   if (!changedMatch) return { predictions: next, changedMatchIds: [] };
-  const fromRank = STAGE_RANK[changedMatch.stage];
 
-  // Walk strictly-downstream matches in topological order. By the time we reach
-  // a match, all of its upstream winners are already finalized in `next`.
+  // Collect the changed match's bracket subtree: every match that transitively
+  // feeds from it. Unrelated branches are never considered, so their picks
+  // (including pre-existing stale ones masked as "complete") stay untouched.
+  const subtree = new Set<string>();
+  const queue = [changedMatchId];
+  while (queue.length > 0) {
+    const parent = queue.shift()!;
+    for (const m of matches) {
+      if (subtree.has(m.id)) continue;
+      if (referencesMatch(m.team1Source, parent) || referencesMatch(m.team2Source, parent)) {
+        subtree.add(m.id);
+        queue.push(m.id);
+      }
+    }
+  }
+
+  // Process the subtree in topological order so each match's upstream winners
+  // are already finalized in `next` by the time we reach it.
   const downstream = matches
-    .filter((m) => STAGE_RANK[m.stage] > fromRank)
+    .filter((m) => subtree.has(m.id))
     .sort((a, b) => STAGE_RANK[a.stage] - STAGE_RANK[b.stage]);
 
   const changedMatchIds: string[] = [];
@@ -104,33 +130,27 @@ export function cascadeKnockoutPick(
     if (oldWinner === null) continue; // nothing picked here — leave it
 
     const slots = before.get(m.id)!;
-    const after1 = resolveTeamSource(
-      m.team1Source,
-      matches,
-      groupPredictions,
-      next,
-      bracketAssignments,
-      groupStandings
-    );
-    const after2 = resolveTeamSource(
-      m.team2Source,
-      matches,
-      groupPredictions,
-      next,
-      bracketAssignments,
-      groupStandings
-    );
-
-    let replacement: string | null;
+    // Only move a pick that sat on a slot fed by the changed chain. A pick on
+    // neither resolved slot was already stale — leave it for the existing
+    // MatchCard auto-clear so we never surface invalidity the user hadn't seen.
+    let slotSource: string;
     if (oldWinner === slots.slot1) {
-      replacement = after1; // keep the slot-1 side, swap to its new team
+      slotSource = m.team1Source; // keep the slot-1 side
     } else if (oldWinner === slots.slot2) {
-      replacement = after2; // keep the slot-2 side
-    } else if (oldWinner === after1 || oldWinner === after2) {
-      replacement = oldWinner; // still a valid contestant — untouched
+      slotSource = m.team2Source; // keep the slot-2 side
     } else {
-      replacement = null; // orphaned — clear (matches existing auto-clear behavior)
+      continue; // already stale / on neither tracked slot — leave as-is
     }
+
+    // Swap to the new team for that slot (or null if the upstream pick was cleared).
+    const replacement = resolveTeamSource(
+      slotSource,
+      matches,
+      groupPredictions,
+      next,
+      bracketAssignments,
+      groupStandings
+    );
 
     if (replacement !== oldWinner) {
       setWinner(m.id, replacement);

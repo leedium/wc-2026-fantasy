@@ -10,6 +10,8 @@ import type { GroupPrediction, KnockoutMatchPrediction } from '@/types/tournamen
 const groupPredictions: GroupPrediction[] = [
   { groupId: 'A', positions: { first: 'mex', second: 'kor', third: 'rsa', fourth: 'cze' } },
   { groupId: 'B', positions: { first: 'can', second: 'sui', third: 'qat', fourth: 'bih' } },
+  { groupId: 'C', positions: { first: 'bra', second: 'mar', third: 'sco', fourth: 'hai' } },
+  { groupId: 'D', positions: { first: 'usa', second: 'par', third: 'aus', fourth: 'tur' } },
   { groupId: 'E', positions: { first: 'ger', second: 'ecu', third: 'civ', fourth: 'cuw' } },
   { groupId: 'F', positions: { first: 'ned', second: 'jpn', third: 'tun', fourth: 'swe' } },
 ];
@@ -144,5 +146,47 @@ describe('cascadeKnockoutPick', () => {
     // The final pick that backed the M101 winner follows it too.
     expect(winnerOf(next, 'M104')).toBe('bra');
     expect(changedMatchIds.sort()).toEqual(['M103', 'M104'].sort());
+  });
+
+  it('leaves picks on unrelated branches alone — including stale ones masked as complete', () => {
+    // M74 (R32) feeds M89; M90 lives on a different branch (M73/M75) that only
+    // rejoins M74's at M97. M90 carries a STALE pick ('arg' — not one of its
+    // M73/M75 contestants), the kind of masked-complete pick a bracket can hold
+    // after earlier edits. Changing M74 must not disturb M90.
+    const predictions = withWinners({
+      M73: 'mex',
+      M75: 'ger',
+      M90: 'arg', // stale: M90 is mex vs ger, never arg
+      M74: 'bra', // 1C
+      M89: 'bra', // valid on M74's side
+    });
+
+    // Swap M74 to its other contestant (2D = par).
+    const { predictions: next, changedMatchIds } = run('M74', 'par', predictions);
+
+    // The unrelated stale pick is untouched...
+    expect(winnerOf(next, 'M90')).toBe('arg');
+    expect(changedMatchIds).not.toContain('M90');
+    // ...while M74's own downstream pick is carried forward.
+    expect(winnerOf(next, 'M89')).toBe('par');
+    expect(changedMatchIds).toContain('M89');
+  });
+
+  it('does not proactively clear a stale pick on the changed branch', () => {
+    // M97 carries a stale pick ('arg') that sits on neither of its contestants.
+    // Changing M73 carries M90 (mex -> sui) but must leave the stale M97 pick
+    // for the existing MatchCard auto-clear rather than nulling it here.
+    const predictions = withWinners({
+      M73: 'mex',
+      M75: 'ger',
+      M90: 'mex', // valid, on M73's side
+      M97: 'arg', // stale: M97 is (M89 winner) vs (M90 winner), never arg
+    });
+
+    const { predictions: next, changedMatchIds } = run('M73', 'sui', predictions);
+
+    expect(winnerOf(next, 'M90')).toBe('sui'); // carried
+    expect(winnerOf(next, 'M97')).toBe('arg'); // stale pick left as-is
+    expect(changedMatchIds).not.toContain('M97');
   });
 });
