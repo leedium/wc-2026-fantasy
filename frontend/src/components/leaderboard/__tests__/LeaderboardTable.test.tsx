@@ -75,4 +75,18 @@ describe('LeaderboardTable', () => {
     expect(screen.getByText('alice@example.com')).toBeInTheDocument();
     expect(screen.queryByText('alice')).not.toBeInTheDocument();
   });
+
+  it('shows a "last updated" time when present, and omits it otherwise', () => {
+    render(
+      <LeaderboardTable
+        entries={[{ ...entries[0], updatedAt: '2026-05-29T12:00:00.000Z' }]}
+      />
+    );
+    expect(screen.getByText(/^Updated /)).toBeInTheDocument();
+  });
+
+  it('omits the updated line when updatedAt is absent', () => {
+    render(<LeaderboardTable entries={entries} />);
+    expect(screen.queryByText(/^Updated /)).not.toBeInTheDocument();
+  });
 });

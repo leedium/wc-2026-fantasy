@@ -115,6 +115,8 @@ export interface LeaderboardEntry {
   advancerPoints: number;
   knockoutPoints: number;
   championPickPoints: number;
+  /** When the prediction's picks were last saved (predictions.updated_at). */
+  updatedAt?: string | null;
 }
 
 export interface LeaderboardRankMatch {

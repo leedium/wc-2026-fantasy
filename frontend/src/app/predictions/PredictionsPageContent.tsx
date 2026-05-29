@@ -44,6 +44,7 @@ import type {
 import { ADVANCER_COUNT } from '@/lib/constants';
 import { autofillGroupPredictionsByFifaRanking } from '@/lib/fifaRankings';
 import { applyGroupPositionChange } from '@/lib/groupSwap';
+import { cascadeKnockoutPick } from '@/lib/knockoutCascade';
 import { AdvancersForm } from '@/components/predictions/AdvancersForm';
 import { fetchJSON } from '@/lib/api/fetchJSON';
 
@@ -379,6 +380,11 @@ export function PredictionsPageContent({
   // Serialized picks as last known on the server. Nav auto-save compares
   // against this and skips the DB round-trip when nothing changed.
   const lastSavedSnapshotRef = React.useRef<string | null>(null);
+  // Wall-clock time of the last successful server save (any persist). Shown in
+  // the footer for an already-submitted prediction so silent auto-commits are
+  // visible — distinct from the localStorage draft time (`lastSavedAt`).
+  const [lastServerSaveAt, setLastServerSaveAt] = React.useState<Date | null>(null);
+  const [autoCommitFailed, setAutoCommitFailed] = React.useState(false);
 
   // Once we know the phase and have hydrated, jump straight to Round of 32
   // when phase 2 is open — group + advancer + champion picks are frozen at
@@ -736,11 +742,29 @@ export function PredictionsPageContent({
   };
 
   const handleKnockoutPredictionChange = (matchId: string, winnerId: string | null) => {
+    if (!matches) return;
+    // Use the functional updater so rapid sequential changes (e.g. filling
+    // several matches in one tick) accumulate against the latest state rather
+    // than a stale closure. Side effects mirror the existing persistDraft
+    // pattern below.
     setKnockoutPredictions((prev) => {
-      const next = prev.map((prediction) =>
-        prediction.matchId === matchId ? { ...prediction, winnerId } : prediction
+      const { predictions: next, changedMatchIds } = cascadeKnockoutPick(
+        matchId,
+        winnerId,
+        matches,
+        prev,
+        groupPredictions,
+        bracketAssignments,
+        groupStandings
       );
       persistDraft({ knockoutPredictions: next });
+      if (changedMatchIds.length > 0) {
+        toast.info(
+          `Carried your pick through ${changedMatchIds.length} later ${
+            changedMatchIds.length === 1 ? 'match' : 'matches'
+          }`
+        );
+      }
       return next;
     });
   };
@@ -819,12 +843,19 @@ export function PredictionsPageContent({
     markSubmitted,
     redirectTo,
     silent,
+    auto,
   }: {
     markSubmitted: boolean;
     /** Override navigation after a successful save-progress (not Submit). */
     redirectTo?: string;
     /** Suppress the "Progress saved" toast (e.g. nav-triggered autosaves). */
     silent?: boolean;
+    /**
+     * Background auto-commit (debounced edit of an already-submitted
+     * prediction). Suppresses the error toast too — failures surface as a quiet
+     * inline status and retry on the next edit instead of spamming toasts.
+     */
+    auto?: boolean;
   }): Promise<boolean> => {
     if (!tournament) return false;
     setPredictionNameTouched(true);
@@ -929,6 +960,8 @@ export function PredictionsPageContent({
       const newId = data.predictionId ?? predictionId;
 
       lastSavedSnapshotRef.current = savedSnapshot;
+      setLastServerSaveAt(new Date());
+      setAutoCommitFailed(false);
       clearDraft();
       if (mode === 'create' && user?.id && tournament.id) {
         clearDraftForPrediction(user.id, tournament.id, NEW_PREDICTION_SENTINEL);
@@ -968,7 +1001,12 @@ export function PredictionsPageContent({
       }
       return true;
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Failed to save');
+      if (auto) {
+        // Quiet failure for background auto-commit; the next edit reschedules.
+        setAutoCommitFailed(true);
+      } else {
+        toast.error(err instanceof Error ? err.message : 'Failed to save');
+      }
       return false;
     } finally {
       setIsSubmitting(false);
@@ -981,13 +1019,14 @@ export function PredictionsPageContent({
     persist({ markSubmitted: false, redirectTo: redirectAfterSave ?? ROUTES.predictions });
   const handleSaveProgress = () => persist({ markSubmitted: false });
 
-  // Should the wizard auto-save before this navigation? Editable phases
+  // Is a server auto-save currently allowed + warranted? Editable phases
   // (phase1 + phase2_open) and admin edits get auto-save so picks aren't
-  // marooned in localStorage between sub-step transitions. In Phase 1 we
-  // still skip the save when champion_team_id is unset — the RPC requires
-  // it, so we wait until the user reaches the Champion Pick step (the
-  // draft preserves their other picks in the meantime).
-  const needsAutosaveOnNav = (): boolean => {
+  // marooned in localStorage. In Phase 1 we still skip the save when
+  // champion_team_id is unset — the RPC requires it, so we wait until the user
+  // reaches the Champion Pick step (the draft preserves their other picks in
+  // the meantime). Shared by nav auto-save and the submitted-prediction
+  // auto-commit effect.
+  const canAutosave = (): boolean => {
     if (isLocked) return false;
     if (isSavingProgress || isSubmitting) return false;
     const isEditablePhase = phase === 'phase1' || phase === 'phase2_open';
@@ -1013,7 +1052,7 @@ export function PredictionsPageContent({
   // when no save is needed, so tests using fake timers don't have to advance
   // microtasks for every Continue / Back click.
   const navigateWithAutosave = (navigate: () => void) => {
-    if (!needsAutosaveOnNav()) {
+    if (!canAutosave()) {
       navigate();
       return;
     }
@@ -1022,6 +1061,40 @@ export function PredictionsPageContent({
       if (ok) navigate();
     })();
   };
+
+  // Auto-commit edits to an ALREADY-submitted prediction. A draft lives in
+  // localStorage until the user navigates/submits, but a submitted prediction
+  // is live on the leaderboard and shown in the preview dialog, so its edits
+  // must reach the server promptly — otherwise the preview/leaderboard show
+  // stale picks. We persist with submit:false: it applies the picks and
+  // preserves submitted_at (and its leaderboard tie-break position) rather than
+  // re-stamping the submission time. Create/draft predictions keep the existing
+  // localStorage + nav-autosave behavior.
+  const wasSubmitted = mode === 'edit' && !!initial?.submittedAt;
+  const picksSnapshot = serializePicks({
+    predictionName,
+    championTeamId,
+    totalGoals,
+    groupPredictions,
+    advancerPredictions,
+    knockoutPredictions,
+  });
+  // Keep the commit action in a ref so the debounce timer runs the latest state
+  // and re-checks the guard at fire time (no double-save if the user also navs).
+  const autoCommitRef = React.useRef<() => void>(() => {});
+  React.useEffect(() => {
+    autoCommitRef.current = () => {
+      if (canAutosave()) {
+        void persist({ markSubmitted: false, silent: true, auto: true });
+      }
+    };
+  });
+  React.useEffect(() => {
+    if (!wasSubmitted || !hydrated) return;
+    if (picksSnapshot === lastSavedSnapshotRef.current) return; // nothing changed
+    const timer = setTimeout(() => autoCommitRef.current(), 1500);
+    return () => clearTimeout(timer);
+  }, [picksSnapshot, wasSubmitted, hydrated]);
 
   if (isLoading || !tournament || !groups || !teams || !matches) {
     return (
@@ -1098,7 +1171,19 @@ export function PredictionsPageContent({
             <Badge variant={isLocked ? 'outline' : 'default'}>
               {isLocked ? 'Locked' : 'Accepting Predictions'}
             </Badge>
-            {!isLocked && lastSavedAt && (
+            {!isLocked && wasSubmitted && autoCommitFailed && (
+              <span className="inline-flex items-center gap-1.5 text-xs text-amber-600 dark:text-amber-500">
+                <Save className="h-3.5 w-3.5" aria-hidden />
+                Couldn’t save changes · will retry on next edit
+              </span>
+            )}
+            {!isLocked && wasSubmitted && !autoCommitFailed && lastServerSaveAt && (
+              <span className="text-muted-foreground inline-flex items-center gap-1.5 text-xs">
+                <Save className="h-3.5 w-3.5" aria-hidden />
+                Changes saved · {formatClockTime(lastServerSaveAt)}
+              </span>
+            )}
+            {!isLocked && !wasSubmitted && lastSavedAt && (
               <span className="text-muted-foreground inline-flex items-center gap-1.5 text-xs">
                 <Save className="h-3.5 w-3.5" aria-hidden />
                 Draft saved · {formatClockTime(lastSavedAt)}
