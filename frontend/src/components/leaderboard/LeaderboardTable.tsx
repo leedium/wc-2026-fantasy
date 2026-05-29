@@ -30,6 +30,18 @@ export interface LeaderboardTableProps {
   enablePreview?: boolean;
 }
 
+function formatUpdated(value?: string | null): string | null {
+  if (!value) return null;
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return null;
+  return d.toLocaleString(undefined, {
+    month: 'short',
+    day: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+  });
+}
+
 function getRankBadge(rank: number): { color: string; label: string } | null {
   switch (rank) {
     case 1:
@@ -135,6 +147,11 @@ export function LeaderboardTable({
                     <span className="text-muted-foreground text-xs">
                       {entry.email ?? entry.username}
                     </span>
+                    {formatUpdated(entry.updatedAt) && (
+                      <span className="text-muted-foreground/80 text-xs">
+                        Updated {formatUpdated(entry.updatedAt)}
+                      </span>
+                    )}
                   </div>
                 </TableCell>
                 <TableCell className="text-right">

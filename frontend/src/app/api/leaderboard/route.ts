@@ -57,6 +57,7 @@ export async function GET(request: NextRequest) {
     knockout_points: number;
     champion_pick_points: number;
     total_goals: number | null;
+    updated_at: string | null;
     total_count: number;
   }>;
 
@@ -73,6 +74,7 @@ export async function GET(request: NextRequest) {
       advancerPoints: Number(row.advancer_points),
       knockoutPoints: row.knockout_points,
       championPickPoints: row.champion_pick_points ?? 0,
+      updatedAt: row.updated_at ?? null,
     })),
     total: Number(rows[0]?.total_count ?? 0),
     page,

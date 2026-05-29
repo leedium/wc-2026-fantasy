@@ -65,6 +65,7 @@ describe('GET /api/leaderboard', () => {
           group_points: 60,
           knockout_points: 40,
           total_goals: 170,
+          updated_at: '2026-05-29T12:00:00.000Z',
           total_count: 2,
         },
         {
@@ -89,6 +90,7 @@ describe('GET /api/leaderboard', () => {
       points: 100,
       groupPoints: 60,
       knockoutPoints: 40,
+      updatedAt: '2026-05-29T12:00:00.000Z',
     });
     expect(body.entries[0].email).toBeUndefined();
     expect(supabaseMock.rpc).toHaveBeenCalledWith(

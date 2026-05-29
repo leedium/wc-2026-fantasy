@@ -185,6 +185,7 @@ jest.mock('@/components/predictions/ChampionPickForm', () => ({
 
 import { PredictionsPageContent } from '../PredictionsPageContent';
 import { DRAFT_DEBOUNCE_MS, DRAFT_VERSION } from '@/hooks/useDraftPersistence';
+import { mockPush } from '../../../../jest.setup';
 
 const TOURNAMENT_ID = 'tournament-1';
 const DRAFT_KEY = `wc2026:draft:user-1:${TOURNAMENT_ID}:new`;
@@ -263,6 +264,7 @@ beforeEach(() => {
   toastSuccess.mockReset();
   toastError.mockReset();
   toastInfo.mockReset();
+  mockPush.mockReset();
   mockAuthProfile = null;
   global.fetch = jest.fn();
 });
@@ -772,6 +774,118 @@ describe('PredictionsPageContent — autosave', () => {
 
     await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
     expect(JSON.parse(fetchMock.mock.calls[0][1].body).submit).toBe(false);
+  });
+
+  it('auto-commits an edit to a SUBMITTED prediction after the debounce (submit:false, no redirect)', async () => {
+    // A submitted prediction is live on the leaderboard / preview, so edits must
+    // reach the server without waiting for a nav or Submit. The auto-commit
+    // preserves submitted_at (submit:false) and never navigates away.
+    configureQueries({ phase: 'phase2_open' });
+    const fetchMock = global.fetch as jest.Mock;
+    fetchMock.mockResolvedValue({ ok: true, json: async () => ({ predictionId: 'pred-1' }) });
+
+    const initial = {
+      id: 'pred-1',
+      name: 'Main',
+      totalGoals: 7,
+      championTeamId: 'arg',
+      submittedAt: new Date(Date.now() - 60_000).toISOString(),
+      isPaid: false,
+      paidAt: null,
+      groups: [],
+      knockout: fixtureKnockoutMatches.map((m) => ({ matchId: m.id, winner: 'mex' })),
+      advancers: [],
+    };
+
+    jest.useFakeTimers({ doNotFake: ['queueMicrotask'] });
+    const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
+    render(<PredictionsPageContent mode="edit" predictionId="pred-1" initial={initial} />);
+
+    await screen.findByTestId('knockout-bracket');
+    await user.click(screen.getByTestId('fill-all-knockout')); // changes picks → dirty
+    expect(fetchMock).not.toHaveBeenCalled(); // debounced, not yet
+
+    await act(async () => {
+      jest.advanceTimersByTime(1600);
+      await Promise.resolve();
+    });
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
+    const [url, init] = fetchMock.mock.calls[0];
+    expect(url).toContain('/api/predictions/pred-1');
+    expect(init.method).toBe('PATCH');
+    expect(JSON.parse(init.body).submit).toBe(false);
+    expect(mockPush).not.toHaveBeenCalled(); // stays on the wizard
+  });
+
+  it('does NOT auto-commit an unsubmitted draft on edit', async () => {
+    // Drafts (submittedAt null) keep the localStorage + nav-autosave model;
+    // edits must not hit the server until the user navigates/submits.
+    configureQueries({ phase: 'phase2_open' });
+    const fetchMock = global.fetch as jest.Mock;
+    fetchMock.mockResolvedValue({ ok: true, json: async () => ({ predictionId: 'pred-1' }) });
+
+    const initial = {
+      id: 'pred-1',
+      name: 'Main',
+      totalGoals: 7,
+      championTeamId: 'arg',
+      submittedAt: null, // draft
+      isPaid: false,
+      paidAt: null,
+      groups: [],
+      knockout: fixtureKnockoutMatches.map((m) => ({ matchId: m.id, winner: 'mex' })),
+      advancers: [],
+    };
+
+    jest.useFakeTimers({ doNotFake: ['queueMicrotask'] });
+    const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
+    render(<PredictionsPageContent mode="edit" predictionId="pred-1" initial={initial} />);
+
+    await screen.findByTestId('knockout-bracket');
+    await user.click(screen.getByTestId('fill-all-knockout'));
+    await act(async () => {
+      jest.advanceTimersByTime(1600);
+      await Promise.resolve();
+    });
+
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it('does not double-save when the user navigates right after an edit', async () => {
+    // The pending auto-commit timer self-guards: after the nav-autosave commits
+    // the same picks, the timer fires but sees nothing dirty and skips.
+    configureQueries({ phase: 'phase2_open' });
+    const fetchMock = global.fetch as jest.Mock;
+    fetchMock.mockResolvedValue({ ok: true, json: async () => ({ predictionId: 'pred-1' }) });
+
+    const initial = {
+      id: 'pred-1',
+      name: 'Main',
+      totalGoals: 7,
+      championTeamId: 'arg',
+      submittedAt: new Date(Date.now() - 60_000).toISOString(),
+      isPaid: false,
+      paidAt: null,
+      groups: [],
+      knockout: fixtureKnockoutMatches.map((m) => ({ matchId: m.id, winner: 'mex' })),
+      advancers: [],
+    };
+
+    jest.useFakeTimers({ doNotFake: ['queueMicrotask'] });
+    const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
+    render(<PredictionsPageContent mode="edit" predictionId="pred-1" initial={initial} />);
+
+    await screen.findByTestId('knockout-bracket');
+    await user.click(screen.getByTestId('fill-all-knockout')); // dirty (schedules auto-commit)
+    await user.click(screen.getByRole('button', { name: /Continue to Round of 16/ }));
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1)); // nav-autosave
+
+    await act(async () => {
+      jest.advanceTimersByTime(1600);
+      await Promise.resolve();
+    }); // pending auto-commit timer fires
+    // Snapshot already matches what nav saved → guard skips, no second save.
+    expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 
   it('Phase 1 nav triggers a silent server save once the champion is picked', async () => {
