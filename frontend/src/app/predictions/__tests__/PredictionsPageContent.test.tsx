@@ -287,6 +287,10 @@ describe('PredictionsPageContent — stepper navigation', () => {
   });
 
   it('advances Groups → Best 3rds → Gut Feeling Champion → Round of 32 via Continue (phase 2 open)', async () => {
+    // Regular users have the Phase 1 tabs locked once Phase 2 opens, so the
+    // full cross-phase Continue chain is exercised as super admin (the only
+    // role that keeps editing every phase through the locks).
+    mockAuthProfile = { isSuperAdmin: true };
     configureQueries({ phase: 'phase2_open' });
     const user = userEvent.setup();
     render(<PredictionsPageContent mode="create" />);
@@ -391,6 +395,9 @@ describe('PredictionsPageContent — stepper navigation', () => {
   });
 
   it('walks through every step with Continue and reaches the tiebreaker (phase 2 open)', async () => {
+    // As above: the full Phase 1 → knockout → tiebreaker chain is super-admin
+    // only in Phase 2, since regular users have the Phase 1 tabs locked.
+    mockAuthProfile = { isSuperAdmin: true };
     configureQueries({ phase: 'phase2_open' });
     const user = userEvent.setup();
     render(<PredictionsPageContent mode="create" />);
@@ -425,6 +432,20 @@ describe('PredictionsPageContent — stepper navigation', () => {
     expect(
       screen.getAllByRole('button', { name: /Submit Prediction/i }).length
     ).toBeGreaterThan(0);
+  });
+
+  it('locks the Phase 1 tabs for a regular user once Phase 2 is open', async () => {
+    // Phase 1 picks (Group Stage / Best 3rds / Gut Feeling) freeze when Phase 2
+    // opens, so those tabs render a lock icon and become non-interactive. The
+    // Phase 2 tabs (Knockout / Tiebreaker) stay open.
+    configureQueries({ phase: 'phase2_open' });
+    render(<PredictionsPageContent mode="create" />);
+
+    expect(await screen.findByRole('tab', { name: /Group Stage/ })).toBeDisabled();
+    expect(screen.getByRole('tab', { name: /Best 3rds/ })).toBeDisabled();
+    expect(screen.getByRole('tab', { name: /Gut Feeling/ })).toBeDisabled();
+    expect(screen.getByRole('tab', { name: /Knockout/ })).not.toBeDisabled();
+    expect(screen.getByRole('tab', { name: /Tiebreaker/ })).not.toBeDisabled();
   });
 
   it('renders a read-only view when the tournament is locked', async () => {

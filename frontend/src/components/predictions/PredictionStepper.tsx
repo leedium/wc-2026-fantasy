@@ -76,6 +76,10 @@ function StepperRow({
               data-status={step.status}
               className={cn(
                 'relative flex h-auto flex-col items-center gap-2 rounded-none bg-transparent shadow-none data-[state=active]:bg-transparent data-[state=active]:shadow-none',
+                // Desktop affordance: these steps are clickable tabs. Locked
+                // steps are `disabled`, which already sets pointer-events-none,
+                // so the pointer cursor only ever shows on navigable steps.
+                'cursor-pointer',
                 isSm ? 'px-1 py-1' : 'px-2 py-1'
               )}
             >
