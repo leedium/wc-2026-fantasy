@@ -89,4 +89,19 @@ describe('LeaderboardTable', () => {
     render(<LeaderboardTable entries={entries} />);
     expect(screen.queryByText(/^Updated /)).not.toBeInTheDocument();
   });
+
+  it('renders an Edit link only on the current user row when enableEdit is set', () => {
+    render(
+      <LeaderboardTable entries={entries} currentUsername="bob" enableEdit />
+    );
+    const editLinks = screen.getAllByRole('link', { name: /^Edit / });
+    expect(editLinks).toHaveLength(1);
+    // bob owns the p2 prediction → deep-links to its editor.
+    expect(editLinks[0]).toHaveAttribute('href', '/predictions/p2');
+  });
+
+  it('omits Edit links when enableEdit is not set', () => {
+    render(<LeaderboardTable entries={entries} currentUsername="bob" />);
+    expect(screen.queryByRole('link', { name: /^Edit / })).not.toBeInTheDocument();
+  });
 });

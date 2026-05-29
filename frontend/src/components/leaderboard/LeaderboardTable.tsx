@@ -1,7 +1,8 @@
 'use client';
 
 import * as React from 'react';
-import { Eye, TrendingDown, TrendingUp, Minus, Trophy } from 'lucide-react';
+import Link from 'next/link';
+import { Eye, Pencil, TrendingDown, TrendingUp, Minus, Trophy } from 'lucide-react';
 import {
   Table,
   TableBody,
@@ -13,6 +14,7 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { BracketPreviewDialog } from '@/components/predictions/BracketPreviewDialog';
+import { ROUTES } from '@/lib/constants';
 import { cn } from '@/lib/utils';
 import type { LeaderboardEntry } from '@/types/tournament';
 
@@ -28,6 +30,13 @@ export interface LeaderboardTableProps {
    * The route requires auth; gate the column visually too.
    */
   enablePreview?: boolean;
+  /**
+   * When true, render an Edit button on the current user's own rows that
+   * deep-links to the prediction editor. Callers should only pass this while
+   * the tournament is unlocked (predictions are editable). Row ownership is
+   * still gated on `currentUsername` so other players' rows never get one.
+   */
+  enableEdit?: boolean;
 }
 
 function formatUpdated(value?: string | null): string | null {
@@ -86,10 +95,14 @@ export function LeaderboardTable({
   highlightedRank,
   className,
   enablePreview = false,
+  enableEdit = false,
 }: LeaderboardTableProps) {
   const [previewId, setPreviewId] = React.useState<string | null>(null);
 
-  const colCount = enablePreview ? 5 : 4;
+  // One shared trailing actions column holds Preview (all rows) and Edit
+  // (the current user's own rows). Render it whenever either is enabled.
+  const showActions = enablePreview || enableEdit;
+  const colCount = showActions ? 5 : 4;
 
   return (
     <>
@@ -100,7 +113,7 @@ export function LeaderboardTable({
             <TableHead>Player</TableHead>
             <TableHead className="text-right">Points</TableHead>
             <TableHead className="w-24 text-right">Change</TableHead>
-            {enablePreview && <TableHead className="w-24 text-right">Bracket</TableHead>}
+            {showActions && <TableHead className="w-36 text-right">Actions</TableHead>}
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -161,18 +174,36 @@ export function LeaderboardTable({
                 <TableCell className="text-right">
                   <ChangeIndicator change={entry.change} />
                 </TableCell>
-                {enablePreview && (
+                {showActions && (
                   <TableCell className="text-right">
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => setPreviewId(entry.predictionId)}
-                      aria-label={`Preview ${entry.predictionName}'s bracket`}
-                    >
-                      <Eye className="mr-1.5 h-4 w-4" />
-                      Preview
-                    </Button>
+                    <div className="flex items-center justify-end gap-1">
+                      {enablePreview && (
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setPreviewId(entry.predictionId)}
+                          aria-label={`Preview ${entry.predictionName}'s bracket`}
+                        >
+                          <Eye className="mr-1.5 h-4 w-4" />
+                          Preview
+                        </Button>
+                      )}
+                      {enableEdit && isCurrentUser && (
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          asChild
+                          aria-label={`Edit ${entry.predictionName}`}
+                        >
+                          <Link href={`${ROUTES.predictions}/${entry.predictionId}`}>
+                            <Pencil className="mr-1.5 h-4 w-4" />
+                            Edit
+                          </Link>
+                        </Button>
+                      )}
+                    </div>
                   </TableCell>
                 )}
               </TableRow>

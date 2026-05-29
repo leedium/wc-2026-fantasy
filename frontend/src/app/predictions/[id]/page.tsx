@@ -3,6 +3,7 @@ import { notFound, redirect } from 'next/navigation';
 
 import { getServerSupabase } from '@/lib/supabase/server';
 import { ROUTES } from '@/lib/constants';
+import { AdminBreadcrumb } from '@/components/admin/AdminBreadcrumb';
 import { PredictionsPageContent, type InitialPrediction } from '../PredictionsPageContent';
 
 export const metadata: Metadata = {
@@ -87,5 +88,19 @@ export default async function EditPredictionPage({ params }: PageProps) {
     })),
   };
 
-  return <PredictionsPageContent mode="edit" predictionId={id} initial={initial} />;
+  return (
+    <PredictionsPageContent
+      mode="edit"
+      predictionId={id}
+      initial={initial}
+      breadcrumb={
+        <AdminBreadcrumb
+          items={[
+            { label: 'My Predictions', href: ROUTES.predictions },
+            { label: p.prediction_name },
+          ]}
+        />
+      }
+    />
+  );
 }

@@ -3,10 +3,11 @@
 import * as React from 'react';
 import { useRouter } from 'next/navigation';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { ArrowLeft, ArrowRight, Clock, Save } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Clock, Eye, Save } from 'lucide-react';
 import { toast } from 'sonner';
 
 import { PageLayout } from '@/components/layout/PageLayout';
+import { BracketPreviewDialog } from '@/components/predictions/BracketPreviewDialog';
 import { ChampionPickForm } from '@/components/predictions/ChampionPickForm';
 import { GroupStageForm } from '@/components/predictions/GroupStageForm';
 import { KnockoutBracket } from '@/components/predictions/KnockoutBracket';
@@ -118,6 +119,16 @@ const TOP_STEP_LABELS: Record<TopStep, string> = {
   champion_pick: 'Gut Feeling',
   knockout: 'Knockout',
   tiebreaker: 'Tiebreaker',
+};
+
+// A representative concrete Step for each top tab, used to test whether the
+// tab's phase is locked (the Knockout tab fans out into per-stage sub-steps).
+const TOP_STEP_REP: Record<TopStep, Step> = {
+  groups: 'groups',
+  best_thirds: 'best_thirds',
+  champion_pick: 'champion_pick',
+  knockout: 'round_of_32',
+  tiebreaker: 'tiebreaker',
 };
 
 function isKnockoutStage(step: Step): step is KnockoutStage {
@@ -313,6 +324,27 @@ export function PredictionsPageContent({
   // stranding super admin on the Groups step in the admin editor.
   const bypassLockNav = isSuperAdmin;
 
+  // A step is "locked" when its phase's edit window is closed for this user.
+  // Phase 1 steps (Group Stage / Best 3rds / Gut Feeling) freeze once Phase 2
+  // opens; Phase 2 steps (Knockout / Tiebreaker) stay locked until Phase 2
+  // opens. Super admin edits any field in any phase, so nothing locks for
+  // them. In the fully-locked read-only phases (phase1_locked / phase2_locked)
+  // nothing is step-locked either — users keep browsing every section via the
+  // stepper and Back / Continue (the forms themselves render read-only).
+  const isStepLocked = React.useCallback(
+    (step: Step): boolean => {
+      if (isSuperAdmin) return false;
+      const top = topOf(step);
+      const isPhase1Step =
+        top === 'groups' || top === 'best_thirds' || top === 'champion_pick';
+      const isPhase2Step = top === 'knockout' || top === 'tiebreaker';
+      if (phase === 'phase2_open' && isPhase1Step) return true;
+      if (phase === 'phase1' && isPhase2Step) return true;
+      return false;
+    },
+    [isSuperAdmin, phase]
+  );
+
   const tournamentQuery = useQuery<{
     id: string;
     slug: string;
@@ -385,6 +417,7 @@ export function PredictionsPageContent({
   // visible — distinct from the localStorage draft time (`lastSavedAt`).
   const [lastServerSaveAt, setLastServerSaveAt] = React.useState<Date | null>(null);
   const [autoCommitFailed, setAutoCommitFailed] = React.useState(false);
+  const [previewOpen, setPreviewOpen] = React.useState(false);
 
   // Once we know the phase and have hydrated, jump straight to Round of 32
   // when phase 2 is open — group + advancer + champion picks are frozen at
@@ -649,14 +682,12 @@ export function PredictionsPageContent({
 
   const topValue: TopStep = topOf(currentStep);
 
-  // In Phase 1 regular users can't edit Phase 2 fields, so the Knockout
-  // and Tiebreaker tabs are visually locked. Super admin can edit any
-  // field in any phase, so they keep full access.
-  const phase2TabsLocked = phase === 'phase1' && !isSuperAdmin;
-
+  // Tabs whose phase is closed for this user render a lock icon and become
+  // non-interactive (see `isStepLocked`): Phase 2 tabs during Phase 1, and the
+  // Phase 1 tabs once Phase 2 is open. Super admin keeps full access.
   const topSteps: StepperStep[] = TOP_STEPS.map((value) => {
     let status: StepperStep['status'];
-    if (phase2TabsLocked && (value === 'knockout' || value === 'tiebreaker')) {
+    if (isStepLocked(TOP_STEP_REP[value])) {
       status = 'locked';
     } else if (value === topValue) {
       status = 'current';
@@ -827,16 +858,29 @@ export function PredictionsPageContent({
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }, [currentStep]);
 
+  // Walk STEP_ORDER from the current step in `dir`, skipping locked steps so
+  // Back / Continue never strand the user on a frozen phase (e.g. Back from
+  // Round of 32 in Phase 2 skips the locked Phase 1 steps and finds nothing
+  // before it, disabling Back).
+  const findAdjacentUnlockedStep = (dir: 1 | -1): Step | null => {
+    let idx = STEP_ORDER.indexOf(currentStep) + dir;
+    while (idx >= 0 && idx < STEP_ORDER.length) {
+      if (!isStepLocked(STEP_ORDER[idx])) return STEP_ORDER[idx];
+      idx += dir;
+    }
+    return null;
+  };
+
   const goToNextStep = () => {
-    const idx = STEP_ORDER.indexOf(currentStep);
-    if (idx < 0 || idx >= STEP_ORDER.length - 1) return;
-    navigateWithAutosave(() => goToStep(STEP_ORDER[idx + 1]));
+    const target = findAdjacentUnlockedStep(1);
+    if (!target) return;
+    navigateWithAutosave(() => goToStep(target));
   };
 
   const goToPreviousStep = () => {
-    const idx = STEP_ORDER.indexOf(currentStep);
-    if (idx <= 0) return;
-    navigateWithAutosave(() => goToStep(STEP_ORDER[idx - 1]));
+    const target = findAdjacentUnlockedStep(-1);
+    if (!target) return;
+    navigateWithAutosave(() => goToStep(target));
   };
 
   const persist = async ({
@@ -1062,6 +1106,16 @@ export function PredictionsPageContent({
     })();
   };
 
+  // Open the full read-only preview. The dialog fetches from the server, so
+  // flush any pending edits first (when a save is warranted) — otherwise the
+  // preview would show the last-saved snapshot, not what's on screen.
+  const handleOpenPreview = async () => {
+    if (canAutosave()) {
+      await persist({ markSubmitted: false, silent: true });
+    }
+    setPreviewOpen(true);
+  };
+
   // Auto-commit edits to an ALREADY-submitted prediction. A draft lives in
   // localStorage until the user navigates/submits, but a submitted prediction
   // is live on the leaderboard and shown in the preview dialog, so its edits
@@ -1110,11 +1164,15 @@ export function PredictionsPageContent({
   }
 
   const stepIndex = STEP_ORDER.indexOf(currentStep);
-  const isFirstStep = stepIndex === 0;
+  // Back / Continue target the nearest *unlocked* neighbour so a frozen phase
+  // is stepped over rather than landed on.
+  const nextUnlockedStep = findAdjacentUnlockedStep(1);
+  const prevUnlockedStep = findAdjacentUnlockedStep(-1);
+  const isFirstStep = prevUnlockedStep === null;
   const isLastStep = stepIndex === STEP_ORDER.length - 1;
   const currentStepComplete = stepStatus[currentStep];
-  const nextStepLabel = !isLastStep ? STEP_LABELS[STEP_ORDER[stepIndex + 1]] : null;
-  const previousStepLabel = !isFirstStep ? STEP_LABELS[STEP_ORDER[stepIndex - 1]] : null;
+  const nextStepLabel = nextUnlockedStep ? STEP_LABELS[nextUnlockedStep] : null;
+  const previousStepLabel = prevUnlockedStep ? STEP_LABELS[prevUnlockedStep] : null;
   // Bottom-nav action layout for the Gut Feeling Champion step in Phase 1
   // (the final Phase-1 step):
   //   - Regular users: "Save Phase 1 Picks" only. Knockout steps are
@@ -1143,6 +1201,11 @@ export function PredictionsPageContent({
   // locked read-only view. Reuses persist()'s name + champion validation.
   const showSaveProgressInline =
     !showSavePhase1 && !showReviewSubmit && !lockedReadOnly;
+  // Phase 2 only: let the user pull up the FULL prediction (both phases,
+  // read-only) at any point in the knockout flow. Needs a persisted prediction
+  // to fetch, so it's edit-mode + an existing id.
+  const isPhase2 = phase === 'phase2_open' || phase === 'phase2_locked';
+  const showPreview = isPhase2 && mode === 'edit' && !!predictionId;
 
   return (
     <PageLayout>
@@ -1336,6 +1399,18 @@ export function PredictionsPageContent({
             <ArrowLeft className="mr-2 h-4 w-4" />
             {previousStepLabel ? `Back: ${previousStepLabel}` : 'Back'}
           </Button>
+          {showPreview && (
+            <Button
+              type="button"
+              variant="outline"
+              onClick={handleOpenPreview}
+              disabled={isSubmitting || isSavingProgress}
+              className="sm:w-auto"
+            >
+              <Eye className="mr-2 h-4 w-4" />
+              Preview prediction
+            </Button>
+          )}
           <div className="flex flex-col items-start gap-2 sm:flex-row sm:items-center">
             {showSaveProgressInline && (
               <Button
@@ -1397,6 +1472,13 @@ export function PredictionsPageContent({
         </div>
       </div>
 
+      {showPreview && (
+        <BracketPreviewDialog
+          predictionId={previewOpen ? (predictionId ?? null) : null}
+          apiBasePath={effectiveApiBasePath}
+          onOpenChange={setPreviewOpen}
+        />
+      )}
     </PageLayout>
   );
 }
