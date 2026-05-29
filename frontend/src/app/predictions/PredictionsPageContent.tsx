@@ -44,6 +44,7 @@ import type {
 import { ADVANCER_COUNT } from '@/lib/constants';
 import { autofillGroupPredictionsByFifaRanking } from '@/lib/fifaRankings';
 import { applyGroupPositionChange } from '@/lib/groupSwap';
+import { cascadeKnockoutPick } from '@/lib/knockoutCascade';
 import { AdvancersForm } from '@/components/predictions/AdvancersForm';
 import { fetchJSON } from '@/lib/api/fetchJSON';
 
@@ -736,11 +737,29 @@ export function PredictionsPageContent({
   };
 
   const handleKnockoutPredictionChange = (matchId: string, winnerId: string | null) => {
+    if (!matches) return;
+    // Use the functional updater so rapid sequential changes (e.g. filling
+    // several matches in one tick) accumulate against the latest state rather
+    // than a stale closure. Side effects mirror the existing persistDraft
+    // pattern below.
     setKnockoutPredictions((prev) => {
-      const next = prev.map((prediction) =>
-        prediction.matchId === matchId ? { ...prediction, winnerId } : prediction
+      const { predictions: next, changedMatchIds } = cascadeKnockoutPick(
+        matchId,
+        winnerId,
+        matches,
+        prev,
+        groupPredictions,
+        bracketAssignments,
+        groupStandings
       );
       persistDraft({ knockoutPredictions: next });
+      if (changedMatchIds.length > 0) {
+        toast.info(
+          `Carried your pick through ${changedMatchIds.length} later ${
+            changedMatchIds.length === 1 ? 'match' : 'matches'
+          }`
+        );
+      }
       return next;
     });
   };
