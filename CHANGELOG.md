@@ -5,6 +5,14 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.1] - 2026-05-31
+
+### Fixed
+
+- Rules page: replaced the vague "contact the pool organizer" payment bullet with
+  concrete payment instructions — e-transfer to `payments@soccer-pool.com` (PayPal also
+  accepted), and a reminder to include your username in the payment notes.
+
 ## [1.0.0] - 2026-05-30
 
 First production release of the World Cup 2026 prediction game — a pure web app
@@ -66,4 +74,5 @@ admin-submitted real-world results.
 - Dark-mode default, container-query-driven priority+ navigation, and SEO no-index
   ahead of launch.
 
+[1.0.1]: https://github.com/leedium/wc-2026-fantasy/releases/tag/v1.0.1
 [1.0.0]: https://github.com/leedium/wc-2026-fantasy/releases/tag/v1.0.0
