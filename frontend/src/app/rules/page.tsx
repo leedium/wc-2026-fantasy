@@ -155,11 +155,6 @@ export default function RulesPage() {
                 including the third-place match) and your Champion&apos;s Total Playoff Goals
                 tiebreaker. After it locks, every pick is frozen.
               </li>
-              <li>
-                <span className="text-foreground font-semibold">Between the two locks.</span>{' '}
-                Your group picks, advancers, Gut Feeling Champion, and prediction name stay
-                frozen — only your knockout bracket and tiebreaker remain editable.
-              </li>
             </ul>
           </CardContent>
         </Card>
