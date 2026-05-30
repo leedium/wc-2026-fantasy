@@ -88,11 +88,17 @@ export default function RulesPage() {
                   multiple paid predictions.
                 </li>
                 <li>
-                  <span className="text-foreground font-semibold">
-                    Contact the pool organizer.
-                  </span>{' '}
-                  Reach out to arrange payment. An admin marks each prediction as paid
-                  before lock; only paid predictions appear on the leaderboard.
+                  <span className="text-foreground font-semibold">Payment</span>
+                  <br />
+                  E-transfer:{' '}
+                  <a href="mailto:payments@soccer-pool.com" className="text-foreground font-medium">
+                    payments@soccer-pool.com
+                  </a>
+                  <br />
+                  PayPal also accepted &mdash; email for info
+                  <br />
+                  <br />
+                  Please include your username in the payment notes.
                 </li>
                 <li>
                   <span className="text-foreground font-semibold">Unpaid still saves.</span>{' '}
