@@ -192,6 +192,38 @@ export function TournamentSettingsForm() {
     }
   };
 
+  // Close Phase 1 immediately. Phase 1 is purely time-based (open while
+  // now < lock_time), so the mirror of Phase 2's knockoutUnlocked=false is to
+  // set lock_time to now — freezing group + advancer picks and new prediction
+  // creation. Reopen by entering a future lock time and saving.
+  const closePhaseOne = async () => {
+    if (!tournament.data) return;
+    setSavingPhase1(true);
+    try {
+      const res = await fetch('/api/admin/tournament', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id: tournament.data.id,
+          lockTime: new Date().toISOString(),
+        }),
+      });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body.error ?? 'Failed');
+      }
+      toast.success('Phase 1 closed');
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['tournament'] }),
+        queryClient.invalidateQueries({ queryKey: ['admin-stats'] }),
+      ]);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Failed');
+    } finally {
+      setSavingPhase1(false);
+    }
+  };
+
   // Phase 2 derived state.
   const advancersCount = advancersQuery.data?.advancers.length ?? 0;
   const assignmentsCount = bracketQuery.data?.assignments.length ?? 0;
@@ -436,9 +468,23 @@ export function TournamentSettingsForm() {
                 predictions.
               </p>
             </div>
-            <Button onClick={handleSavePhase1Lock} disabled={savingPhase1}>
-              {savingPhase1 ? 'Saving…' : 'Save Phase 1 lock time'}
-            </Button>
+            <div className="flex flex-wrap gap-2">
+              <Button onClick={handleSavePhase1Lock} disabled={savingPhase1}>
+                {savingPhase1 ? 'Saving…' : 'Save Phase 1 lock time'}
+              </Button>
+              <Button
+                variant="outline"
+                onClick={closePhaseOne}
+                disabled={savingPhase1 || phase !== 'phase1'}
+                title={
+                  phase !== 'phase1'
+                    ? 'Phase 1 is already closed'
+                    : 'Close Phase 1 now — freezes group + advancer picks and new predictions'
+                }
+              >
+                Close Phase 1
+              </Button>
+            </div>
           </CardContent>
         </Card>
 
