@@ -57,14 +57,22 @@ describe('Footer', () => {
       expect(privacyLink).toBeInTheDocument();
       expect(privacyLink).toHaveAttribute('href', '/privacy');
     });
+
+    it('should render Audit link', () => {
+      render(<Footer />);
+
+      const auditLink = screen.getByRole('link', { name: 'Audit' });
+      expect(auditLink).toBeInTheDocument();
+      expect(auditLink).toHaveAttribute('href', '/audit');
+    });
   });
 
   describe('structure', () => {
-    it('should contain all four footer links', () => {
+    it('should contain all footer links', () => {
       render(<Footer />);
 
       const links = screen.getAllByRole('link');
-      expect(links).toHaveLength(4);
+      expect(links).toHaveLength(5);
     });
 
     it('should have navigation element for links', () => {

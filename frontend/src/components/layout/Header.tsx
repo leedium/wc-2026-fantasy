@@ -27,6 +27,7 @@ const navLinks = [
   { label: 'Rules & Scoring', href: ROUTES.rules },
   { label: 'About', href: ROUTES.about },
   { label: 'Charities', href: ROUTES.charities },
+  { label: 'Audit', href: ROUTES.audit },
 ];
 
 export function Header() {

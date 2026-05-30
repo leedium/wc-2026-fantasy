@@ -1,10 +1,13 @@
 import type { Metadata } from 'next';
+import Link from 'next/link';
+import { ArrowRight } from 'lucide-react';
 
 import { PageLayout } from '@/components/layout/PageLayout';
 import { ScoringBreakdown } from '@/components/marketing/ScoringBreakdown';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { PRICING } from '@/lib/constants';
+import { Button } from '@/components/ui/button';
+import { PRICING, ROUTES } from '@/lib/constants';
 
 export const metadata: Metadata = {
   title: 'Rules | World Cup 2026',
@@ -156,6 +159,29 @@ export default function RulesPage() {
                 tiebreaker. After it locks, every pick is frozen.
               </li>
             </ul>
+          </CardContent>
+        </Card>
+      </section>
+
+      <section className="py-8">
+        <Card>
+          <CardHeader>
+            <CardTitle>Transparency &amp; audit</CardTitle>
+            <CardDescription>See exactly where the money goes.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <p className="text-muted-foreground mb-4 text-sm">
+              We keep a live audit page open to every member: total members, paid entries, the
+              charity contribution ({PRICING.charityPortionCAD} {PRICING.currency} of every entry),
+              the full operating-cost breakdown, and the resulting net payout. Nothing is hidden —
+              the figures update in real time as entries are paid.
+            </p>
+            <Button asChild>
+              <Link href={ROUTES.audit}>
+                View the audit page
+                <ArrowRight className="ml-2 h-4 w-4" />
+              </Link>
+            </Button>
           </CardContent>
         </Card>
       </section>

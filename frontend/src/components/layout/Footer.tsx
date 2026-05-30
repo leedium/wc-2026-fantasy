@@ -7,6 +7,7 @@ import { ROUTES } from '@/lib/constants';
 const footerLinks = [
   { label: 'About', href: ROUTES.about },
   { label: 'Rules & Scoring', href: ROUTES.rules },
+  { label: 'Audit', href: ROUTES.audit },
   { label: 'Terms', href: ROUTES.terms },
   { label: 'Privacy', href: ROUTES.privacy },
 ];

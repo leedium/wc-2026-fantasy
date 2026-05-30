@@ -41,6 +41,27 @@ export const PRICING = {
 } as const;
 
 /**
+ * Operating-cost model for the /audit transparency page. Every value here is
+ * meant to be edited directly when costs change.
+ *
+ * Flat totals for one tournament (~2 months) — no per-month / per-year
+ * normalization. Just set each line to the dollar amount it costs to run this
+ * tournament.
+ *
+ * - `recurring[]`: one-time/flat cost lines for the tournament.
+ * - `devPerSubmissionCAD`: development / management cost, charged per paid
+ *   submission (entry).
+ */
+export const OPERATING_COSTS = {
+  devPerSubmissionCAD: 0.5,
+  recurring: [
+    { label: 'Domain', amount: 150 },
+    { label: 'Hosting / Email', amount: 124 },
+    { label: 'Software Services (AI / tooling)', amount: 78.5 },
+  ],
+} as const;
+
+/**
  * Labels for the 8 ranked 3rd-place advancer slots, shown in the wizard
  * and admin UI. Rank 1 = "best" 3rd-place team, rank 8 = "8th best".
  */
@@ -70,6 +91,7 @@ export const ROUTES = {
   account: '/account',
   about: '/about',
   charities: '/charities',
+  audit: '/audit',
   rules: '/rules',
   terms: '/terms',
   privacy: '/privacy',
