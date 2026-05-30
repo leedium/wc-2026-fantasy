@@ -3,7 +3,7 @@
 import * as React from 'react';
 import Link from 'next/link';
 import { useQuery } from '@tanstack/react-query';
-import { ArrowRight, Search, Trophy, Users } from 'lucide-react';
+import { ArrowRight, Lock, Search, Trophy, Users } from 'lucide-react';
 
 import { PageLayout } from '@/components/layout/PageLayout';
 import { LeaderboardTable } from '@/components/leaderboard/LeaderboardTable';
@@ -46,11 +46,19 @@ interface LeaderboardResponse {
 
 export function LeaderboardPageContent() {
   const { user, profile } = useAuth();
-  const { isLocked } = useTournamentLock();
+  const { isLocked, phase } = useTournamentLock();
   const [currentPage, setCurrentPage] = React.useState(1);
   const [highlightedRank, setHighlightedRank] = React.useState<number | null>(null);
 
   const currentUsername = profile?.username ?? null;
+  // Staff (admin or super-admin — the latter doesn't imply the former) can
+  // always preview every bracket. Everyone else is limited to their own
+  // entries until knockout picks are frozen (`phase2_locked`), so a player
+  // can't copy a still-editable rival's picks. Fails closed while the
+  // tournament query is loading (phase defaults to phase1 → restricted).
+  const isStaff = !!profile?.isAdmin || !!profile?.isSuperAdmin;
+  const previewOthersLocked = phase !== 'phase2_locked';
+  const canPreviewOthers = isStaff || !previewOthersLocked;
   // The leaderboard response shape depends on the viewer's identity:
   // admins get an extra `email` field, anon/auth users don't. Bake the
   // viewer kind into the cache key so logging in/out triggers a fresh
@@ -194,6 +202,17 @@ export function LeaderboardPageContent() {
         </div>
       </div>
 
+      {!isStaff && previewOthersLocked && !isLoading && (
+        <div className="border-muted-foreground/20 bg-muted/40 text-muted-foreground mb-6 flex items-start gap-2 rounded-md border px-4 py-3 text-sm">
+          <Lock className="mt-0.5 h-4 w-4 shrink-0" />
+          <p>
+            <span className="text-foreground font-medium">Heads up —</span> you can preview only
+            your own brackets for now. Everyone&apos;s brackets open for viewing once the knockout
+            bracket locks. This keeps picks private while they can still be edited.
+          </p>
+        </div>
+      )}
+
       <Card className="mb-6">
         <CardContent className="p-0">
           {isLoading ? (
@@ -204,6 +223,7 @@ export function LeaderboardPageContent() {
               currentUsername={currentUsername}
               highlightedRank={highlightedRank}
               enablePreview={!!user}
+              canPreviewOthers={canPreviewOthers}
               // Edit deep-link only while predictions are still editable.
               enableEdit={!!user && !isLocked}
             />

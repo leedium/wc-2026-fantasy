@@ -31,6 +31,13 @@ export interface LeaderboardTableProps {
    */
   enablePreview?: boolean;
   /**
+   * When true, the viewer may preview rows that aren't their own. When false,
+   * other players' Preview buttons render faded + disabled (own rows stay
+   * clickable). Gates copying picks while predictions are still editable —
+   * the RPC enforces the same rule, this is just the matching affordance.
+   */
+  canPreviewOthers?: boolean;
+  /**
    * When true, render an Edit button on the current user's own rows that
    * deep-links to the prediction editor. Callers should only pass this while
    * the tournament is unlocked (predictions are editable). Row ownership is
@@ -95,6 +102,7 @@ export function LeaderboardTable({
   highlightedRank,
   className,
   enablePreview = false,
+  canPreviewOthers = false,
   enableEdit = false,
 }: LeaderboardTableProps) {
   const [previewId, setPreviewId] = React.useState<string | null>(null);
@@ -123,6 +131,7 @@ export function LeaderboardTable({
             const isHighlighted = highlightedRank && entry.rank === highlightedRank;
             const rankBadge = getRankBadge(entry.rank);
             const isEvenRow = index % 2 === 0;
+            const canPreviewThisRow = isCurrentUser || canPreviewOthers;
 
             return (
               <TableRow
@@ -177,18 +186,32 @@ export function LeaderboardTable({
                 {showActions && (
                   <TableCell className="text-right">
                     <div className="flex items-center justify-end gap-1">
-                      {enablePreview && (
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => setPreviewId(entry.predictionId)}
-                          aria-label={`Preview ${entry.predictionName}'s bracket`}
-                        >
-                          <Eye className="mr-1.5 h-4 w-4" />
-                          Preview
-                        </Button>
-                      )}
+                      {enablePreview &&
+                        (canPreviewThisRow ? (
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => setPreviewId(entry.predictionId)}
+                            aria-label={`Preview ${entry.predictionName}'s bracket`}
+                          >
+                            <Eye className="mr-1.5 h-4 w-4" />
+                            Preview
+                          </Button>
+                        ) : (
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            disabled
+                            className="cursor-not-allowed opacity-50"
+                            aria-label={`Previewing ${entry.predictionName}'s bracket unlocks when the knockout bracket locks`}
+                            title="Previewing other players' brackets unlocks when the knockout bracket locks"
+                          >
+                            <Eye className="mr-1.5 h-4 w-4" />
+                            Preview
+                          </Button>
+                        ))}
                       {enableEdit && isCurrentUser && (
                         <Button
                           type="button"
