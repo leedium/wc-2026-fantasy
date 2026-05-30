@@ -67,7 +67,12 @@ export function AuthMenu() {
   // (non-Radix) placeholder for the first paint sidesteps the issue.
   if (!mounted) {
     return (
-      <Button variant="outline" size="sm" className="gap-2" disabled>
+      <Button
+        variant="outline"
+        size="sm"
+        className="gap-2 border-indigo-500/40 bg-indigo-500/10 font-medium text-indigo-600 dark:text-indigo-400"
+        disabled
+      >
         <UserIcon className="h-4 w-4" />
         <span className="max-w-[120px] truncate">{displayName}</span>
       </Button>
@@ -77,7 +82,11 @@ export function AuthMenu() {
   return (
     <Popover>
       <PopoverTrigger asChild>
-        <Button variant="outline" size="sm" className="relative gap-2">
+        <Button
+          variant="outline"
+          size="sm"
+          className="relative gap-2 border-indigo-500/40 bg-indigo-500/10 font-medium text-indigo-600 hover:bg-indigo-500/20 hover:text-indigo-600 dark:text-indigo-400 dark:hover:text-indigo-400"
+        >
           <UserIcon className="h-4 w-4" />
           <span className="max-w-[120px] truncate">{displayName}</span>
           {/* Unread-style indicator for available free-pick credits

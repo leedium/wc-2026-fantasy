@@ -1163,6 +1163,33 @@ export function PredictionsPageContent({
     );
   }
 
+  // Once the tournament is locked, no role — including super admin — may
+  // create a NEW prediction on the user-facing route. (The admin-on-behalf
+  // editor passes a different apiBasePath and is intentionally exempt.) This
+  // backstops the disabled "New prediction" button on the hub against a direct
+  // deep-link to the create wizard. Editing existing predictions is unaffected.
+  if (mode === 'create' && isLocked && apiBasePath === '/api/predictions') {
+    return (
+      <PageLayout>
+        {breadcrumb}
+        <Card className="mt-6 border-amber-500/40 bg-amber-500/10">
+          <CardContent
+            role="status"
+            className="text-amber-900 dark:text-amber-200 flex flex-col items-center gap-3 py-10 text-center"
+          >
+            <p className="text-lg font-semibold">Predictions are locked</p>
+            <p className="text-sm">
+              No further prediction submissions are being accepted.
+            </p>
+            <Button variant="outline" onClick={() => router.push(ROUTES.predictions)}>
+              Back to your predictions
+            </Button>
+          </CardContent>
+        </Card>
+      </PageLayout>
+    );
+  }
+
   const stepIndex = STEP_ORDER.indexOf(currentStep);
   // Back / Continue target the nearest *unlocked* neighbour so a frozen phase
   // is stepped over rather than landed on.

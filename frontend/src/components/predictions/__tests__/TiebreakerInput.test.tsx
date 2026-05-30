@@ -8,14 +8,14 @@ describe('TiebreakerInput', () => {
       const mockOnChange = jest.fn();
       render(<TiebreakerInput value={null} onChange={mockOnChange} />);
 
-      expect(screen.getByText("Tiebreaker: Champion's Total Goals")).toBeInTheDocument();
+      expect(screen.getByText("Tiebreaker: Champion's Total Playoff Goals")).toBeInTheDocument();
     });
 
     it('should render label and input', () => {
       const mockOnChange = jest.fn();
       render(<TiebreakerInput value={null} onChange={mockOnChange} />);
 
-      expect(screen.getByLabelText("Champion's Total Goals")).toBeInTheDocument();
+      expect(screen.getByLabelText("Champion's Total Playoff Goals")).toBeInTheDocument();
     });
 
     it('should render description text', () => {
@@ -23,8 +23,9 @@ describe('TiebreakerInput', () => {
       render(<TiebreakerInput value={null} onChange={mockOnChange} />);
 
       expect(
-        screen.getByText(/Predict the total goals the World Cup champion scores/i)
+        screen.getByText(/Predict how many total goals the World Cup champion will score/i)
       ).toBeInTheDocument();
+      expect(screen.getByText(/5 playoff\s+matches \(R32–Final\)/i)).toBeInTheDocument();
     });
 
     it('should render help text', () => {
@@ -33,7 +34,11 @@ describe('TiebreakerInput', () => {
 
       expect(screen.getByText(/How it works:/i)).toBeInTheDocument();
       expect(
-        screen.getByText(/closest to the champion's actual goal tally/i)
+        screen.getByText(/the earliest submission wins/i)
+      ).toBeInTheDocument();
+      expect(screen.getByText(/Includes:/i)).toBeInTheDocument();
+      expect(
+        screen.getByText(/Regulation, extra time, and penalty shootout goals/i)
       ).toBeInTheDocument();
     });
 
@@ -41,8 +46,8 @@ describe('TiebreakerInput', () => {
       const mockOnChange = jest.fn();
       render(<TiebreakerInput value={null} onChange={mockOnChange} />);
 
-      const input = screen.getByLabelText("Champion's Total Goals");
-      expect(input).toHaveAttribute('placeholder', 'Enter a number (0-200)');
+      const input = screen.getByLabelText("Champion's Total Playoff Goals");
+      expect(input).toHaveAttribute('placeholder', 'Enter a number (1-50)');
     });
   });
 
@@ -51,7 +56,7 @@ describe('TiebreakerInput', () => {
       const mockOnChange = jest.fn();
       render(<TiebreakerInput value={null} onChange={mockOnChange} />);
 
-      const input = screen.getByLabelText("Champion's Total Goals");
+      const input = screen.getByLabelText("Champion's Total Playoff Goals");
       expect(input).toHaveValue(null);
     });
 
@@ -59,7 +64,7 @@ describe('TiebreakerInput', () => {
       const mockOnChange = jest.fn();
       render(<TiebreakerInput value={18} onChange={mockOnChange} />);
 
-      const input = screen.getByLabelText("Champion's Total Goals");
+      const input = screen.getByLabelText("Champion's Total Playoff Goals");
       expect(input).toHaveValue(18);
     });
   });
@@ -70,7 +75,7 @@ describe('TiebreakerInput', () => {
       const mockOnChange = jest.fn();
       render(<TiebreakerInput value={null} onChange={mockOnChange} />);
 
-      const input = screen.getByLabelText("Champion's Total Goals");
+      const input = screen.getByLabelText("Champion's Total Playoff Goals");
       await user.type(input, '18');
 
       expect(mockOnChange).toHaveBeenLastCalledWith(18);
@@ -82,7 +87,7 @@ describe('TiebreakerInput', () => {
       const mockOnChange = jest.fn();
       render(<TiebreakerInput value={null} onChange={mockOnChange} />);
 
-      const input = screen.getByLabelText("Champion's Total Goals");
+      const input = screen.getByLabelText("Champion's Total Playoff Goals");
       await user.type(input, '-1');
 
       expect(screen.getByText(/Goals must be between 0 and 200/i)).toBeInTheDocument();
@@ -94,7 +99,7 @@ describe('TiebreakerInput', () => {
       const mockOnChange = jest.fn();
       render(<TiebreakerInput value={null} onChange={mockOnChange} />);
 
-      const input = screen.getByLabelText("Champion's Total Goals");
+      const input = screen.getByLabelText("Champion's Total Playoff Goals");
       await user.type(input, '250');
 
       expect(screen.getByText(/Goals must be between 0 and 200/i)).toBeInTheDocument();
@@ -106,7 +111,7 @@ describe('TiebreakerInput', () => {
       const mockOnChange = jest.fn();
       render(<TiebreakerInput value={null} onChange={mockOnChange} />);
 
-      const input = screen.getByLabelText("Champion's Total Goals");
+      const input = screen.getByLabelText("Champion's Total Playoff Goals");
       await user.type(input, '120');
 
       expect(mockOnChange).toHaveBeenLastCalledWith(120);
@@ -118,7 +123,7 @@ describe('TiebreakerInput', () => {
       const mockOnChange = jest.fn();
       render(<TiebreakerInput value={null} onChange={mockOnChange} />);
 
-      const input = screen.getByLabelText("Champion's Total Goals");
+      const input = screen.getByLabelText("Champion's Total Playoff Goals");
       await user.clear(input);
       await user.type(input, '-10');
 
@@ -133,7 +138,7 @@ describe('TiebreakerInput', () => {
       const mockOnChange = jest.fn();
       render(<TiebreakerInput value={18} onChange={mockOnChange} />);
 
-      const input = screen.getByLabelText("Champion's Total Goals");
+      const input = screen.getByLabelText("Champion's Total Playoff Goals");
       await user.clear(input);
 
       // Clearing should call onChange with null
@@ -145,7 +150,7 @@ describe('TiebreakerInput', () => {
       const mockOnChange = jest.fn();
       render(<TiebreakerInput value={null} onChange={mockOnChange} />);
 
-      const input = screen.getByLabelText("Champion's Total Goals");
+      const input = screen.getByLabelText("Champion's Total Playoff Goals");
 
       // Enter invalid value (above max)
       await user.type(input, '250');
@@ -162,7 +167,7 @@ describe('TiebreakerInput', () => {
       const mockOnChange = jest.fn();
       render(<TiebreakerInput value={null} onChange={mockOnChange} disabled={true} />);
 
-      const input = screen.getByLabelText("Champion's Total Goals");
+      const input = screen.getByLabelText("Champion's Total Playoff Goals");
       expect(input).toBeDisabled();
     });
 
@@ -170,7 +175,7 @@ describe('TiebreakerInput', () => {
       const mockOnChange = jest.fn();
       render(<TiebreakerInput value={null} onChange={mockOnChange} disabled={false} />);
 
-      const input = screen.getByLabelText("Champion's Total Goals");
+      const input = screen.getByLabelText("Champion's Total Playoff Goals");
       expect(input).not.toBeDisabled();
     });
   });
@@ -180,7 +185,7 @@ describe('TiebreakerInput', () => {
       const mockOnChange = jest.fn();
       render(<TiebreakerInput value={null} onChange={mockOnChange} />);
 
-      const input = screen.getByLabelText("Champion's Total Goals");
+      const input = screen.getByLabelText("Champion's Total Playoff Goals");
       expect(input).toHaveAttribute('aria-describedby', 'tiebreaker-help tiebreaker-error');
     });
 
@@ -189,7 +194,7 @@ describe('TiebreakerInput', () => {
       const mockOnChange = jest.fn();
       render(<TiebreakerInput value={null} onChange={mockOnChange} />);
 
-      const input = screen.getByLabelText("Champion's Total Goals");
+      const input = screen.getByLabelText("Champion's Total Playoff Goals");
       await user.type(input, '250');
 
       expect(input).toHaveAttribute('aria-invalid', 'true');
@@ -199,7 +204,7 @@ describe('TiebreakerInput', () => {
       const mockOnChange = jest.fn();
       render(<TiebreakerInput value={18} onChange={mockOnChange} />);
 
-      const input = screen.getByLabelText("Champion's Total Goals");
+      const input = screen.getByLabelText("Champion's Total Playoff Goals");
       expect(input).toHaveAttribute('aria-invalid', 'false');
     });
   });

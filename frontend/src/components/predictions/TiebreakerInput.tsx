@@ -8,11 +8,13 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { cn } from '@/lib/utils';
 
-// Validation range for the champion's tournament-goal tally.
-// Champion plays 8 matches; realistic range is roughly 5-25.
-// Hard bound is generous (200) — matches the DB CHECK.
+// Hard validation bounds — generous, matches the DB CHECK (0–200).
 const MIN_GOALS = 0;
 const MAX_GOALS = 200;
+// Realistic range shown as the input placeholder hint. The champion plays 5
+// playoff matches (R32–Final), so a handful of goals is the expected range.
+const SUGGESTED_MIN_GOALS = 1;
+const SUGGESTED_MAX_GOALS = 50;
 
 interface TiebreakerInputProps {
   value: number | null;
@@ -69,19 +71,22 @@ export function TiebreakerInput({ value, onChange, disabled = false }: Tiebreake
       <CardHeader>
         <div className="flex items-center gap-2">
           <Target className="text-primary h-5 w-5" />
-          <CardTitle className="text-base">Tiebreaker: Champion&apos;s Total Goals</CardTitle>
+          <CardTitle className="text-base">
+            Tiebreaker: Champion&apos;s Total Playoff Goals
+          </CardTitle>
         </div>
         <CardDescription>
-          Predict the total goals the World Cup champion scores across their 8 tournament matches
+          Predict how many total goals the World Cup champion will score across their 5 playoff
+          matches (R32–Final).
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="space-y-2">
-          <Label htmlFor="total-goals">Champion&apos;s Total Goals</Label>
+          <Label htmlFor="total-goals">Champion&apos;s Total Playoff Goals</Label>
           <Input
             id="total-goals"
             type="number"
-            placeholder={`Enter a number (${MIN_GOALS}-${MAX_GOALS})`}
+            placeholder={`Enter a number (${SUGGESTED_MIN_GOALS}-${SUGGESTED_MAX_GOALS})`}
             value={inputValue}
             onChange={handleChange}
             disabled={disabled}
@@ -105,12 +110,11 @@ export function TiebreakerInput({ value, onChange, disabled = false }: Tiebreake
           <HelpCircle className="text-muted-foreground mt-0.5 h-4 w-4 shrink-0" />
           <div className="text-muted-foreground space-y-1">
             <p>
-              <strong>How it works:</strong> if two or more players are tied on total points, the
-              prediction closest to the champion&apos;s actual goal tally wins the tie.
+              <strong>How it works:</strong> In the event of a tie, the closest prediction wins.
+              If two predictions are equally close, the earliest submission wins.
             </p>
             <p className="text-xs">
-              Counts every goal the champion scores in regulation and extra time across all 8 of
-              their matches (group stage through final). Penalty-shootout goals don&apos;t count.
+              <strong>Includes:</strong> Regulation, extra time, and penalty shootout goals.
             </p>
           </div>
         </div>

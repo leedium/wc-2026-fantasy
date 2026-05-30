@@ -215,13 +215,19 @@ export function ScoringBreakdown() {
       <Card className="mt-6">
         <CardContent className="flex flex-col items-center justify-between gap-4 py-6 sm:flex-row">
           <div>
-            <p className="text-muted-foreground text-sm">Tiebreaker</p>
+            <p className="text-muted-foreground text-sm">
+              Tiebreaker: Champion&apos;s Total Playoff Goals
+            </p>
             <p className="font-medium">
-              Predict the total goals scored by the World Cup champion across all 8 of their
-              tournament matches. Closest to actual wins.
+              Predict how many total goals the World Cup champion will score across their 5
+              playoff matches (R32–Final).
             </p>
             <p className="text-muted-foreground mt-1 text-xs">
-              Regulation and extra time only — penalty-shootout goals don&apos;t count.
+              <strong>How it works:</strong> In the event of a tie, the closest prediction wins.
+              If two predictions are equally close, the earliest submission wins.
+            </p>
+            <p className="text-muted-foreground mt-1 text-xs">
+              <strong>Includes:</strong> Regulation, extra time, and penalty shootout goals.
             </p>
           </div>
           <div className="text-center sm:text-right">

@@ -103,7 +103,7 @@ function MatchNode({
             key={idx}
             className={cn(
               'flex items-center gap-2 px-2 py-1.5',
-              slot.isWinner && 'bg-primary/10 font-semibold text-primary',
+              slot.isWinner && 'bg-green-500/10 font-semibold text-primary',
               idx === 0 && 'border-b'
             )}
           >

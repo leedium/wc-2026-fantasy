@@ -1,7 +1,7 @@
 # CLAUDE.md
 
-> **Version:** 3.7.0
-> **Last Updated:** 2026-05-28
+> **Version:** 3.7.1
+> **Last Updated:** 2026-05-30
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
@@ -109,7 +109,7 @@ Plus flat bonuses: Final (M104) winner `+30` (this absorbs the legacy round + ch
 
 **Gut Feeling Champion (Phase 1)** — `+5` (from `scoring_champion_pick_pts()`) if `predictions.champion_team_id` matches the actual M104 winner. Independent of the bracket Final (M104) pick scoring (`+30`) — users can pick the same team for both (so a correct gut pick + correct bracket Final stacks to `+35`), or split between them. The pick is collected via a dropdown as the final Phase 1 wizard step (after Best 3rds), required at create time, and writable only while the tournament is in `phase1`; once `phase1_locked` (or later) it is frozen.
 
-**Tiebreaker** — closest prediction to the *champion's* total goals across all 8 of their tournament matches (regulation + extra time only; no penalty-shootout goals). Stored on `tournaments.champion_total_goals` (admin-entered when the tournament ends). `predictions.total_goals` is reused with a CHECK of `between 0 and 200`.
+**Tiebreaker (Champion's Total Playoff Goals)** — closest prediction to the *champion's* total goals across their 5 playoff matches (R32 → Final), including regulation, extra time, **and** penalty-shootout goals. Admin-entered on `tournaments.champion_total_goals` when the tournament ends. `predictions.total_goals` is reused with a CHECK of `between 0 and 200` (the wizard suggests a 1–50 range via the input placeholder; the hard bound stays 0–200). `get_leaderboard` / `get_leaderboard_rank` break a points tie by smallest `abs(total_goals − champion_total_goals)`, then earliest `submitted_at` — which is exactly what the user-facing copy (TiebreakerInput + Rules) describes ("closest prediction wins; if equally close, earliest submission wins").
 
 **Grand total max: 125 + 20 + 263 + 5 = 413.** (Group 125 + Advancers 20 + Knockout 263 + Champion Pick 5.)
 
@@ -172,7 +172,7 @@ Client-facing API surface is `/api/rewards/*` driven by `redeem_free_pick` + `ge
 - **Gut Feeling Champion** (Phase 1): one team picked from the 48 as your tournament champion. Required at prediction-creation time, collected as the final Phase 1 wizard step (after Best 3rds), and locked when Phase 1 ends. Independent of the bracket Final (M104) pick — both score separately.
 - Group stage: predict positions 1–4 for all 12 groups; only the top 2 finishers are scored (set-based 10/7/5/2/0 — exact / reversed / right-slot / wrong-slot / none — with Group I, the "Group of Death", paying 15 for an exact top-2 instead of 10)
 - Knockout: predict winners R32 → Final. Each correct match winner scores a flat per-round value (R32 +5, R16 +8, QF +12, SF +18); the Final (M104) winner pays +30 and the third-place (M103) winner +5
-- Tiebreaker: closest prediction to the champion's total tournament goals (regulation + extra time across their 8 matches; penalty-shootout goals excluded)
+- Tiebreaker — Champion's Total Playoff Goals: closest prediction to the champion's total goals across their 5 playoff matches (R32 → Final), including regulation, extra time, and penalty-shootout goals; broken by the closest prediction, then earliest submission
 
 ## Oracle Design
 

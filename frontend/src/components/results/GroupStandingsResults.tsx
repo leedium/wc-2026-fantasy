@@ -18,6 +18,12 @@ export interface GroupStandingsResultsProps {
    * (e.g. the bracket preview), where that results-only status has no meaning.
    */
   showStatusBadge?: boolean;
+  /**
+   * Background tint for the top-two (advancing) rows. Defaults to the green
+   * "advancing" tint used on both /results and the bracket preview; overridable
+   * if a caller needs a different highlight.
+   */
+  advanceClassName?: string;
 }
 
 const POSITIONS = [
@@ -32,6 +38,7 @@ export function GroupStandingsResults({
   teams,
   standings,
   showStatusBadge = true,
+  advanceClassName = 'bg-green-500/10',
 }: GroupStandingsResultsProps) {
   const teamById = React.useMemo(
     () => new Map(teams.map((t) => [t.id, t])),
@@ -75,7 +82,7 @@ export function GroupStandingsResults({
                     key={key}
                     className={cn(
                       'flex items-center gap-2 rounded-md px-2 py-1.5 text-sm',
-                      advances && team && 'bg-primary/5'
+                      advances && team && advanceClassName
                     )}
                   >
                     <span className="text-muted-foreground w-7 shrink-0 text-xs font-medium">
