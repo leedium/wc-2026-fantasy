@@ -54,6 +54,10 @@ function LedgerRow({
         className={cn(
           'shrink-0 font-mono tabular-nums',
           variant === 'total' && 'text-lg font-bold',
+          variant === 'total' &&
+            (amount < 0
+              ? 'text-red-600 dark:text-red-400'
+              : 'text-green-700 dark:text-green-400'),
           variant === 'strong' && 'font-semibold'
         )}
       >
