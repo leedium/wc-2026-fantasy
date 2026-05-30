@@ -5,7 +5,7 @@ import { render, screen, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import * as React from 'react';
 
-import { PoolStatsBar, isPoolStatsVisiblePath } from '../PoolStatsBar';
+import { PoolStatsBar } from '../PoolStatsBar';
 
 let mockPathname = '/';
 jest.mock('next/navigation', () => ({
@@ -42,33 +42,6 @@ function mockTournamentResponse(potTotalCAD: number, charityTotalCAD: number) {
   }) as unknown as typeof fetch;
 }
 
-describe('isPoolStatsVisiblePath', () => {
-  it.each([
-    ['/', true],
-    ['/predictions', true],
-    ['/predictions/abc-123', true],
-    ['/leaderboard', true],
-    ['/rules', true],
-    ['/charities', true],
-    ['/charities/canadian-cancer-society', true],
-    ['/rewards', true],
-    ['/referrals', true],
-    ['/admin', false],
-    ['/admin/users/123', false],
-    ['/account', false],
-    ['/login', false],
-    ['/register', false],
-    ['/about', false],
-    ['/terms', false],
-    ['/privacy', false],
-    ['/forgot-password', false],
-    ['/reset-password', false],
-    ['/auth/callback', false],
-  ])('pathname %s → %s', (path, expected) => {
-    expect(isPoolStatsVisiblePath(path)).toBe(expected);
-  });
-});
-
 describe('PoolStatsBar', () => {
   it('renders the pot total and a per-charity breakdown on a tournament-facing page', async () => {
     mockPathname = '/predictions';
@@ -102,22 +75,15 @@ describe('PoolStatsBar', () => {
     expect(screen.getAllByText('$17.50')).toHaveLength(2);
   });
 
-  it('renders nothing on an admin route', () => {
+  it('renders on every page for a logged-in user (incl. previously-excluded routes)', async () => {
     mockPathname = '/admin/users/abc';
     mockTournamentResponse(1240, 206);
-    const { container } = render(wrap(<PoolStatsBar />));
-    expect(container).toBeEmptyDOMElement();
-    expect(global.fetch).not.toHaveBeenCalled();
+    render(wrap(<PoolStatsBar />));
+    await waitFor(() => expect(screen.getByRole('status')).toBeInTheDocument());
+    expect(screen.getByRole('status')).toHaveTextContent(/\$1,240/);
   });
 
-  it('renders nothing on /account', () => {
-    mockPathname = '/account';
-    mockTournamentResponse(1240, 206);
-    const { container } = render(wrap(<PoolStatsBar />));
-    expect(container).toBeEmptyDOMElement();
-  });
-
-  it('renders nothing when the user is logged out, even on a visible path', () => {
+  it('renders nothing when the user is logged out', () => {
     mockPathname = '/';
     authState.user = null;
     mockTournamentResponse(1240, 206);

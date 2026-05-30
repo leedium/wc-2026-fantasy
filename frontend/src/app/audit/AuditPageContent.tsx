@@ -2,7 +2,7 @@
 
 import * as React from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Banknote, Gift, ShieldCheck, UserCheck, Users } from 'lucide-react';
+import { Banknote, Gift, HeartHandshake, ShieldCheck, UserCheck, Users } from 'lucide-react';
 
 import { PageLayout } from '@/components/layout/PageLayout';
 import { StatCard } from '@/components/shared/StatCard';
@@ -106,7 +106,7 @@ export function AuditPageContent() {
       ) : (
         <>
           {/* Dashboard: general stats */}
-          <div className="mb-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="mb-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
             <StatCard
               icon={Users}
               label="Total members"
@@ -131,6 +131,13 @@ export function AuditPageContent() {
               isLoading={isLoading}
             />
             <StatCard
+              icon={HeartHandshake}
+              label="Charity total"
+              value={formatCAD(accounting?.charity ?? 0)}
+              subtitle={`${formatCAD(PRICING.charityPortionCAD)} per paid entry`}
+              isLoading={isLoading}
+            />
+            <StatCard
               icon={Gift}
               label="Applied rewards"
               value={appliedRewards.toLocaleString()}
@@ -147,8 +154,7 @@ export function AuditPageContent() {
               <CardTitle>Tournament Accounting</CardTitle>
               <CardDescription>
                 Charity is {formatCAD(PRICING.charityPortionCAD)} per paid entry. Operating costs
-                are billed across {OPERATING_COSTS.overheadMonths} months (the 2-year Euro / World
-                Cup prep cycle).
+                are the flat costs of running this ~2-month tournament.
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -195,11 +201,11 @@ export function AuditPageContent() {
                       variant="strong"
                     />
 
-                    <LedgerRow label="Net payout" amount={accounting.netPayout} variant="total" />
+                    <LedgerRow label="Net" amount={accounting.netPayout} variant="total" />
                   </dl>
                   <p className="text-muted-foreground mt-4 text-xs">
-                    Net payout is the surplus after charity and operating costs — the pool available
-                    to return to players, equivalently the operator&apos;s retained margin.
+                    Net is the surplus after charity and operating costs — the pool available to
+                    return to players, equivalently the operator&apos;s retained margin.
                   </p>
                 </>
               )}

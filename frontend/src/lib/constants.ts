@@ -44,32 +44,20 @@ export const PRICING = {
  * Operating-cost model for the /audit transparency page. Every value here is
  * meant to be edited directly when costs change.
  *
- * - `overheadMonths`: the window of recurring overhead attributed to one
- *   tournament. The pool runs ~2 months, but prep runs on a 2-year
- *   (Euro/World-Cup) cadence, so recurring costs are billed across 24 months.
- * - `recurring[]`: each cost is normalized to a monthly rate, multiplied by its
- *   `attributionPct` (share of a shared subscription billed to this project —
- *   default 1), then by `overheadMonths`. Cadences:
- *     monthly  → amount
- *     yearly   → amount / 12
- *     multiYear→ amount / (years * 12)
+ * Flat totals for one tournament (~2 months) — no per-month / per-year
+ * normalization. Just set each line to the dollar amount it costs to run this
+ * tournament.
+ *
+ * - `recurring[]`: one-time/flat cost lines for the tournament.
  * - `devPerSubmissionCAD`: development / management cost, charged per paid
- *   submission (entry). `devFlatCAD` is kept as the alternative basis.
+ *   submission (entry).
  */
 export const OPERATING_COSTS = {
-  overheadMonths: 24,
   devPerSubmissionCAD: 0.5,
-  devFlatCAD: 300,
   recurring: [
-    { label: 'Hosting', amount: 5, cadence: 'monthly' },
-    {
-      label: 'Claude (Anthropic) + JetBrains',
-      amount: 157.5,
-      cadence: 'monthly',
-      attributionPct: 0.5,
-    },
-    { label: 'Email service', amount: 40, cadence: 'yearly' },
-    { label: 'Domain', amount: 150, cadence: 'multiYear', years: 4 },
+    { label: 'Domain', amount: 150 },
+    { label: 'Hosting / Email', amount: 124 },
+    { label: 'Software Services (AI / tooling)', amount: 78.5 },
   ],
 } as const;
 

@@ -2,7 +2,6 @@
 
 import Image from 'next/image';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
 import { useQuery } from '@tanstack/react-query';
 import { CircleDollarSign } from 'lucide-react';
 
@@ -35,36 +34,18 @@ const CHARITY_CENTS_FORMATTER = new Intl.NumberFormat('en-CA', {
 const formatCharityShare = (value: number) =>
   (Number.isInteger(value) ? POT_FORMATTER : CHARITY_CENTS_FORMATTER).format(value);
 
-// Tournament-facing pages where pool stats are contextually relevant.
-// Admin / account / auth / marketing pages stay clean.
-export const POOL_STATS_VISIBLE_PATHS: readonly string[] = [
-  ROUTES.home,
-  ROUTES.predictions,
-  ROUTES.leaderboard,
-  ROUTES.rules,
-  ROUTES.charities,
-  ROUTES.rewards,
-  ROUTES.referrals,
-];
-
-export function isPoolStatsVisiblePath(pathname: string): boolean {
-  return POOL_STATS_VISIBLE_PATHS.some((path) =>
-    path === ROUTES.home ? pathname === path : pathname === path || pathname.startsWith(`${path}/`)
-  );
-}
-
 /**
  * Slim sticky strip directly under the main Header showing the live pot total
  * and the charity-raised total, broken down evenly across the supported
- * charities. Shares the ['tournament'] React Query cache key with
- * HomePageContent so no extra request is issued when both mount on /.
+ * charities. Shown on every page for a logged-in user; hidden when logged out.
+ * Shares the ['tournament'] React Query cache key with HomePageContent so no
+ * extra request is issued when both mount on /.
  */
 export function PoolStatsBar({ className }: { className?: string }) {
-  const pathname = usePathname();
   const { user, loading } = useAuthContext();
   const query = useQuery<TournamentSlice>({
     queryKey: ['tournament'],
-    enabled: !loading && !!user && isPoolStatsVisiblePath(pathname),
+    enabled: !loading && !!user,
     queryFn: async () => {
       const res = await fetch('/api/tournament');
       if (!res.ok) throw new Error('Failed to fetch tournament');
@@ -72,7 +53,6 @@ export function PoolStatsBar({ className }: { className?: string }) {
     },
   });
 
-  if (!isPoolStatsVisiblePath(pathname)) return null;
   if (!user || !query.data) return null;
 
   const pot = POT_FORMATTER.format(query.data.potTotalCAD);

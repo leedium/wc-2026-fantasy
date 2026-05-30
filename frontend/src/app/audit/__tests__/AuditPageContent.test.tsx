@@ -40,7 +40,7 @@ describe('AuditPageContent', () => {
     expect(screen.getByText('Gross income')).toBeInTheDocument();
     expect(screen.getByText('Charity')).toBeInTheDocument();
     expect(screen.getByText('Total costs')).toBeInTheDocument();
-    expect(screen.getByText('Net payout')).toBeInTheDocument();
+    expect(screen.getByText('Net')).toBeInTheDocument();
   });
 
   it('shows a loading state without crashing', () => {
