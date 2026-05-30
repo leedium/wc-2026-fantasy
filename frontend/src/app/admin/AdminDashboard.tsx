@@ -20,6 +20,7 @@ import {
 import { PageLayout } from '@/components/layout/PageLayout';
 import { AdminNav } from '@/components/admin/AdminNav';
 import { LeaderboardTable } from '@/components/leaderboard/LeaderboardTable';
+import { StatCard } from '@/components/shared/StatCard';
 import { TeamFlag } from '@/components/shared/TeamFlag';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -75,43 +76,6 @@ function formatTimeRemaining(lockMs: number, nowMs: number): string {
   if (days > 0) return `${days}d ${hours}h`;
   if (hours > 0) return `${hours}h ${minutes}m`;
   return `${minutes}m`;
-}
-
-function StatCard({
-  icon: Icon,
-  label,
-  value,
-  subtitle,
-  isLoading,
-}: {
-  icon: React.ComponentType<{ className?: string }>;
-  label: string;
-  value: React.ReactNode;
-  subtitle?: React.ReactNode;
-  isLoading?: boolean;
-}) {
-  return (
-    <Card>
-      <CardHeader className="pb-2">
-        <CardDescription className="flex items-center gap-2">
-          <Icon className="h-4 w-4" />
-          {label}
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
-        {isLoading ? (
-          <Skeleton className="h-8 w-20" />
-        ) : (
-          <>
-            <div className="text-2xl font-bold">{value}</div>
-            {subtitle ? (
-              <p className="text-muted-foreground mt-1 text-xs">{subtitle}</p>
-            ) : null}
-          </>
-        )}
-      </CardContent>
-    </Card>
-  );
 }
 
 export function AdminDashboard() {

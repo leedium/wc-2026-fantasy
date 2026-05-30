@@ -9,6 +9,7 @@ const PROTECTED_PREFIXES = [
   '/referrals',
   '/rewards',
   '/results',
+  '/audit',
 ];
 
 // Using the deprecated middleware.ts name (not Next 16's proxy.ts) because

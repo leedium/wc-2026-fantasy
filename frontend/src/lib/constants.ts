@@ -41,6 +41,39 @@ export const PRICING = {
 } as const;
 
 /**
+ * Operating-cost model for the /audit transparency page. Every value here is
+ * meant to be edited directly when costs change.
+ *
+ * - `overheadMonths`: the window of recurring overhead attributed to one
+ *   tournament. The pool runs ~2 months, but prep runs on a 2-year
+ *   (Euro/World-Cup) cadence, so recurring costs are billed across 24 months.
+ * - `recurring[]`: each cost is normalized to a monthly rate, multiplied by its
+ *   `attributionPct` (share of a shared subscription billed to this project —
+ *   default 1), then by `overheadMonths`. Cadences:
+ *     monthly  → amount
+ *     yearly   → amount / 12
+ *     multiYear→ amount / (years * 12)
+ * - `devPerSubmissionCAD`: development / management cost, charged per paid
+ *   submission (entry). `devFlatCAD` is kept as the alternative basis.
+ */
+export const OPERATING_COSTS = {
+  overheadMonths: 24,
+  devPerSubmissionCAD: 0.5,
+  devFlatCAD: 300,
+  recurring: [
+    { label: 'Hosting', amount: 5, cadence: 'monthly' },
+    {
+      label: 'Claude (Anthropic) + JetBrains',
+      amount: 157.5,
+      cadence: 'monthly',
+      attributionPct: 0.5,
+    },
+    { label: 'Email service', amount: 40, cadence: 'yearly' },
+    { label: 'Domain', amount: 150, cadence: 'multiYear', years: 4 },
+  ],
+} as const;
+
+/**
  * Labels for the 8 ranked 3rd-place advancer slots, shown in the wizard
  * and admin UI. Rank 1 = "best" 3rd-place team, rank 8 = "8th best".
  */
@@ -70,6 +103,7 @@ export const ROUTES = {
   account: '/account',
   about: '/about',
   charities: '/charities',
+  audit: '/audit',
   rules: '/rules',
   terms: '/terms',
   privacy: '/privacy',
