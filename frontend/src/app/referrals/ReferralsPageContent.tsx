@@ -12,6 +12,7 @@ import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useRewardsStatus } from '@/hooks/useRewardsStatus';
 import { ROUTES } from '@/lib/constants';
+import { ANALYTICS_EVENTS, trackEvent } from '@/lib/analytics';
 
 /**
  * "Refer a friend" share page. Single job: show the user's code + share
@@ -38,6 +39,9 @@ export function ReferralsPageContent() {
     try {
       await navigator.clipboard.writeText(value);
       toast.success(`${label} copied to clipboard`);
+      trackEvent(ANALYTICS_EVENTS.referralShared, {
+        method: label === 'Code' ? 'code' : 'link',
+      });
     } catch {
       toast.error('Copy failed — long-press to select');
     }
@@ -52,6 +56,7 @@ export function ReferralsPageContent() {
           text: 'Join my World Cup 2026 prediction pool — use my referral link:',
           url: shareUrl,
         });
+        trackEvent(ANALYTICS_EVENTS.referralShared, { method: 'native' });
         return;
       } catch {
         // user cancelled or share unavailable — fall through to copy

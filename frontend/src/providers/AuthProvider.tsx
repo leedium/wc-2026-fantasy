@@ -4,6 +4,7 @@ import * as React from 'react';
 import type { User } from '@supabase/supabase-js';
 import { useQueryClient } from '@tanstack/react-query';
 import { createSupabaseBrowserClient } from '@/lib/supabase/client';
+import { ANALYTICS_EVENTS, trackEvent } from '@/lib/analytics';
 import { clearAllDrafts } from '@/hooks/useDraftPersistence';
 import type { Profile } from '@/types/tournament';
 
@@ -27,6 +28,12 @@ export function AuthProvider({ children, initialUser, initialProfile }: AuthProv
   const [user, setUser] = React.useState<User | null>(initialUser);
   const [profile, setProfile] = React.useState<Profile | null>(initialProfile);
   const [loading, setLoading] = React.useState(false);
+
+  // Push a pseudonymous user_id (Supabase UUID, never email/username) to the
+  // GTM dataLayer so GA4 can stitch sessions across auth. No-op when GTM is off.
+  React.useEffect(() => {
+    trackEvent(ANALYTICS_EVENTS.setUser, { user_id: user?.id ?? null });
+  }, [user]);
 
   const supabase = React.useMemo(() => createSupabaseBrowserClient(), []);
   const queryClient = useQueryClient();
