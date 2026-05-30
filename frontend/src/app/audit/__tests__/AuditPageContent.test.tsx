@@ -9,6 +9,15 @@ jest.mock('@/components/layout/PageLayout', () => ({
 }));
 
 import { AuditPageContent } from '../AuditPageContent';
+import { computeAuditAccounting } from '@/lib/audit';
+import { OPERATING_COSTS, PRICING } from '@/lib/constants';
+import { formatCAD } from '@/lib/currency';
+
+function netDisplay(c: typeof counts): string {
+  const net = computeAuditAccounting(c, { pricing: PRICING, costs: OPERATING_COSTS }).netPayout;
+  const sign = net < 0 ? '−' : '';
+  return `${sign}${formatCAD(Math.abs(net), { cents: true })}`;
+}
 
 const counts = {
   tournament: { id: 't1', status: 'group_stage', lockTime: null },
@@ -41,6 +50,21 @@ describe('AuditPageContent', () => {
     expect(screen.getByText('Charity')).toBeInTheDocument();
     expect(screen.getByText('Total costs')).toBeInTheDocument();
     expect(screen.getByText('Net')).toBeInTheDocument();
+  });
+
+  it('colors Net green when positive and red when negative', () => {
+    // Healthy pool → positive net, green.
+    const positive = { ...counts, cashPaidCount: 200 };
+    mockUseQuery.mockReturnValue({ data: positive, isLoading: false, isError: false });
+    const { unmount } = render(<AuditPageContent />);
+    expect(screen.getByText(netDisplay(positive))).toHaveClass('text-green-700');
+    unmount();
+
+    // Tiny pool → costs exceed income, negative net, red.
+    const negative = { ...counts, cashPaidCount: 5 };
+    mockUseQuery.mockReturnValue({ data: negative, isLoading: false, isError: false });
+    render(<AuditPageContent />);
+    expect(screen.getByText(netDisplay(negative))).toHaveClass('text-red-600');
   });
 
   it('shows a loading state without crashing', () => {
