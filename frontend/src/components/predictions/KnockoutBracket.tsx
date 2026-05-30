@@ -112,6 +112,14 @@ function describeSource(source: string): string {
   return formatSource(source);
 }
 
+// Selected-winner treatment for a team button: green tint + green font,
+// matching the match card's green winner state (replaces the solid
+// black/white `variant="default"` fill, which reads as low-signal in the
+// monochrome theme). Hover keeps the green so the outline button's default
+// gray hover doesn't wash it out.
+const SELECTED_TEAM_CLASS =
+  'border-green-500/50 bg-green-500/10 font-semibold text-green-700 hover:bg-green-500/20 hover:text-green-700 dark:text-green-400 dark:hover:text-green-400';
+
 // Single match card component
 function MatchCard({
   match,
@@ -171,8 +179,12 @@ function MatchCard({
       <CardContent className="space-y-2 p-3 pt-0">
         {/* Team 1 */}
         <Button
-          variant={effectiveWinnerId === team1Id && team1Id ? 'default' : 'outline'}
-          className={cn('h-auto w-full justify-start px-3 py-2', !team1 && 'text-muted-foreground')}
+          variant="outline"
+          className={cn(
+            'h-auto w-full justify-start px-3 py-2',
+            !team1 && 'text-muted-foreground',
+            effectiveWinnerId === team1Id && team1Id && SELECTED_TEAM_CLASS
+          )}
           disabled={!canSelect || !team1Id}
           onClick={() => onSelect(team1Id)}
         >
@@ -193,8 +205,12 @@ function MatchCard({
 
         {/* Team 2 */}
         <Button
-          variant={effectiveWinnerId === team2Id && team2Id ? 'default' : 'outline'}
-          className={cn('h-auto w-full justify-start px-3 py-2', !team2 && 'text-muted-foreground')}
+          variant="outline"
+          className={cn(
+            'h-auto w-full justify-start px-3 py-2',
+            !team2 && 'text-muted-foreground',
+            effectiveWinnerId === team2Id && team2Id && SELECTED_TEAM_CLASS
+          )}
           disabled={!canSelect || !team2Id}
           onClick={() => onSelect(team2Id)}
         >
@@ -389,9 +405,9 @@ export function KnockoutBracket({
         <span>·</span>
         <span>SF +18</span>
         <span>·</span>
-        <span>Final +30</span>
-        <span>·</span>
         <span>3rd +5</span>
+        <span>·</span>
+        <span>Final +30</span>
       </div>
 
       <StageSection

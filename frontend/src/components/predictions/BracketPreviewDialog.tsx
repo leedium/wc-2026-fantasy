@@ -108,6 +108,15 @@ export function BracketPreviewDialog({
     groupsQuery.data &&
     standingsQuery.data;
 
+  // The user's predicted champion = the winner they picked in the Final
+  // (M104). Resolve it from their knockout picks so the meta bar can show it
+  // alongside the Gut Feeling Champion (TBD until the Final is picked).
+  const finalMatch = matchesQuery.data?.find((m) => m.stage === 'final') ?? null;
+  const bracketChampionTeamId =
+    finalMatch && predictionQuery.data
+      ? (predictionQuery.data.knockout.find((k) => k.matchId === finalMatch.id)?.winner ?? null)
+      : null;
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-h-[90vh] max-w-5xl overflow-y-auto">
@@ -157,6 +166,7 @@ export function BracketPreviewDialog({
             <PredictionMetaBar
               username={predictionQuery.data!.username}
               championTeamId={predictionQuery.data!.championTeamId}
+              bracketChampionTeamId={bracketChampionTeamId}
               totalGoals={predictionQuery.data!.totalGoals}
               teams={teamsQuery.data!}
             />
@@ -226,6 +236,8 @@ function PreviewSection({
 interface PredictionMetaBarProps {
   username: string | null;
   championTeamId: string | null;
+  /** The user's predicted Final (M104) winner — their bracket champion. */
+  bracketChampionTeamId: string | null;
   totalGoals: number | null;
   teams: Team[];
 }
@@ -233,15 +245,19 @@ interface PredictionMetaBarProps {
 function PredictionMetaBar({
   username,
   championTeamId,
+  bracketChampionTeamId,
   totalGoals,
   teams,
 }: PredictionMetaBarProps) {
   const championTeam = championTeamId
     ? (teams.find((t) => t.id === championTeamId) ?? null)
     : null;
+  const bracketChampionTeam = bracketChampionTeamId
+    ? (teams.find((t) => t.id === bracketChampionTeamId) ?? null)
+    : null;
 
   return (
-    <dl className="bg-muted/40 grid gap-3 rounded-md border px-4 py-3 text-sm sm:grid-cols-3">
+    <dl className="bg-muted/40 grid gap-3 rounded-md border px-4 py-3 text-sm sm:grid-cols-2 lg:grid-cols-4">
       <div className="flex items-start gap-2">
         <UserIcon className="text-muted-foreground mt-0.5 h-4 w-4 shrink-0" aria-hidden />
         <div>
@@ -266,6 +282,22 @@ function PredictionMetaBar({
         </div>
       </div>
       <div className="flex items-start gap-2">
+        <Trophy className="text-muted-foreground mt-0.5 h-4 w-4 shrink-0" aria-hidden />
+        <div>
+          <dt className="text-muted-foreground text-xs">Bracket Champion</dt>
+          <dd className="font-medium">
+            {bracketChampionTeam ? (
+              <span className="inline-flex items-center gap-1.5">
+                <TeamFlag code={bracketChampionTeam.code} className="h-4 w-6" />
+                {bracketChampionTeam.name}
+              </span>
+            ) : (
+              <span className="text-muted-foreground italic">TBD</span>
+            )}
+          </dd>
+        </div>
+      </div>
+      <div className="flex items-start gap-2">
         <span
           aria-hidden
           className="text-muted-foreground mt-0.5 inline-flex h-4 w-4 shrink-0 items-center justify-center text-base leading-none"
@@ -273,7 +305,7 @@ function PredictionMetaBar({
           ⚽
         </span>
         <div>
-          <dt className="text-muted-foreground text-xs">Champion total goals</dt>
+          <dt className="text-muted-foreground text-xs">Champion&apos;s Total Playoff Goals</dt>
           <dd className="font-medium">{totalGoals != null ? totalGoals : '—'}</dd>
         </div>
       </div>

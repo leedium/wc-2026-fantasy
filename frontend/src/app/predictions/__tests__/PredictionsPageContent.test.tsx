@@ -448,13 +448,49 @@ describe('PredictionsPageContent — stepper navigation', () => {
     expect(screen.getByRole('tab', { name: /Tiebreaker/ })).not.toBeDisabled();
   });
 
-  it('renders a read-only view when the tournament is locked', async () => {
-    // Regular users in a locked phase should still be able to *navigate*
-    // between steps to view past picks — only edits/saves are blocked.
-    // The submit/save card is hidden entirely and a read-only notice is
-    // surfaced so the user understands why.
+  it('blocks creating a new prediction when the tournament is locked (all roles)', async () => {
+    // Once locked, NO role may create a new entry — the create wizard shows a
+    // "submissions closed" notice instead of the form, backstopping the
+    // disabled "New prediction" button against a direct deep-link.
     configureQueries({ tournamentLockTime: new Date(Date.now() - 1000).toISOString() });
-    render(<PredictionsPageContent mode="create" />);
+    const { rerender } = render(<PredictionsPageContent mode="create" />);
+
+    expect(
+      await screen.findByText(/no further prediction submissions/i)
+    ).toBeInTheDocument();
+    expect(screen.queryByTestId('fill-all-groups')).toBeNull();
+
+    // Super admin is blocked from CREATING too (they may still edit existing).
+    mockAuthProfile = { isSuperAdmin: true };
+    rerender(<PredictionsPageContent mode="create" />);
+    expect(
+      await screen.findByText(/no further prediction submissions/i)
+    ).toBeInTheDocument();
+  });
+
+  it('renders a read-only view when editing in a locked tournament', async () => {
+    // Editing an existing prediction in a locked phase: the user can still
+    // *navigate* between steps to view past picks — only edits/saves are
+    // blocked. The submit/save card is hidden and a read-only notice shows.
+    configureQueries({ tournamentLockTime: new Date(Date.now() - 1000).toISOString() });
+    render(
+      <PredictionsPageContent
+        mode="edit"
+        predictionId="pred-1"
+        initial={{
+          id: 'pred-1',
+          name: 'Main',
+          totalGoals: null,
+          championTeamId: 'arg',
+          submittedAt: new Date(Date.now() - 60_000).toISOString(),
+          isPaid: false,
+          paidAt: null,
+          groups: [],
+          knockout: [],
+          advancers: [],
+        }}
+      />
+    );
 
     await screen.findByText(/read-only view of your picks/i);
     const tabs = screen.getAllByRole('tab');
@@ -464,18 +500,36 @@ describe('PredictionsPageContent — stepper navigation', () => {
     expect(screen.queryByRole('button', { name: /Submit Prediction/ })).toBeNull();
   });
 
-  it('lets a super admin advance past Groups when the tournament is locked', async () => {
-    // Super admin keeps full write access through phase1_locked (admin
-    // RPC bypasses the lock check). The wizard nav must follow suit so
-    // they can actually reach Best 3rds + the knockout sub-steps when
-    // editing a user's bracket post-lock.
+  it('lets a super admin advance past Groups when editing in a locked tournament', async () => {
+    // Super admin keeps full write access through phase1_locked (admin RPC
+    // bypasses the lock check) when EDITING an existing prediction. The wizard
+    // nav must follow suit so they can reach Best 3rds + the knockout sub-steps.
     mockAuthProfile = { isSuperAdmin: true };
     configureQueries({
       tournamentLockTime: new Date(Date.now() - 1000).toISOString(),
       phase: 'phase1_locked',
     });
     const user = userEvent.setup();
-    render(<PredictionsPageContent mode="create" />);
+    render(
+      <PredictionsPageContent
+        mode="edit"
+        predictionId="pred-1"
+        initial={{
+          id: 'pred-1',
+          name: 'Main',
+          totalGoals: null,
+          // null champion → nav autosave is skipped (RPC requires it), so
+          // Continue navigates without needing a mocked fetch.
+          championTeamId: null,
+          submittedAt: null,
+          isPaid: false,
+          paidAt: null,
+          groups: [],
+          knockout: [],
+          advancers: [],
+        }}
+      />
+    );
 
     // Wait for the wizard to hydrate past the skeleton. The "Locked" badge
     // on the lock-time card is the stable signal — Submit/Save buttons no
@@ -613,7 +667,9 @@ describe('PredictionsPageContent — autosave', () => {
 
     render(<PredictionsPageContent mode="create" />);
 
-    await screen.findByText(/read-only view of your picks/i);
+    // Create is blocked when locked (submissions-closed notice), but the
+    // lock-clears-draft hygiene still runs in the hydrate effect.
+    await screen.findByText(/no further prediction submissions/i);
     expect(window.localStorage.getItem(DRAFT_KEY)).toBeNull();
   });
 
@@ -1166,7 +1222,24 @@ describe('PredictionsPageContent — autosave', () => {
 
   it('does not render Save progress in a locked read-only view', async () => {
     configureQueries({ tournamentLockTime: new Date(Date.now() - 1000).toISOString() });
-    render(<PredictionsPageContent mode="create" />);
+    render(
+      <PredictionsPageContent
+        mode="edit"
+        predictionId="pred-1"
+        initial={{
+          id: 'pred-1',
+          name: 'Main',
+          totalGoals: null,
+          championTeamId: 'arg',
+          submittedAt: new Date(Date.now() - 60_000).toISOString(),
+          isPaid: false,
+          paidAt: null,
+          groups: [],
+          knockout: [],
+          advancers: [],
+        }}
+      />
+    );
 
     await screen.findByText(/read-only view of your picks/i);
     expect(screen.queryByRole('button', { name: /Save progress/i })).toBeNull();

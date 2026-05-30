@@ -152,8 +152,8 @@ export default function RulesPage() {
                 </span>{' '}
                 Opens once the group results are in and the bracket is set. Until it passes
                 you can still edit your knockout bracket (Round of 32 through the Final,
-                including the third-place match) and your Total Goals tiebreaker. After it
-                locks, every pick is frozen.
+                including the third-place match) and your Champion&apos;s Total Playoff Goals
+                tiebreaker. After it locks, every pick is frozen.
               </li>
               <li>
                 <span className="text-foreground font-semibold">Between the two locks.</span>{' '}

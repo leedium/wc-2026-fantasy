@@ -79,9 +79,15 @@ export function PredictionsListPage() {
     phase === 'phase2_locked' || (phase === 'phase1_locked' && advancersSet);
 
   const predictions = query.data?.predictions ?? [];
-  // Late-joiner block: new predictions can only be created during phase 1.
-  // Super admins bypass.
-  const canCreate = phase === 'phase1' || isSuperAdmin;
+  // New predictions are accepted only during phase 1 (super admins may also
+  // create while a later phase is still open). Once the tournament is LOCKED,
+  // no role — including super admin — can create a new entry.
+  const canCreate = !isLocked && (phase === 'phase1' || isSuperAdmin);
+  const createDisabledReason = isLocked
+    ? 'Predictions are locked — no new entries are being accepted'
+    : !canCreate
+      ? 'New predictions are only accepted during the group stage'
+      : undefined;
 
   const handleRedeem = async (prediction: ApiPrediction) => {
     if (redeemingId) return;
@@ -161,21 +167,38 @@ export function PredictionsListPage() {
               <ArrowRight className="ml-2 h-4 w-4" />
             </Link>
           </Button>
-          <Button asChild disabled={!canCreate} size="lg">
-            <Link
-              href={
-                canCreate ? `${ROUTES.predictions}/${NEW_PREDICTION_SENTINEL}` : '#'
-              }
-              aria-disabled={!canCreate}
-              title={
-                isLocked && !isSuperAdmin ? 'Predictions are locked' : undefined
-              }
-            >
-              <Plus className="mr-2 h-4 w-4" /> New prediction
-            </Link>
-          </Button>
+          {/* When locked, hide the New-prediction button entirely — a disabled
+              button alongside the "locked" banner just reads as confusing. The
+              late-joiner case (open, but past phase 1) keeps a disabled button
+              with an explanatory tooltip. */}
+          {!isLocked && (
+            <Button asChild disabled={!canCreate} size="lg">
+              <Link
+                href={
+                  canCreate ? `${ROUTES.predictions}/${NEW_PREDICTION_SENTINEL}` : '#'
+                }
+                aria-disabled={!canCreate}
+                title={createDisabledReason}
+              >
+                <Plus className="mr-2 h-4 w-4" /> New prediction
+              </Link>
+            </Button>
+          )}
         </div>
       </div>
+
+      {isLocked && (
+        <Card className="mb-6 border-amber-500/40 bg-amber-500/10">
+          <CardContent
+            role="status"
+            className="py-3 text-sm text-amber-900 dark:text-amber-200"
+          >
+            <span className="font-semibold">Predictions are locked.</span> No further
+            prediction submissions are being accepted. You can still view and preview your
+            existing entries.
+          </CardContent>
+        </Card>
+      )}
 
       <div className="mb-4">
         <FreePickBanner />
@@ -191,11 +214,15 @@ export function PredictionsListPage() {
         <Card>
           <CardContent className="flex flex-col items-center justify-center gap-3 py-12 text-center">
             <p className="text-muted-foreground">You haven&apos;t created any predictions yet.</p>
-            <Button asChild>
-              <Link href={`${ROUTES.predictions}/${NEW_PREDICTION_SENTINEL}`}>
-                <Plus className="mr-2 h-4 w-4" /> Create your first prediction
-              </Link>
-            </Button>
+            {canCreate ? (
+              <Button asChild>
+                <Link href={`${ROUTES.predictions}/${NEW_PREDICTION_SENTINEL}`}>
+                  <Plus className="mr-2 h-4 w-4" /> Create your first prediction
+                </Link>
+              </Button>
+            ) : (
+              <p className="text-muted-foreground text-sm">{createDisabledReason}</p>
+            )}
           </CardContent>
         </Card>
       ) : (
