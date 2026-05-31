@@ -5,6 +5,22 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.2] - 2026-05-31
+
+### Added
+
+- Leaderboard: non-admin users can now preview other members' brackets once the
+  Group Stage is locked (`phase1_locked`), so people can compare group-stage picks.
+  Preview is restricted again while knockout picks are editable (`phase2_open`) and
+  reopens once the knockout bracket locks (`phase2_locked`). Owners always see their
+  own; admins/super-admins always see everything.
+
+### Fixed
+
+- Auth: the Admin link (and other profile-gated UI) could silently stay hidden after a
+  session was restored client-side but not resolved by the server — `AuthProvider` now
+  loads the profile on `INITIAL_SESSION` when SSR provided none.
+
 ## [1.0.1] - 2026-05-31
 
 ### Fixed
@@ -74,5 +90,6 @@ admin-submitted real-world results.
 - Dark-mode default, container-query-driven priority+ navigation, and SEO no-index
   ahead of launch.
 
+[1.0.2]: https://github.com/leedium/wc-2026-fantasy/releases/tag/v1.0.2
 [1.0.1]: https://github.com/leedium/wc-2026-fantasy/releases/tag/v1.0.1
 [1.0.0]: https://github.com/leedium/wc-2026-fantasy/releases/tag/v1.0.0
