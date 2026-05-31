@@ -119,6 +119,76 @@ describe('AuthProvider', () => {
     });
   });
 
+  it('loads the profile on INITIAL_SESSION when SSR provided none', async () => {
+    // SSR couldn't resolve the session (initialProfile null) but the client
+    // restores it via INITIAL_SESSION. The profile must still be fetched so
+    // profile-gated UI (e.g. the Admin link) doesn't stay hidden.
+    fromMock.mockImplementation(() => ({
+      select: () => ({
+        eq: () => ({
+          maybeSingle: async () => ({
+            data: {
+              id: 'u3',
+              username: 'carol',
+              display_name: null,
+              avatar_url: null,
+              is_admin: true,
+              is_super_admin: true,
+            },
+          }),
+        }),
+      }),
+    }));
+
+    render(
+      withProviders(
+        <AuthProvider initialUser={null} initialProfile={null}>
+          <Consumer />
+        </AuthProvider>
+      )
+    );
+
+    await act(async () => {
+      authCallback?.('INITIAL_SESSION', { user: { id: 'u3' } as User });
+    });
+
+    await waitFor(() => {
+      expect(screen.getByTestId('user').textContent).toBe('u3');
+      expect(screen.getByTestId('username').textContent).toBe('carol');
+    });
+  });
+
+  it('does NOT refetch on INITIAL_SESSION when SSR already provided the profile', async () => {
+    fromMock.mockImplementation(() => {
+      throw new Error('loadProfile should not be called when SSR provided the profile');
+    });
+
+    render(
+      withProviders(
+        <AuthProvider
+          initialUser={{ id: 'u1' } as User}
+          initialProfile={{
+            id: 'u1',
+            username: 'alice',
+            displayName: null,
+            avatarUrl: null,
+            isAdmin: false,
+            isSuperAdmin: false,
+          }}
+        >
+          <Consumer />
+        </AuthProvider>
+      )
+    );
+
+    await act(async () => {
+      authCallback?.('INITIAL_SESSION', { user: { id: 'u1' } as User });
+    });
+
+    expect(fromMock).not.toHaveBeenCalled();
+    expect(screen.getByTestId('username').textContent).toBe('alice');
+  });
+
   it('clears the React Query cache when SIGNED_OUT fires', async () => {
     // Seed cache with stale data that would belong to the previous user.
     queryClient.setQueryData(['predictions'], { stale: true });
