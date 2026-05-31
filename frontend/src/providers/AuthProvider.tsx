@@ -31,6 +31,11 @@ export function AuthProvider({ children, initialUser, initialProfile }: AuthProv
   const supabase = React.useMemo(() => createSupabaseBrowserClient(), []);
   const queryClient = useQueryClient();
 
+  // Whose profile (if any) SSR resolved at mount. Drives whether the
+  // INITIAL_SESSION handler below still needs to fetch the profile client-side.
+  // A ref (not a dep) so the auth listener effect stays mounted-once.
+  const initialProfileUserIdRef = React.useRef(initialProfile?.id ?? null);
+
   const loadProfile = React.useCallback(
     async (userId: string) => {
       const { data } = await supabase
@@ -73,7 +78,19 @@ export function AuthProvider({ children, initialUser, initialProfile }: AuthProv
         setProfile(null);
         return;
       }
-      if (event === 'INITIAL_SESSION') return;
+      // On the initial client session we normally trust the SSR-provided
+      // initialProfile and skip a redundant fetch. But if SSR couldn't resolve
+      // the session (server/client cookie skew — e.g. right after a local DB
+      // reset), initialProfile is null while the client DOES hold a session.
+      // Without this, profile stays null and profile-gated UI (the Admin link,
+      // rewards badge, etc.) silently stays hidden until some later auth event
+      // fires. Fetch when SSR gave us no profile, or one for a different user.
+      if (event === 'INITIAL_SESSION') {
+        if (initialProfileUserIdRef.current !== session.user.id) {
+          void loadProfile(session.user.id);
+        }
+        return;
+      }
       void loadProfile(session.user.id);
     });
     return () => subscription.subscription.unsubscribe();
