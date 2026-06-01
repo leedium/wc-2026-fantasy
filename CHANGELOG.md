@@ -5,6 +5,15 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.4] - 2026-06-01
+
+### Added
+
+- Predictions wizard: the Group Stage and Best 3rds steps now have a "Randomize" button
+  (alongside "Auto-fill by FIFA ranking" and "Reset") that fills the picks with a random
+  arrangement — shuffling each group into positions 1–4 and seeding 8 random advancers
+  ranked 1–8. A "feeling lucky" alternative to the ranking-based auto-fill.
+
 ## [1.0.3] - 2026-06-01
 
 ### Added
@@ -99,6 +108,7 @@ admin-submitted real-world results.
 - Dark-mode default, container-query-driven priority+ navigation, and SEO no-index
   ahead of launch.
 
+[1.0.4]: https://github.com/leedium/wc-2026-fantasy/releases/tag/v1.0.4
 [1.0.3]: https://github.com/leedium/wc-2026-fantasy/releases/tag/v1.0.3
 [1.0.2]: https://github.com/leedium/wc-2026-fantasy/releases/tag/v1.0.2
 [1.0.1]: https://github.com/leedium/wc-2026-fantasy/releases/tag/v1.0.1
