@@ -14,6 +14,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { TeamFlag } from '@/components/shared/TeamFlag';
+import { FEATURES } from '@/lib/constants';
 import { cn } from '@/lib/utils';
 import type { Group, GroupPrediction, Team } from '@/types/tournament';
 
@@ -196,7 +197,7 @@ export function GroupStageForm({
   onResetGroups,
 }: GroupStageFormProps) {
   const isAdmin = variant === 'admin';
-  const showAutofill = !isAdmin && !!onAutofillByFifaRanking && !disabled;
+  const showAutofill = FEATURES.fifaAutofill && !isAdmin && !!onAutofillByFifaRanking && !disabled;
   const showRandomize = !isAdmin && !!onRandomize && !disabled;
   const showReset = !isAdmin && !!onResetGroups && !disabled;
   const showActions = showAutofill || showRandomize || showReset;
