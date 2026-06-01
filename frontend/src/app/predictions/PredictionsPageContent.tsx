@@ -47,6 +47,7 @@ import {
   autofillAdvancersByFifaRanking,
   autofillGroupPredictionsByFifaRanking,
 } from '@/lib/fifaRankings';
+import { randomizeAdvancers, randomizeGroupPredictions } from '@/lib/randomPredictions';
 import { applyGroupPositionChange } from '@/lib/groupSwap';
 import { cascadeKnockoutPick } from '@/lib/knockoutCascade';
 import { AdvancersForm } from '@/components/predictions/AdvancersForm';
@@ -768,6 +769,13 @@ export function PredictionsPageContent({
     persistDraft({ groupPredictions: next });
   };
 
+  const handleRandomizeGroups = () => {
+    if (!groups) return;
+    const next = randomizeGroupPredictions(groups);
+    setGroupPredictions(next);
+    persistDraft({ groupPredictions: next });
+  };
+
   const handleResetGroups = () => {
     if (!groups) return;
     const next = buildEmptyGroups(groups);
@@ -815,6 +823,12 @@ export function PredictionsPageContent({
 
   const handleAutofillAdvancersByFifaRanking = () => {
     const next = autofillAdvancersByFifaRanking(advancerCandidatePool);
+    setAdvancerPredictions(next);
+    persistDraft({ advancerPredictions: next });
+  };
+
+  const handleRandomizeAdvancers = () => {
+    const next = randomizeAdvancers(advancerCandidatePool);
     setAdvancerPredictions(next);
     persistDraft({ advancerPredictions: next });
   };
@@ -1391,6 +1405,7 @@ export function PredictionsPageContent({
               predictions={groupPredictions}
               onPredictionChange={handleGroupPredictionChange}
               onAutofillByFifaRanking={handleAutofillGroupsByFifaRanking}
+              onRandomize={handleRandomizeGroups}
               onResetGroups={handleResetGroups}
               disabled={!phase1Editable}
             />
@@ -1403,6 +1418,7 @@ export function PredictionsPageContent({
               value={advancerPredictions}
               onRankChange={handleAdvancerRankChange}
               onAutofillByFifaRanking={handleAutofillAdvancersByFifaRanking}
+              onRandomize={handleRandomizeAdvancers}
               onResetPicks={handleResetAdvancers}
               disabled={!phase1Editable}
             />
