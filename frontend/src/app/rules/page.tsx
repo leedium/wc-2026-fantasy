@@ -44,9 +44,9 @@ export default function RulesPage() {
                 </li>
                 <li>
                   <span className="text-foreground font-semibold">
-                    Up to five named predictions.
+                    Multiple named predictions.
                   </span>{' '}
-                  Each account can save as many as five separate predictions per tournament.
+                  Each account can save as many separate predictions per tournament as you like.
                   Each has its own name, picks, and tiebreaker.
                 </li>
                 <li>
