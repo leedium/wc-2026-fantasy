@@ -1,12 +1,18 @@
-import type { Group } from '@/types/tournament';
+import type { Group, Team } from '@/types/tournament';
 
-import { FIFA_RANKINGS, autofillGroupPredictionsByFifaRanking } from '../fifaRankings';
+import {
+  FIFA_RANKINGS,
+  autofillAdvancersByFifaRanking,
+  autofillGroupPredictionsByFifaRanking,
+} from '../fifaRankings';
 
 const makeGroup = (id: string, teams: Array<{ id: string; code: string }>): Group => ({
   id,
   name: `Group ${id}`,
   teams: teams.map((t) => ({ id: t.id, name: t.id, code: t.code, group: id })),
 });
+
+const makeTeam = (id: string, code: string): Team => ({ id, name: id, code, group: 'X' });
 
 describe('autofillGroupPredictionsByFifaRanking', () => {
   it('orders top-3 by rank ascending, with leftover team in 4th', () => {
@@ -78,5 +84,61 @@ describe('autofillGroupPredictionsByFifaRanking', () => {
     expect(pred.positions.first).toBe('esp');
     expect(pred.positions.second).toBe('uru');
     expect(FIFA_RANKINGS.ESP).toBeLessThan(FIFA_RANKINGS.URU);
+  });
+});
+
+describe('autofillAdvancersByFifaRanking', () => {
+  it('orders the pool by rank ascending and assigns ranks 1..8', () => {
+    const rankings = { AAA: 1, BBB: 2, CCC: 3 };
+    const pool = [makeTeam('c', 'CCC'), makeTeam('a', 'AAA'), makeTeam('b', 'BBB')];
+
+    const result = autofillAdvancersByFifaRanking(pool, rankings);
+
+    expect(result).toEqual([
+      { rank: 1, teamId: 'a' },
+      { rank: 2, teamId: 'b' },
+      { rank: 3, teamId: 'c' },
+    ]);
+  });
+
+  it('caps the result at the 8 best-ranked teams', () => {
+    const rankings = Object.fromEntries(
+      Array.from({ length: 12 }, (_, i) => [`T${i}`, i + 1]),
+    );
+    const pool = Array.from({ length: 12 }, (_, i) => makeTeam(`t${i}`, `T${i}`));
+
+    // Shuffle-ish: reverse so input order does not match rank order.
+    const result = autofillAdvancersByFifaRanking([...pool].reverse(), rankings);
+
+    expect(result).toHaveLength(8);
+    expect(result.map((p) => p.rank)).toEqual([1, 2, 3, 4, 5, 6, 7, 8]);
+    expect(result.map((p) => p.teamId)).toEqual([
+      't0', 't1', 't2', 't3', 't4', 't5', 't6', 't7',
+    ]);
+  });
+
+  it('sorts teams missing from the rankings to the bottom', () => {
+    const rankings = { AAA: 5, BBB: 10 };
+    const pool = [
+      makeTeam('unknown1', 'XXX'),
+      makeTeam('a', 'AAA'),
+      makeTeam('b', 'BBB'),
+    ];
+
+    const result = autofillAdvancersByFifaRanking(pool, rankings);
+
+    expect(result.map((p) => p.teamId)).toEqual(['a', 'b', 'unknown1']);
+  });
+
+  it('fills only what is available when the pool has fewer than 8 teams', () => {
+    const rankings = { AAA: 1, BBB: 2 };
+    const pool = [makeTeam('a', 'AAA'), makeTeam('b', 'BBB')];
+
+    const result = autofillAdvancersByFifaRanking(pool, rankings);
+
+    expect(result).toEqual([
+      { rank: 1, teamId: 'a' },
+      { rank: 2, teamId: 'b' },
+    ]);
   });
 });

@@ -4,6 +4,7 @@ import * as React from 'react';
 import { CheckCircle2, Circle } from 'lucide-react';
 
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
   Select,
@@ -31,6 +32,10 @@ export interface AdvancersFormProps {
   value: AdvancerPrediction[];
   /** Called when a rank's team changes (null to clear). */
   onRankChange: (rank: number, teamId: string | null) => void;
+  /** Predict variant only: seed ranks 1–8 from the candidate pool by FIFA ranking. */
+  onAutofillByFifaRanking?: () => void;
+  /** Predict variant only: clear all ranked picks. */
+  onResetPicks?: () => void;
   disabled?: boolean;
 }
 
@@ -45,12 +50,17 @@ export function AdvancersForm({
   candidatePool,
   value,
   onRankChange,
+  onAutofillByFifaRanking,
+  onResetPicks,
   disabled = false,
 }: AdvancersFormProps) {
   const filledCount = value.filter((v) => !!v.teamId).length;
   const isComplete = filledCount === ADVANCER_COUNT;
   const pickedTeamIds = new Set(value.filter((v) => v.teamId).map((v) => v.teamId));
   const poolIncomplete = candidatePool.length < ADVANCER_COUNT;
+  const showAutofill = variant === 'predict' && !!onAutofillByFifaRanking && !disabled;
+  const showReset = variant === 'predict' && !!onResetPicks && !disabled;
+  const showActions = showAutofill || showReset;
 
   return (
     <div className="space-y-6">
@@ -97,6 +107,33 @@ export function AdvancersForm({
         <div className="rounded-md border border-amber-500/50 bg-amber-500/10 px-4 py-3 text-sm">
           <strong>Heads up:</strong> only {candidatePool.length} of 12 group 3rd-place picks
           are filled in. Finish the group stage first so all 12 candidates are available here.
+        </div>
+      )}
+
+      {showActions && (
+        <div className="flex items-center justify-between gap-2">
+          {showAutofill ? (
+            <Button
+              type="button"
+              variant="outline"
+              size="lg"
+              onClick={onAutofillByFifaRanking}
+            >
+              Auto-fill by FIFA ranking
+            </Button>
+          ) : (
+            <span />
+          )}
+          {showReset && (
+            <Button
+              type="button"
+              variant="outline"
+              size="lg"
+              onClick={onResetPicks}
+            >
+              Reset
+            </Button>
+          )}
         </div>
       )}
 

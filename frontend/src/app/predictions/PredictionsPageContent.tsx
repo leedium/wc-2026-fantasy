@@ -43,7 +43,10 @@ import type {
   TournamentInfo,
 } from '@/types/tournament';
 import { ADVANCER_COUNT } from '@/lib/constants';
-import { autofillGroupPredictionsByFifaRanking } from '@/lib/fifaRankings';
+import {
+  autofillAdvancersByFifaRanking,
+  autofillGroupPredictionsByFifaRanking,
+} from '@/lib/fifaRankings';
 import { applyGroupPositionChange } from '@/lib/groupSwap';
 import { cascadeKnockoutPick } from '@/lib/knockoutCascade';
 import { AdvancersForm } from '@/components/predictions/AdvancersForm';
@@ -810,6 +813,17 @@ export function PredictionsPageContent({
     persistDraft({ championTeamId: value });
   };
 
+  const handleAutofillAdvancersByFifaRanking = () => {
+    const next = autofillAdvancersByFifaRanking(advancerCandidatePool);
+    setAdvancerPredictions(next);
+    persistDraft({ advancerPredictions: next });
+  };
+
+  const handleResetAdvancers = () => {
+    setAdvancerPredictions([]);
+    persistDraft({ advancerPredictions: [] });
+  };
+
   const handleAdvancerRankChange = (rank: number, teamId: string | null) => {
     setAdvancerPredictions((prev) => {
       const others = prev.filter((a) => a.rank !== rank);
@@ -1388,6 +1402,8 @@ export function PredictionsPageContent({
               candidatePool={advancerCandidatePool}
               value={advancerPredictions}
               onRankChange={handleAdvancerRankChange}
+              onAutofillByFifaRanking={handleAutofillAdvancersByFifaRanking}
+              onResetPicks={handleResetAdvancers}
               disabled={!phase1Editable}
             />
           )}

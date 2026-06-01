@@ -2,7 +2,8 @@
 // Hand-maintained; refresh after each official FIFA ranking publication.
 // Last updated: 2026-05.
 
-import type { Group, GroupPrediction } from '@/types/tournament';
+import { ADVANCER_COUNT } from '@/lib/constants';
+import type { AdvancerPrediction, Group, GroupPrediction, Team } from '@/types/tournament';
 
 export const FIFA_RANKINGS: Record<string, number> = {
   ESP: 1,
@@ -73,4 +74,16 @@ export function autofillGroupPredictionsByFifaRanking(
       },
     };
   });
+}
+
+export function autofillAdvancersByFifaRanking(
+  candidatePool: Team[],
+  rankings: Record<string, number> = FIFA_RANKINGS,
+): AdvancerPrediction[] {
+  const sorted = [...candidatePool].sort(
+    (a, b) => (rankings[a.code] ?? Infinity) - (rankings[b.code] ?? Infinity),
+  );
+  return sorted
+    .slice(0, ADVANCER_COUNT)
+    .map((team, i) => ({ rank: i + 1, teamId: team.id }));
 }
