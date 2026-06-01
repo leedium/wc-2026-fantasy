@@ -135,7 +135,7 @@ export function AdvancersForm({
                 size="lg"
                 onClick={onRandomize}
               >
-                Randomize
+                Randomize Picks
               </Button>
             )}
           </div>

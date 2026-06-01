@@ -270,7 +270,7 @@ export function GroupStageForm({
                 size="lg"
                 onClick={onRandomize}
               >
-                Randomize
+                Randomize Picks
               </Button>
             )}
           </div>
