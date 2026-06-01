@@ -5,6 +5,31 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.5] - 2026-06-02
+
+### Added
+
+- Rules page: a new "How the two phases work" card after the hero summarizes what each
+  phase covers and the points it's worth — Phase 1 (group standings, Best 3rds advancers,
+  Gut Feeling Champion) up to 150, Phase 2 (knockout bracket + Champion's Total Playoff
+  Goals tiebreaker) up to 263, for a 413 maximum. Totals derive from the scoring
+  constants. (#192)
+
+### Changed
+
+- Rules page: replaced the "up to five named predictions" copy — accounts can now create
+  unlimited named predictions per tournament, so the rule reads "Multiple named
+  predictions." (#191)
+- Predictions wizard: the "Randomize" button is now labelled "Randomize Picks" in both the
+  Group Stage and Best 3rds steps. (#190)
+
+### Removed
+
+- Predictions wizard: the "Auto-fill by FIFA ranking" buttons are hidden from the Group
+  Stage and Best 3rds steps to encourage prediction variety. The autofill logic is
+  preserved behind a `FEATURES.fifaAutofill` flag (default off) and can be re-enabled with
+  a one-line change. (#189)
+
 ## [1.0.4] - 2026-06-01
 
 ### Added

@@ -7,7 +7,7 @@ import { ScoringBreakdown } from '@/components/marketing/ScoringBreakdown';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { PRICING, ROUTES } from '@/lib/constants';
+import { PRICING, ROUTES, SCORING } from '@/lib/constants';
 
 export const metadata: Metadata = {
   title: 'Rules | World Cup 2026',
@@ -30,6 +30,49 @@ export default function RulesPage() {
       </section>
 
       <section className="py-8">
+        <Card>
+          <CardHeader>
+            <CardTitle>How the two phases work</CardTitle>
+            <CardDescription>
+              Predictions are made and scored across two separately-locked phases.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4 text-sm">
+              <p className="text-muted-foreground">
+                <span className="text-foreground font-semibold">Phase 1 — Before kickoff.</span>{' '}
+                Predict group standings (1st–4th in all 12 groups), rank your 8 best third-place
+                advancers, and pick your Gut Feeling Champion. Locks at the opening match.{' '}
+                <span className="text-foreground font-medium">
+                  Up to{' '}
+                  {SCORING.maxGroupPoints +
+                    SCORING.maxAdvancerPoints +
+                    SCORING.championPickBonus}{' '}
+                  points.
+                </span>
+              </p>
+              <p className="text-muted-foreground">
+                <span className="text-foreground font-semibold">Phase 2 — The knockouts.</span>{' '}
+                Once the group results are in and the bracket is set, predict every match winner
+                from the Round of 32 through the Final, plus the third-place match, and set your
+                Champion&apos;s Total Playoff Goals tiebreaker. Locks before the Round of 32.{' '}
+                <span className="text-foreground font-medium">
+                  Up to {SCORING.maxKnockoutPoints} points.
+                </span>
+              </p>
+              <p className="text-muted-foreground">
+                Together they total a maximum of{' '}
+                <span className="text-foreground font-semibold">
+                  {SCORING.maxTotalPoints} points
+                </span>
+                .
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      </section>
+
+      <section className="py-8">
         <div className="grid gap-6 md:grid-cols-2">
           <Card>
             <CardHeader>
@@ -44,9 +87,9 @@ export default function RulesPage() {
                 </li>
                 <li>
                   <span className="text-foreground font-semibold">
-                    Up to five named predictions.
+                    Multiple named predictions.
                   </span>{' '}
-                  Each account can save as many as five separate predictions per tournament.
+                  Each account can save as many separate predictions per tournament as you like.
                   Each has its own name, picks, and tiebreaker.
                 </li>
                 <li>
