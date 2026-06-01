@@ -9,6 +9,16 @@ export const TOURNAMENT_CONFIG = {
   totalMatches: 104,
 } as const;
 
+/**
+ * UI feature flags. `fifaAutofill` hides the "Auto-fill by FIFA ranking" buttons
+ * in the Group Stage and Best 3rds wizard steps. Disabled to encourage prediction
+ * variety; the autofill logic in lib/fifaRankings.ts is preserved — flip to `true`
+ * to bring the buttons back.
+ */
+export const FEATURES = {
+  fifaAutofill: false,
+} as const;
+
 // Scoring v4 (migration 0051) + third-place restored (0053) + group rebalance (0054):
 // Group stage: 11 standard groups × 10 (exact-order top-2) + Group I "Group of Death" exact-order 15
 //   = 110 + 15 = 125. Reversed = 7, single correct in slot = 5, single in wrong slot = 2.

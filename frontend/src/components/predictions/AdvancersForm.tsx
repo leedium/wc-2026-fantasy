@@ -14,7 +14,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { TeamFlag } from '@/components/shared/TeamFlag';
-import { ADVANCER_COUNT, ADVANCER_RANK_LABELS } from '@/lib/constants';
+import { ADVANCER_COUNT, ADVANCER_RANK_LABELS, FEATURES } from '@/lib/constants';
 import { cn } from '@/lib/utils';
 import type { AdvancerPrediction, Team } from '@/types/tournament';
 
@@ -61,7 +61,8 @@ export function AdvancersForm({
   const isComplete = filledCount === ADVANCER_COUNT;
   const pickedTeamIds = new Set(value.filter((v) => v.teamId).map((v) => v.teamId));
   const poolIncomplete = candidatePool.length < ADVANCER_COUNT;
-  const showAutofill = variant === 'predict' && !!onAutofillByFifaRanking && !disabled;
+  const showAutofill =
+    FEATURES.fifaAutofill && variant === 'predict' && !!onAutofillByFifaRanking && !disabled;
   const showRandomize = variant === 'predict' && !!onRandomize && !disabled;
   const showReset = variant === 'predict' && !!onResetPicks && !disabled;
   const showActions = showAutofill || showRandomize || showReset;
