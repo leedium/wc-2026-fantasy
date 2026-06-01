@@ -34,6 +34,8 @@ export interface AdvancersFormProps {
   onRankChange: (rank: number, teamId: string | null) => void;
   /** Predict variant only: seed ranks 1–8 from the candidate pool by FIFA ranking. */
   onAutofillByFifaRanking?: () => void;
+  /** Predict variant only: seed ranks 1–8 with a random selection from the pool. */
+  onRandomize?: () => void;
   /** Predict variant only: clear all ranked picks. */
   onResetPicks?: () => void;
   disabled?: boolean;
@@ -51,6 +53,7 @@ export function AdvancersForm({
   value,
   onRankChange,
   onAutofillByFifaRanking,
+  onRandomize,
   onResetPicks,
   disabled = false,
 }: AdvancersFormProps) {
@@ -59,8 +62,9 @@ export function AdvancersForm({
   const pickedTeamIds = new Set(value.filter((v) => v.teamId).map((v) => v.teamId));
   const poolIncomplete = candidatePool.length < ADVANCER_COUNT;
   const showAutofill = variant === 'predict' && !!onAutofillByFifaRanking && !disabled;
+  const showRandomize = variant === 'predict' && !!onRandomize && !disabled;
   const showReset = variant === 'predict' && !!onResetPicks && !disabled;
-  const showActions = showAutofill || showReset;
+  const showActions = showAutofill || showRandomize || showReset;
 
   return (
     <div className="space-y-6">
@@ -111,19 +115,29 @@ export function AdvancersForm({
       )}
 
       {showActions && (
-        <div className="flex items-center justify-between gap-2">
-          {showAutofill ? (
-            <Button
-              type="button"
-              variant="outline"
-              size="lg"
-              onClick={onAutofillByFifaRanking}
-            >
-              Auto-fill by FIFA ranking
-            </Button>
-          ) : (
-            <span />
-          )}
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div className="flex flex-wrap items-center gap-2">
+            {showAutofill && (
+              <Button
+                type="button"
+                variant="outline"
+                size="lg"
+                onClick={onAutofillByFifaRanking}
+              >
+                Auto-fill by FIFA ranking
+              </Button>
+            )}
+            {showRandomize && (
+              <Button
+                type="button"
+                variant="outline"
+                size="lg"
+                onClick={onRandomize}
+              >
+                Randomize
+              </Button>
+            )}
+          </div>
           {showReset && (
             <Button
               type="button"

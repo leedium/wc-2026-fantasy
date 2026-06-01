@@ -55,6 +55,11 @@ interface GroupStageFormProps {
    */
   onAutofillByFifaRanking?: () => void;
   /**
+   * Predict-variant only: when provided, renders a "Randomize" button that
+   * overwrites all 12 groups with a random ordering of each group's teams.
+   */
+  onRandomize?: () => void;
+  /**
    * Predict-variant only: when provided, renders a "Reset" button that clears
    * every position in every group back to the unselected state.
    */
@@ -187,12 +192,14 @@ export function GroupStageForm({
   variant = 'predict',
   extraPerCard,
   onAutofillByFifaRanking,
+  onRandomize,
   onResetGroups,
 }: GroupStageFormProps) {
   const isAdmin = variant === 'admin';
   const showAutofill = !isAdmin && !!onAutofillByFifaRanking && !disabled;
+  const showRandomize = !isAdmin && !!onRandomize && !disabled;
   const showReset = !isAdmin && !!onResetGroups && !disabled;
-  const showActions = showAutofill || showReset;
+  const showActions = showAutofill || showRandomize || showReset;
 
   // Calculate completion stats
   const completedGroups = predictions.filter((p) => {
@@ -243,19 +250,29 @@ export function GroupStageForm({
       )}
 
       {showActions && (
-        <div className="flex items-center justify-between gap-2">
-          {showAutofill ? (
-            <Button
-              type="button"
-              variant="outline"
-              size="lg"
-              onClick={onAutofillByFifaRanking}
-            >
-              Auto-fill by FIFA ranking
-            </Button>
-          ) : (
-            <span />
-          )}
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div className="flex flex-wrap items-center gap-2">
+            {showAutofill && (
+              <Button
+                type="button"
+                variant="outline"
+                size="lg"
+                onClick={onAutofillByFifaRanking}
+              >
+                Auto-fill by FIFA ranking
+              </Button>
+            )}
+            {showRandomize && (
+              <Button
+                type="button"
+                variant="outline"
+                size="lg"
+                onClick={onRandomize}
+              >
+                Randomize
+              </Button>
+            )}
+          </div>
           {showReset && (
             <Button
               type="button"
