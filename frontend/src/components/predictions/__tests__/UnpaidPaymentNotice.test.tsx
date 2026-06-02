@@ -28,14 +28,21 @@ describe('UnpaidPaymentNotice', () => {
     expect(screen.getByText(/1 unpaid prediction(?!s)/i)).toBeInTheDocument();
   });
 
-  it('links to the payments email and falls back when email is null', () => {
-    render(<UnpaidPaymentNotice unpaidCount={1} email={null} />);
+  it('shows the payments address as plain text with no mailto link', () => {
+    render(<UnpaidPaymentNotice unpaidCount={1} email="player@example.com" />);
 
-    const links = screen
-      .getAllByRole('link')
-      .filter((a) => a.getAttribute('href')?.startsWith(`mailto:${PAYMENTS_EMAIL}`));
-    expect(links.length).toBeGreaterThan(0);
-    // The (<email>) label falls back to this phrase when no email is supplied.
+    // Interac e-transfers go through the user's bank — there must be no
+    // mailto link / "email" button suggesting otherwise.
+    expect(screen.queryByRole('link')).not.toBeInTheDocument();
+    expect(screen.queryByText(/email payment to/i)).not.toBeInTheDocument();
+    // The address is still shown (twice: body + how-to-pay instruction).
+    expect(screen.getAllByText(PAYMENTS_EMAIL).length).toBeGreaterThan(0);
+    expect(screen.getByText(/how to pay/i)).toBeInTheDocument();
+    expect(screen.getByText(/through your bank/i)).toBeInTheDocument();
+  });
+
+  it('falls back to a generic email label when none is supplied', () => {
+    render(<UnpaidPaymentNotice unpaidCount={1} email={null} />);
     expect(screen.getAllByText(/your registered email/i).length).toBeGreaterThan(0);
   });
 });
