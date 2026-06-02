@@ -1,6 +1,7 @@
 'use client';
 
 import * as React from 'react';
+import Image from 'next/image';
 import { AlertTriangle } from 'lucide-react';
 
 import { Card, CardContent } from '@/components/ui/card';
@@ -57,7 +58,18 @@ export function UnpaidPaymentNotice({
             <span className="font-semibold">
               ${totalDue} {PRICING.currency}
             </span>
-            ). Send an <span className="font-semibold">Interac e-transfer</span> to{' '}
+            ). Send an{' '}
+            <span className="inline-flex items-center gap-1 font-semibold">
+              Interac
+              <Image
+                src="/interac-logo.png"
+                alt="Interac"
+                width={50}
+                height={50}
+                className="inline-block h-auto w-[50px] align-middle"
+              />
+            </span>{' '}
+            e-transfer to{' '}
             <span className="font-semibold break-all">{PAYMENTS_EMAIL}</span>. You{' '}
             <span className="font-semibold uppercase">must</span> put your registered
             email{' '}
