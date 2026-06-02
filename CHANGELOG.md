@@ -5,6 +5,24 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.6] - 2026-06-02
+
+### Added
+
+- Admin: a new **Referrals** tab where an admin can search any member, view their full
+  referral state, and link/unlink referee accounts to credit referrals retroactively
+  (e.g. signups that arrived without a `?ref=` link). Rewards stay purely derived
+  (`floor(qualified/4) − redeemed`); `admin_add_referral` backfills `qualified_at` from
+  the referee's earliest non-free payment, and every add/remove is recorded in a
+  `referral_admin_audit` trail with actor, targets, and a required proof note. (#194)
+- Unpaid-prediction payment prompts on `/predictions` and `/leaderboard`: a shared,
+  persistent red notice tells the user how many entries are unpaid, the total CAD due,
+  and to send an Interac e-transfer to the payments email including their registered
+  account email. The predictions list tints unpaid rows red, and the leaderboard shows a
+  dedicated "not ranked yet" table of the user's unpaid entries above the ranking. The
+  nudge mirrors the leaderboard's own eligibility filter, so Phase 1 saved drafts
+  (`submitted_at` null but a complete pick set) are included. (#195)
+
 ## [1.0.5] - 2026-06-02
 
 ### Added
