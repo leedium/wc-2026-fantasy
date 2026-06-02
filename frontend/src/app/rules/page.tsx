@@ -7,7 +7,7 @@ import { ScoringBreakdown } from '@/components/marketing/ScoringBreakdown';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { PRICING, ROUTES, SCORING } from '@/lib/constants';
+import { PAYMENTS_EMAIL, PRICING, ROUTES, SCORING } from '@/lib/constants';
 
 export const metadata: Metadata = {
   title: 'Rules | World Cup 2026',
@@ -134,8 +134,8 @@ export default function RulesPage() {
                   <span className="text-foreground font-semibold">Payment</span>
                   <br />
                   E-transfer:{' '}
-                  <a href="mailto:payments@soccer-pool.com" className="text-foreground font-medium">
-                    payments@soccer-pool.com
+                  <a href={`mailto:${PAYMENTS_EMAIL}`} className="text-foreground font-medium">
+                    {PAYMENTS_EMAIL}
                   </a>
                   <br />
                   PayPal also accepted &mdash; email for info

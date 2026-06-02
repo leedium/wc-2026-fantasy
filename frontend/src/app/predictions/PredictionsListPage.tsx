@@ -31,8 +31,10 @@ import {
 } from '@/hooks/useRewardsStatus';
 import { BracketPreviewDialog } from '@/components/predictions/BracketPreviewDialog';
 import { FreePickBanner } from '@/components/predictions/FreePickBanner';
+import { UnpaidPaymentNotice } from '@/components/predictions/UnpaidPaymentNotice';
 import { PRICING, ROUTES } from '@/lib/constants';
 import { fetchJSON } from '@/lib/api/fetchJSON';
+import { cn } from '@/lib/utils';
 
 interface ApiPrediction {
   id: string;
@@ -79,6 +81,10 @@ export function PredictionsListPage() {
     phase === 'phase2_locked' || (phase === 'phase1_locked' && advancersSet);
 
   const predictions = query.data?.predictions ?? [];
+  // Submitted entries that haven't been marked paid — drive the red payment
+  // notice + row tint. `isPaid` already covers free picks (isFreePaid rows are
+  // isPaid === true), so they're excluded.
+  const unpaidSubmitted = predictions.filter((p) => !p.isPaid && p.submittedAt);
   // New predictions are accepted only during phase 1 (super admins may also
   // create while a later phase is still open). Once the tournament is LOCKED,
   // no role — including super admin — can create a new entry.
@@ -200,6 +206,11 @@ export function PredictionsListPage() {
         </Card>
       )}
 
+      <UnpaidPaymentNotice
+        unpaidCount={unpaidSubmitted.length}
+        email={user?.email ?? null}
+      />
+
       <div className="mb-4">
         <FreePickBanner />
       </div>
@@ -227,8 +238,16 @@ export function PredictionsListPage() {
         </Card>
       ) : (
         <div className="space-y-3">
-          {predictions.map((p) => (
-            <Card key={p.id}>
+          {predictions.map((p) => {
+            const isUnpaidSubmitted = !p.isPaid && !!p.submittedAt;
+            return (
+            <Card
+              key={p.id}
+              className={cn(
+                isUnpaidSubmitted &&
+                  'border-red-500/40 bg-red-500/5 dark:bg-red-500/10'
+              )}
+            >
               <CardContent className="flex flex-col gap-4 py-4 sm:flex-row sm:items-center sm:justify-between">
                 <div className="flex-1">
                   <div className="flex flex-wrap items-center gap-2">
@@ -321,7 +340,8 @@ export function PredictionsListPage() {
                 </div>
               </CardContent>
             </Card>
-          ))}
+            );
+          })}
         </div>
       )}
 
