@@ -10,6 +10,7 @@ import { LeaderboardTable } from '@/components/leaderboard/LeaderboardTable';
 import { UnpaidPredictionsTable } from '@/components/leaderboard/UnpaidPredictionsTable';
 import { UnpaidPaymentNotice } from '@/components/predictions/UnpaidPaymentNotice';
 import { Pagination, DEFAULT_ITEMS_PER_PAGE } from '@/components/shared/Pagination';
+import { needsPayment } from '@/lib/predictions/paymentStatus';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -53,6 +54,8 @@ interface PredictionsResponse {
     name: string;
     submittedAt: string | null;
     isPaid: boolean;
+    groups: Array<{ groupId: string }>;
+    advancers: Array<{ rank: number; teamId: string }>;
   }>;
 }
 
@@ -141,11 +144,10 @@ export function LeaderboardPageContent() {
     enabled: !!user,
   });
 
-  const unpaidSubmitted = React.useMemo(
-    () =>
-      (predictionsQuery.data?.predictions ?? []).filter(
-        (p) => !p.isPaid && p.submittedAt
-      ),
+  // Mirror the leaderboard's own eligibility filter (submitted OR Phase-1
+  // complete) so unpaid Phase 1 saved drafts surface here too.
+  const unpaidPredictions = React.useMemo(
+    () => (predictionsQuery.data?.predictions ?? []).filter(needsPayment),
     [predictionsQuery.data]
   );
 
@@ -263,10 +265,10 @@ export function LeaderboardPageContent() {
       {user && (
         <>
           <UnpaidPaymentNotice
-            unpaidCount={unpaidSubmitted.length}
+            unpaidCount={unpaidPredictions.length}
             email={user.email ?? null}
           />
-          <UnpaidPredictionsTable predictions={unpaidSubmitted} isLocked={isLocked} />
+          <UnpaidPredictionsTable predictions={unpaidPredictions} isLocked={isLocked} />
         </>
       )}
 

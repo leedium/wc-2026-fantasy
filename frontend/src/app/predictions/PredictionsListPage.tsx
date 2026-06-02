@@ -34,6 +34,7 @@ import { FreePickBanner } from '@/components/predictions/FreePickBanner';
 import { UnpaidPaymentNotice } from '@/components/predictions/UnpaidPaymentNotice';
 import { PRICING, ROUTES } from '@/lib/constants';
 import { fetchJSON } from '@/lib/api/fetchJSON';
+import { needsPayment } from '@/lib/predictions/paymentStatus';
 import { cn } from '@/lib/utils';
 
 interface ApiPrediction {
@@ -44,6 +45,10 @@ interface ApiPrediction {
   isPaid: boolean;
   paidAt: string | null;
   isFreePaid: boolean;
+  // Used to mirror the leaderboard's Phase-1-complete eligibility (12 group
+  // rows + 8 advancer rows) so unpaid Phase 1 saved drafts get the payment nudge.
+  groups: Array<{ groupId: string }>;
+  advancers: Array<{ rank: number; teamId: string }>;
 }
 
 interface ApiResponse {
@@ -81,10 +86,11 @@ export function PredictionsListPage() {
     phase === 'phase2_locked' || (phase === 'phase1_locked' && advancersSet);
 
   const predictions = query.data?.predictions ?? [];
-  // Submitted entries that haven't been marked paid — drive the red payment
-  // notice + row tint. `isPaid` already covers free picks (isFreePaid rows are
-  // isPaid === true), so they're excluded.
-  const unpaidSubmitted = predictions.filter((p) => !p.isPaid && p.submittedAt);
+  // Unpaid entries that would rank once paid — drive the red payment notice +
+  // row tint. Mirrors the leaderboard eligibility filter (submitted OR Phase-1
+  // complete), so Phase 1 saved drafts are included. `isPaid` already covers
+  // free picks (isFreePaid rows are isPaid === true), so they're excluded.
+  const unpaidPredictions = predictions.filter(needsPayment);
   // New predictions are accepted only during phase 1 (super admins may also
   // create while a later phase is still open). Once the tournament is LOCKED,
   // no role — including super admin — can create a new entry.
@@ -207,7 +213,7 @@ export function PredictionsListPage() {
       )}
 
       <UnpaidPaymentNotice
-        unpaidCount={unpaidSubmitted.length}
+        unpaidCount={unpaidPredictions.length}
         email={user?.email ?? null}
       />
 
@@ -239,13 +245,12 @@ export function PredictionsListPage() {
       ) : (
         <div className="space-y-3">
           {predictions.map((p) => {
-            const isUnpaidSubmitted = !p.isPaid && !!p.submittedAt;
+            const isUnpaid = needsPayment(p);
             return (
             <Card
               key={p.id}
               className={cn(
-                isUnpaidSubmitted &&
-                  'border-red-500/40 bg-red-500/5 dark:bg-red-500/10'
+                isUnpaid && 'border-red-500/40 bg-red-500/5 dark:bg-red-500/10'
               )}
             >
               <CardContent className="flex flex-col gap-4 py-4 sm:flex-row sm:items-center sm:justify-between">
