@@ -5,6 +5,16 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.7] - 2026-06-02
+
+### Fixed
+
+- Unpaid-prediction notice (`/predictions` + `/leaderboard`): removed the "Email payment
+  to …" button and the `mailto:` links on the payments address — an Interac e-transfer is
+  sent through the user's bank, not by email, so the button was misleading. The address is
+  now plain selectable text, with a short "How to pay" instruction (online banking →
+  Interac e-Transfer → send to the address). (#197)
+
 ## [1.0.6] - 2026-06-02
 
 ### Added
