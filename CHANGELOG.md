@@ -5,6 +5,13 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.9] - 2026-06-02
+
+### Added
+
+- Unpaid-prediction notice (`/predictions` + `/leaderboard`): the official Interac logo now
+  appears inline next to the word "Interac" in the e-transfer instructions. (#201)
+
 ## [1.0.8] - 2026-06-02
 
 ### Fixed
