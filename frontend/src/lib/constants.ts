@@ -51,6 +51,13 @@ export const PRICING = {
 } as const;
 
 /**
+ * Address for out-of-band entry payments (Interac e-transfer / PayPal). Surfaced
+ * in the rules page and the unpaid-prediction payment notice. Single source so
+ * the email only ever lives in one place.
+ */
+export const PAYMENTS_EMAIL = 'payments@soccer-pool.com';
+
+/**
  * Operating-cost model for the /audit transparency page. Every value here is
  * meant to be edited directly when costs change.
  *

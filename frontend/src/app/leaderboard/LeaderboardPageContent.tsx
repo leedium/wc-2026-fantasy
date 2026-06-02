@@ -7,7 +7,10 @@ import { ArrowRight, Lock, Search, Trophy, Users } from 'lucide-react';
 
 import { PageLayout } from '@/components/layout/PageLayout';
 import { LeaderboardTable } from '@/components/leaderboard/LeaderboardTable';
+import { UnpaidPredictionsTable } from '@/components/leaderboard/UnpaidPredictionsTable';
+import { UnpaidPaymentNotice } from '@/components/predictions/UnpaidPaymentNotice';
 import { Pagination, DEFAULT_ITEMS_PER_PAGE } from '@/components/shared/Pagination';
+import { needsPayment } from '@/lib/predictions/paymentStatus';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -42,6 +45,18 @@ interface LeaderboardResponse {
   total: number;
   page: number;
   pageSize: number;
+}
+
+interface PredictionsResponse {
+  tournament: { id: string; lockTime: string };
+  predictions: Array<{
+    id: string;
+    name: string;
+    submittedAt: string | null;
+    isPaid: boolean;
+    groups: Array<{ groupId: string }>;
+    advancers: Array<{ rank: number; teamId: string }>;
+  }>;
 }
 
 export function LeaderboardPageContent() {
@@ -115,6 +130,26 @@ export function LeaderboardPageContent() {
     if (!matches.length) return null;
     return matches.reduce((best, m) => (m.rank < best.rank ? m : best), matches[0]);
   }, [meQuery.data]);
+
+  // The public leaderboard only lists paid entries. Fetch the signed-in user's
+  // own predictions (shared cache key with /predictions) so we can surface any
+  // submitted-but-unpaid entries that are missing from the ranking below.
+  const predictionsQuery = useQuery<PredictionsResponse>({
+    queryKey: ['predictions'],
+    queryFn: async () => {
+      const res = await fetch('/api/predictions');
+      if (!res.ok) throw new Error('Failed to fetch predictions');
+      return res.json();
+    },
+    enabled: !!user,
+  });
+
+  // Mirror the leaderboard's own eligibility filter (submitted OR Phase-1
+  // complete) so unpaid Phase 1 saved drafts surface here too.
+  const unpaidPredictions = React.useMemo(
+    () => (predictionsQuery.data?.predictions ?? []).filter(needsPayment),
+    [predictionsQuery.data]
+  );
 
   const handleFindMyRank = React.useCallback(() => {
     if (!bestMatch) return;
@@ -225,6 +260,16 @@ export function LeaderboardPageContent() {
             )}
           </p>
         </div>
+      )}
+
+      {user && (
+        <>
+          <UnpaidPaymentNotice
+            unpaidCount={unpaidPredictions.length}
+            email={user.email ?? null}
+          />
+          <UnpaidPredictionsTable predictions={unpaidPredictions} isLocked={isLocked} />
+        </>
       )}
 
       <Card className="mb-6">
