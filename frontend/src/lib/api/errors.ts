@@ -61,6 +61,13 @@ const KNOWN_ERROR_FRAGMENTS = [
   'tournament_id is required',
   // Reset tournament (migration 0046)
   'tournament not found',
+  // Referral admin tool (migration 0059)
+  'referee account not found',
+  'referee already referred',
+  'cannot refer self',
+  'referrer not found',
+  'note is required',
+  'referral not found',
 ] as const;
 
 export function safeMessage(

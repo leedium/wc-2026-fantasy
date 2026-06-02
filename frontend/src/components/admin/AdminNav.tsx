@@ -8,6 +8,7 @@ const links = [
   { label: 'Dashboard', href: '/admin' },
   { label: 'Results', href: '/admin/results' },
   { label: 'Users', href: '/admin/users' },
+  { label: 'Referrals', href: '/admin/referrals' },
   { label: 'Tournament', href: '/admin/tournament' },
 ];
 
