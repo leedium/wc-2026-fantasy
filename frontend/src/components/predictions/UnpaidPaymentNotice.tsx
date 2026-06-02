@@ -63,10 +63,11 @@ export function UnpaidPaymentNotice({
               Interac
               <Image
                 src="/interac-logo.png"
-                alt="Interac"
-                width={50}
-                height={50}
-                className="inline-block h-auto w-[50px] align-middle"
+                alt=""
+                aria-hidden
+                width={20}
+                height={20}
+                className="inline-block h-auto w-[20px] align-middle"
               />
             </span>{' '}
             e-transfer to{' '}
