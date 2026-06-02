@@ -33,6 +33,13 @@ describe('UnpaidPaymentNotice', () => {
     expect(chip.className).toMatch(/bg-red-600/);
   });
 
+  it('renders the Interac logo next to the word Interac', () => {
+    render(<UnpaidPaymentNotice unpaidCount={1} email="player@example.com" />);
+    const logo = screen.getByAltText('Interac');
+    expect(logo).toBeInTheDocument();
+    expect(logo).toHaveAttribute('src', '/interac-logo.png');
+  });
+
   it('uses singular copy for a single unpaid prediction', () => {
     render(<UnpaidPaymentNotice unpaidCount={1} email="player@example.com" />);
     expect(screen.getByText(/1 unpaid prediction(?!s)/i)).toBeInTheDocument();
