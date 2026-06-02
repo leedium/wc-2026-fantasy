@@ -23,6 +23,16 @@ describe('UnpaidPaymentNotice', () => {
     ).toBeInTheDocument();
   });
 
+  it('emphasizes that the registered email MUST be in the Interac message', () => {
+    render(<UnpaidPaymentNotice unpaidCount={1} email="player@example.com" />);
+
+    expect(screen.getByText(/must/i)).toBeInTheDocument();
+    // The email renders as its own (chip) element, not just inline prose.
+    const chip = screen.getByText('player@example.com');
+    expect(chip.tagName).toBe('SPAN');
+    expect(chip.className).toMatch(/bg-red-600/);
+  });
+
   it('uses singular copy for a single unpaid prediction', () => {
     render(<UnpaidPaymentNotice unpaidCount={1} email="player@example.com" />);
     expect(screen.getByText(/1 unpaid prediction(?!s)/i)).toBeInTheDocument();

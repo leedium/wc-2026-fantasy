@@ -58,10 +58,14 @@ export function UnpaidPaymentNotice({
               ${totalDue} {PRICING.currency}
             </span>
             ). Send an <span className="font-semibold">Interac e-transfer</span> to{' '}
-            <span className="font-semibold break-all">{PAYMENTS_EMAIL}</span> and{' '}
-            <span className="font-semibold">include your registered email</span> (
-            <span className="font-medium break-all">{emailLabel}</span>) in the
-            transfer message so we can match it to your account.
+            <span className="font-semibold break-all">{PAYMENTS_EMAIL}</span>. You{' '}
+            <span className="font-semibold uppercase">must</span> put your registered
+            email{' '}
+            <span className="inline-flex items-center rounded bg-red-600 px-1.5 py-0.5 font-mono text-xs font-semibold break-all text-white dark:bg-red-500">
+              {emailLabel}
+            </span>{' '}
+            in the Interac message so we can match the payment to your account —
+            without it your entries can&apos;t be credited.
           </p>
           <p className="text-sm">
             <span className="font-semibold">How to pay:</span> log in to your online
