@@ -33,11 +33,16 @@ describe('UnpaidPaymentNotice', () => {
     expect(chip.className).toMatch(/bg-red-600/);
   });
 
-  it('renders the Interac logo next to the word Interac', () => {
-    render(<UnpaidPaymentNotice unpaidCount={1} email="player@example.com" />);
-    const logo = screen.getByAltText('Interac');
+  it('renders the Interac logo as a decorative image', () => {
+    const { container } = render(
+      <UnpaidPaymentNotice unpaidCount={1} email="player@example.com" />
+    );
+    const logo = container.querySelector('img[src="/interac-logo.png"]');
     expect(logo).toBeInTheDocument();
-    expect(logo).toHaveAttribute('src', '/interac-logo.png');
+    // Decorative: empty alt + aria-hidden so the adjacent word "Interac" isn't
+    // announced twice by screen readers.
+    expect(logo).toHaveAttribute('alt', '');
+    expect(logo).toHaveAttribute('aria-hidden');
   });
 
   it('uses singular copy for a single unpaid prediction', () => {
