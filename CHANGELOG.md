@@ -5,6 +5,15 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.8] - 2026-06-02
+
+### Fixed
+
+- Unpaid-prediction notice (`/predictions` + `/leaderboard`): the registered email the user
+  must include in the Interac e-transfer message now renders as a high-contrast red chip and
+  the copy is strengthened to "You MUST put your registered email … in the Interac message …
+  without it your entries can't be credited." Previously it was easy-to-miss inline text. (#199)
+
 ## [1.0.7] - 2026-06-02
 
 ### Fixed
