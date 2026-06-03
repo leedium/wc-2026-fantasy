@@ -5,6 +5,28 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.11] - 2026-06-03
+
+### Added
+
+- Account settings (`/account`): users can now **change their email address**. Submitting a new
+  email sends confirmation links to both the current and new inbox (Supabase double-confirm); the
+  change only takes effect once both are clicked. Links route through `/auth/callback`, which
+  already verifies the `email_change` OTP type. (#205)
+- Account settings (`/account`): a **"Delete account"** option in a new Danger-zone card, backed by
+  a caller-scoped `delete_own_account()` RPC (migration `0060`). Deletion requires typing your own
+  username to confirm (verified server-side) and is **blocked when the account has any paid
+  leaderboard entry** (cash or free pick) or is an admin — those must be removed by the organizer
+  first, preserving payment/leaderboard history. On success the user is signed out and FK cascades
+  wipe predictions, payments, and referral links. (#205)
+
+### Fixed
+
+- Email-change confirmation link routing: added a custom `email_change` email template (and
+  `[auth.email.template.email_change]` config) so the link points at `/auth/callback` instead of
+  GoTrue's `/verify` route, which the local CLI builds in a form Kong can't route ("no Route matched
+  with those values"). Mirrors the existing recovery/confirmation template overrides. (#205)
+
 ## [1.0.10] - 2026-06-02
 
 ### Changed
