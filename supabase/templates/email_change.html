@@ -1,0 +1,10 @@
+<h2>Confirm your email change</h2>
+
+<p>Follow this link to confirm updating your email to {{ .NewEmail }}:</p>
+<p><a href="{{ .SiteURL }}/auth/callback?token_hash={{ .TokenHash }}&type=email_change&next=/account">Confirm email change</a></p>
+
+<p>With double confirmation enabled, this link is sent to both your current and new address — click it in both inboxes to finish the change.</p>
+
+<p>If you didn't request this, you can ignore this email.</p>
+
+<p>Alternatively, enter the code: {{ .Token }}</p>

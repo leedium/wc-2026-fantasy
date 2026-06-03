@@ -43,6 +43,14 @@ content_path = "./supabase/templates/recovery.html"
 subject = "Confirm your email"
 content_path = "./supabase/templates/confirmation.html"
 
+# Same fix for the email-change confirmation email. With
+# double_confirm_changes this template is sent to BOTH the current and new
+# address (each gets its own token_hash); /auth/callback verifies the
+# email_change OTP type.
+[auth.email.template.email_change]
+subject = "Confirm your email change"
+content_path = "./supabase/templates/email_change.html"
+
 [inbucket]
 enabled = true
 port = 54324
