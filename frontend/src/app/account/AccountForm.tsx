@@ -11,6 +11,14 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { FieldError } from '@/components/ui/field-error';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import { RewardsSummaryCard } from '@/components/rewards/RewardsSummaryCard';
 import { useAuthContext } from '@/providers/AuthProvider';
 import { ROUTES, USERNAME_REGEX } from '@/lib/constants';
@@ -24,7 +32,7 @@ interface AccountFormProps {
 
 export function AccountForm({ email, initialUsername, initialDisplayName }: AccountFormProps) {
   const router = useRouter();
-  const { refreshProfile } = useAuthContext();
+  const { refreshProfile, signOut } = useAuthContext();
   const [username, setUsername] = React.useState(initialUsername);
   const [displayName, setDisplayName] = React.useState(initialDisplayName);
   const [touched, setTouched] = React.useState<Record<'username' | 'displayName', boolean>>({
@@ -124,13 +132,6 @@ export function AccountForm({ email, initialUsername, initialDisplayName }: Acco
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4" noValidate>
             <div className="space-y-1">
-              <Label htmlFor="account-email">Email</Label>
-              <Input id="account-email" type="email" value={email} readOnly disabled />
-              <p className="text-muted-foreground text-xs">
-                Email is set at signup and can&apos;t be changed here.
-              </p>
-            </div>
-            <div className="space-y-1">
               <Label htmlFor="account-username">Username</Label>
               <Input
                 id="account-username"
@@ -190,6 +191,8 @@ export function AccountForm({ email, initialUsername, initialDisplayName }: Acco
         </CardContent>
       </Card>
 
+      <EmailCard currentEmail={email} />
+
       {/* Compact free-pick summary. Full breakdown (referral + loyalty
           activity) lives on /rewards; share-link copy controls live on
           /referrals. */}
@@ -203,6 +206,225 @@ export function AccountForm({ email, initialUsername, initialDisplayName }: Acco
           .
         </p>
       </div>
+
+      <DangerZoneCard
+        username={initialUsername}
+        onDeleted={async () => {
+          await signOut();
+          router.push(ROUTES.home);
+        }}
+      />
     </PageLayout>
+  );
+}
+
+function EmailCard({ currentEmail }: { currentEmail: string }) {
+  const [newEmail, setNewEmail] = React.useState('');
+  const [error, setError] = React.useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = React.useState(false);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError(null);
+    const email = newEmail.trim();
+    if (!email) {
+      setError('Enter a new email address.');
+      return;
+    }
+    if (email.toLowerCase() === currentEmail.toLowerCase()) {
+      setError('That is already your email address.');
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      const res = await fetch('/api/auth/change-email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email }),
+      });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        setError(String(body.error ?? 'Could not update email.'));
+        return;
+      }
+      setNewEmail('');
+      toast.success('Check both your current and new inbox to confirm the change.');
+    } catch {
+      toast.error('Could not update email. Please try again.');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  return (
+    <Card className="mt-6 max-w-xl">
+      <CardHeader>
+        <CardTitle>Email</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <form onSubmit={handleSubmit} className="space-y-4" noValidate>
+          <div className="space-y-1">
+            <Label htmlFor="account-current-email">Current email</Label>
+            <Input id="account-current-email" type="email" value={currentEmail} readOnly disabled />
+          </div>
+          <div className="space-y-1">
+            <Label htmlFor="account-new-email">New email</Label>
+            <Input
+              id="account-new-email"
+              type="email"
+              value={newEmail}
+              onChange={(e) => {
+                setNewEmail(e.target.value);
+                if (error) setError(null);
+              }}
+              disabled={isSubmitting}
+              autoComplete="email"
+              placeholder="you@example.com"
+              aria-invalid={error ? true : undefined}
+              aria-describedby={error ? 'account-new-email-error' : 'account-new-email-help'}
+              className={cn(error && 'border-destructive focus-visible:ring-destructive')}
+            />
+            {!error && (
+              <p id="account-new-email-help" className="text-muted-foreground text-xs">
+                We&apos;ll send confirmation links to both your current and new address. The change
+                takes effect only after you click both.
+              </p>
+            )}
+            <FieldError id="account-new-email-error" message={error || undefined} />
+          </div>
+          <div className="flex justify-end">
+            <Button type="submit" disabled={isSubmitting || !newEmail.trim()}>
+              {isSubmitting ? 'Sending…' : 'Send confirmation'}
+            </Button>
+          </div>
+        </form>
+      </CardContent>
+    </Card>
+  );
+}
+
+function DangerZoneCard({
+  username,
+  onDeleted,
+}: {
+  username: string;
+  onDeleted: () => Promise<void>;
+}) {
+  const [open, setOpen] = React.useState(false);
+  const [confirmValue, setConfirmValue] = React.useState('');
+  const [error, setError] = React.useState<string | null>(null);
+  const [isDeleting, setIsDeleting] = React.useState(false);
+
+  const matches = confirmValue.trim().toLowerCase() === username.toLowerCase() && !!username;
+
+  const handleOpenChange = (next: boolean) => {
+    if (isDeleting) return;
+    setOpen(next);
+    if (!next) {
+      setConfirmValue('');
+      setError(null);
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!matches) return;
+    setError(null);
+    setIsDeleting(true);
+    try {
+      const res = await fetch('/api/account/delete', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ confirmUsername: confirmValue.trim() }),
+      });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        const msg = String(body.error ?? 'Could not delete account.');
+        if (msg.includes('account has paid entries')) {
+          setError(
+            'Your account has paid entries on the leaderboard. Please contact the pool organizer to remove them before deleting your account.'
+          );
+          return;
+        }
+        if (msg.includes('cannot delete admin account')) {
+          setError('Admin accounts can’t be deleted here. Please contact the organizer.');
+          return;
+        }
+        setError(msg);
+        return;
+      }
+      toast.success('Your account has been deleted.');
+      await onDeleted();
+    } catch {
+      setError('Could not delete account. Please try again.');
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  return (
+    <Card className="border-destructive/50 mt-6 max-w-xl">
+      <CardHeader>
+        <CardTitle className="text-destructive">Danger zone</CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <p className="text-muted-foreground text-sm">
+          Permanently delete your account. This removes your predictions, payment records, and
+          referral links. This cannot be undone.
+        </p>
+        <Button type="button" variant="destructive" onClick={() => setOpen(true)}>
+          Delete account
+        </Button>
+      </CardContent>
+
+      <Dialog open={open} onOpenChange={handleOpenChange}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete your account?</DialogTitle>
+            <DialogDescription>
+              This permanently deletes your account along with all of your predictions, payment
+              records, and referral links. This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2">
+            <Label htmlFor="delete-confirm">
+              Type your username <span className="font-semibold">{username}</span> to confirm
+            </Label>
+            <Input
+              id="delete-confirm"
+              type="text"
+              value={confirmValue}
+              onChange={(e) => {
+                setConfirmValue(e.target.value);
+                if (error) setError(null);
+              }}
+              disabled={isDeleting}
+              autoComplete="off"
+              aria-invalid={error ? true : undefined}
+              aria-describedby={error ? 'delete-confirm-error' : undefined}
+            />
+            <FieldError id="delete-confirm-error" message={error || undefined} />
+          </div>
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => handleOpenChange(false)}
+              disabled={isDeleting}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              variant="destructive"
+              onClick={handleDelete}
+              disabled={!matches || isDeleting}
+            >
+              {isDeleting ? 'Deleting…' : 'Delete account'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </Card>
   );
 }
