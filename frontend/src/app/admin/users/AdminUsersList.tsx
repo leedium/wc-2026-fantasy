@@ -124,7 +124,7 @@ export function AdminUsersList() {
         <CardContent className="space-y-4 p-4">
           <div className="flex items-center justify-between gap-2">
             <Input
-              placeholder="Search username…"
+              placeholder="Search username, email, or prediction name…"
               value={search}
               onChange={(e) => {
                 setSearch(e.target.value);
