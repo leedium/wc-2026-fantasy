@@ -41,8 +41,17 @@ describe('middleware', () => {
 
   it('passes through public routes even when signed out', async () => {
     getUserMock.mockResolvedValue({ data: { user: null } });
-    const res = await middleware(makeRequest('/leaderboard'));
+    const res = await middleware(makeRequest('/rules'));
     expect(res.status).toBe(200);
+  });
+
+  it('redirects unauthenticated users from /leaderboard to /login', async () => {
+    getUserMock.mockResolvedValue({ data: { user: null } });
+    const res = await middleware(makeRequest('/leaderboard'));
+    expect(res.status).toBe(307);
+    const location = res.headers.get('location')!;
+    expect(location).toContain('/login');
+    expect(location).toContain('next=%2Fleaderboard');
   });
 
   it('redirects unauthenticated users from /admin to /login', async () => {

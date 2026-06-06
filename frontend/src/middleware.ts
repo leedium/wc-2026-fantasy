@@ -4,6 +4,7 @@ import { env } from '@/config/env';
 
 const PROTECTED_PREFIXES = [
   '/predictions',
+  '/leaderboard',
   '/admin',
   '/account',
   '/referrals',
