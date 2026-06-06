@@ -8,6 +8,13 @@ export async function GET(request: NextRequest) {
 
   const supabase = await getServerSupabase();
 
+  // The leaderboard is gated to signed-in users (middleware protects the page;
+  // this guards the API directly since the prefix check doesn't cover /api/*).
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
   const { data: tournament } = await supabase
     .from('tournaments')
     .select('id')
@@ -23,16 +30,12 @@ export async function GET(request: NextRequest) {
   // We check is_admin via profiles since the user's session is already
   // attached to the cookie client; admin_get_leaderboard double-checks
   // is_admin() at the DB level so the API can't be tricked.
-  const { data: authData } = await supabase.auth.getUser();
-  let isAdmin = false;
-  if (authData.user) {
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('is_admin')
-      .eq('id', authData.user.id)
-      .maybeSingle();
-    isAdmin = profile?.is_admin === true;
-  }
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('is_admin')
+    .eq('id', user.id)
+    .maybeSingle();
+  const isAdmin = profile?.is_admin === true;
 
   const rpcName = isAdmin ? 'admin_get_leaderboard' : 'get_leaderboard';
   const { data, error } = await supabase.rpc(rpcName, {

@@ -41,8 +41,15 @@ describe('GET /api/leaderboard', () => {
     supabaseMock.from.mockReset();
     supabaseMock.rpc.mockReset();
     supabaseMock.auth.getUser.mockReset();
-    // Default: anonymous caller
+    // Default: authenticated non-admin caller (the leaderboard is login-gated).
+    supabaseMock.auth.getUser.mockResolvedValue({ data: { user: { id: 'u1' } } });
+  });
+
+  it('returns 401 when unauthenticated', async () => {
     supabaseMock.auth.getUser.mockResolvedValue({ data: { user: null } });
+    const res = await GET(req('?page=1&pageSize=25'));
+    expect(res.status).toBe(401);
+    expect(supabaseMock.rpc).not.toHaveBeenCalled();
   });
 
   it('returns empty list when no active tournament', async () => {
@@ -54,8 +61,13 @@ describe('GET /api/leaderboard', () => {
     expect(await res.json()).toEqual({ entries: [], total: 0, page: 1, pageSize: 25 });
   });
 
-  it('shapes the RPC result into paginated entries (anon caller, no email)', async () => {
-    supabaseMock.from.mockImplementation(mockTournamentLookup);
+  it('shapes the RPC result into paginated entries (non-admin, no email)', async () => {
+    let callIdx = 0;
+    supabaseMock.from.mockImplementation(() => {
+      const handler = callIdx === 0 ? mockTournamentLookup() : mockProfileLookup(false);
+      callIdx += 1;
+      return handler;
+    });
     supabaseMock.rpc.mockResolvedValue({
       data: [
         {
