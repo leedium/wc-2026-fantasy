@@ -5,6 +5,32 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.12] - 2026-06-09
+
+### Fixed
+
+- Predictions wizard: editing a saved prediction and changing a group-stage 3rd-place pick that an
+  existing Best-3rds (advancer) pick depended on no longer blocks you from progressing. The orphaned
+  advancer — whose team is no longer one of your 3rd-place picks — is now pruned from state the moment
+  the group changes (with a toast), and persisted alongside the group edit. Previously it lingered in
+  state, so the autosave that fires on the next step transition sent it to `submit_predictions`, which
+  rejected it (`advancer team … not in your 3rd-place picks`) and silently blocked navigation. The
+  prune also covers the autofill / randomize / reset group helpers. (#210)
+
+### Added
+
+- Admin user search (`/admin/users`): the search box now also matches **prediction name**, scoped to
+  the active tournament, so payments referenced by a prediction name (rather than username/email) can
+  be linked to the owning account. Migration `0061` adds an `EXISTS` branch to `admin_list_users`;
+  a user with multiple matching predictions still appears once. (#207)
+
+### Changed
+
+- Leaderboard is now **login-gated** (previously public), matching `/predictions` and `/results`.
+  `/leaderboard` is added to the middleware's protected prefixes (logged-out users are redirected to
+  `/login?next=%2Fleaderboard`), and `/api/leaderboard` returns `401` when unauthenticated as
+  defense-in-depth. The nav link stays visible to logged-out users and routes them through login. (#208)
+
 ## [1.0.11] - 2026-06-03
 
 ### Added
