@@ -93,6 +93,11 @@ jest.mock('@/components/predictions/GroupStageForm', () => ({
           onPredictionChange(predictions[0].groupId, 'first', 'mex')
         }
       />
+      <button
+        type="button"
+        data-testid="clear-group-a-third"
+        onClick={() => onPredictionChange('A', 'third', null)}
+      />
     </div>
   ),
 }));
@@ -150,8 +155,15 @@ interface AdvancersFormProps {
   onRankChange: (rank: number, teamId: string | null) => void;
 }
 jest.mock('@/components/predictions/AdvancersForm', () => ({
-  AdvancersForm: ({ onRankChange }: AdvancersFormProps) => (
+  AdvancersForm: ({ value, onRankChange }: AdvancersFormProps) => (
     <div data-testid="advancers-form">
+      <span data-testid="advancer-team-ids">
+        {value
+          .slice()
+          .sort((a, b) => a.rank - b.rank)
+          .map((a) => a.teamId)
+          .join(',')}
+      </span>
       <button
         type="button"
         data-testid="fill-all-bundles"
@@ -498,6 +510,84 @@ describe('PredictionsPageContent — stepper navigation', () => {
     expect(screen.queryByRole('button', { name: /Predictions Locked/ })).toBeNull();
     expect(screen.queryByRole('button', { name: /Save progress/ })).toBeNull();
     expect(screen.queryByRole('button', { name: /Submit Prediction/ })).toBeNull();
+  });
+
+  it('prunes orphaned best-3rds picks when a group 3rd-place pick changes (edit mode)', async () => {
+    // Repro for the "advancer team … not in your 3rd-place picks" bug: editing
+    // a submitted prediction and changing a group 3rd-place pick used to leave
+    // the now-orphaned advancer in state. The next step transition autosaved
+    // it, the RPC rejected it, and navigation was silently blocked. The wizard
+    // now prunes the orphan (and toasts) the moment the group changes, so the
+    // autosave payload stays valid.
+    configureQueries(); // phase 1, lock in the future
+    const fetchMock = global.fetch as jest.Mock;
+    fetchMock.mockResolvedValue({ ok: true, json: async () => ({ predictionId: 'pred-1' }) });
+
+    // Every group fully filled; group A's 3rd is 'rsa'. Advancers ranks 1–8
+    // are each group's 3rd-place team, so all 8 are valid to start.
+    const groups = fixtureGroups.map((g) => ({
+      groupId: g.id,
+      first: g.teams[0].id,
+      second: g.teams[1].id,
+      third: g.teams[2].id,
+      fourth: g.teams[3].id,
+    }));
+    const advancers = fixtureGroups.slice(0, 8).map((g, i) => ({
+      rank: i + 1,
+      teamId: g.teams[2].id,
+    }));
+
+    const user = userEvent.setup();
+    render(
+      <PredictionsPageContent
+        mode="edit"
+        predictionId="pred-1"
+        initial={{
+          id: 'pred-1',
+          name: 'Main',
+          totalGoals: null,
+          championTeamId: 'arg',
+          submittedAt: new Date(Date.now() - 60_000).toISOString(),
+          isPaid: false,
+          paidAt: null,
+          groups,
+          knockout: [],
+          advancers,
+        }}
+      />
+    );
+
+    // On the Group Stage step, clear group A's 3rd-place pick → 'rsa' is no
+    // longer a valid advancer and must be pruned (with a toast).
+    await user.click(await screen.findByRole('tab', { name: /Group Stage/ }));
+    await user.click(await screen.findByTestId('clear-group-a-third'));
+    await waitFor(() =>
+      expect(toastInfo).toHaveBeenCalledWith(
+        expect.stringMatching(/Cleared 1 best-3rd pick no longer backed by a 3rd-place team/)
+      )
+    );
+
+    // Navigate to Best 3rds via the tab (Continue is disabled now that group A
+    // is incomplete). The autosave that fires must succeed — proving the
+    // orphan is gone — and the surviving picks no longer include 'rsa'.
+    await user.click(screen.getByRole('tab', { name: /Best 3rds/ }));
+    await screen.findByTestId('advancers-form');
+    const ids = screen.getByTestId('advancer-team-ids').textContent ?? '';
+    expect(ids).not.toContain('rsa');
+    expect(ids.split(',').filter(Boolean)).toHaveLength(7);
+
+    // The autosave payload that fired on navigation excludes the orphan, so
+    // the RPC would accept it (no "not in your 3rd-place picks" rejection).
+    const saveCall = fetchMock.mock.calls.find(([, init]) => {
+      try {
+        return JSON.parse((init as RequestInit).body as string).groups?.length > 0;
+      } catch {
+        return false;
+      }
+    });
+    expect(saveCall).toBeDefined();
+    const body = JSON.parse((saveCall![1] as RequestInit).body as string);
+    expect(body.advancers.map((a: { teamId: string }) => a.teamId)).not.toContain('rsa');
   });
 
   it('lets a super admin advance past Groups when editing in a locked tournament', async () => {
