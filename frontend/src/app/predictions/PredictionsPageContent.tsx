@@ -49,6 +49,7 @@ import {
 } from '@/lib/fifaRankings';
 import { randomizeAdvancers, randomizeGroupPredictions } from '@/lib/randomPredictions';
 import { applyGroupPositionChange } from '@/lib/groupSwap';
+import { pruneOrphanedAdvancers } from '@/lib/advancers';
 import { cascadeKnockoutPick } from '@/lib/knockoutCascade';
 import { AdvancersForm } from '@/components/predictions/AdvancersForm';
 import { fetchJSON } from '@/lib/api/fetchJSON';
@@ -748,6 +749,31 @@ export function PredictionsPageContent({
     persistDraft({ predictionName: value });
   };
 
+  // Best-3rds picks must stay a subset of the group 3rd-place picks. When a
+  // group change drops a team out of 3rd place, prune the now-orphaned
+  // advancer(s) and persist groups + advancers together so the autosave that
+  // fires on the next step transition can't send an invalid payload (which
+  // the RPC rejects, silently blocking navigation). Persisting both fields in
+  // one draft keeps the saved snapshot internally consistent.
+  const commitGroupChange = (nextGroups: GroupPrediction[]) => {
+    setAdvancerPredictions((prevAdvancers) => {
+      const { advancers: prunedAdvancers, removedCount } = pruneOrphanedAdvancers(
+        prevAdvancers,
+        nextGroups
+      );
+      persistDraft({ groupPredictions: nextGroups, advancerPredictions: prunedAdvancers });
+      if (removedCount > 0) {
+        toast.info(
+          `Cleared ${removedCount} best-3rd ${
+            removedCount === 1 ? 'pick' : 'picks'
+          } no longer backed by a 3rd-place team`
+        );
+        return prunedAdvancers;
+      }
+      return prevAdvancers;
+    });
+  };
+
   const handleGroupPredictionChange = (
     groupId: string,
     position: PositionKey,
@@ -757,7 +783,7 @@ export function PredictionsPageContent({
       // Conflict-swap semantics live in @/lib/groupSwap so admin code can
       // reuse the same behavior.
       const next = applyGroupPositionChange(prev, groupId, position, teamId);
-      persistDraft({ groupPredictions: next });
+      commitGroupChange(next);
       return next;
     });
   };
@@ -766,21 +792,21 @@ export function PredictionsPageContent({
     if (!groups) return;
     const next = autofillGroupPredictionsByFifaRanking(groups);
     setGroupPredictions(next);
-    persistDraft({ groupPredictions: next });
+    commitGroupChange(next);
   };
 
   const handleRandomizeGroups = () => {
     if (!groups) return;
     const next = randomizeGroupPredictions(groups);
     setGroupPredictions(next);
-    persistDraft({ groupPredictions: next });
+    commitGroupChange(next);
   };
 
   const handleResetGroups = () => {
     if (!groups) return;
     const next = buildEmptyGroups(groups);
     setGroupPredictions(next);
-    persistDraft({ groupPredictions: next });
+    commitGroupChange(next);
   };
 
   const handleKnockoutPredictionChange = (matchId: string, winnerId: string | null) => {
