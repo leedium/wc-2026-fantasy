@@ -1274,14 +1274,26 @@ export function PredictionsPageContent({
   const showReviewSubmit = isLastStep && !lockedReadOnly;
   const showContinue =
     !isLastStep && (lockedReadOnly || !isPhase1LastStep || isSuperAdmin);
+  // A Phase 1 server save needs champion_team_id (the RPC requires it on any
+  // Phase 1 write), but the champion is the *last* Phase 1 step — so on the
+  // earlier steps (Group Stage, Best 3rds) there's nothing we can persist to
+  // the server yet. canAutosave() already skips the save in that window; this
+  // mirrors it for the explicit button. Without this, Save progress would call
+  // persist(), hit its champion guard, and bounce the user to the Champion
+  // Pick step — skipping Best 3rds. Their picks are still safe in the
+  // localStorage draft; "Save Phase 1 Picks" on the champion step is the real
+  // server commit.
+  const championRequiredButMissing =
+    (usesAdminRoute || phase === 'phase1') && !championTeamId;
   // Save progress: an explicit "persist now, don't advance" action so a user
   // can checkpoint the current round (Phase 1 or Phase 2) in place. Auto-save
   // still fires on Continue / Back / sub-tab; this covers staying put. Hidden
   // where a dedicated commit button already owns the footer (Phase 1 last
-  // step → Save Phase 1 Picks; final/tiebreaker → Submit Prediction) and in a
-  // locked read-only view. Reuses persist()'s name + champion validation.
+  // step → Save Phase 1 Picks; final/tiebreaker → Submit Prediction), in a
+  // locked read-only view, and where no server save is yet possible (Phase 1
+  // before the champion is picked). Reuses persist()'s name + champion validation.
   const showSaveProgressInline =
-    !showSavePhase1 && !showReviewSubmit && !lockedReadOnly;
+    !showSavePhase1 && !showReviewSubmit && !lockedReadOnly && !championRequiredButMissing;
   // Phase 2 only: let the user pull up the FULL prediction (both phases,
   // read-only) at any point in the knockout flow. Needs a persisted prediction
   // to fetch, so it's edit-mode + an existing id.
