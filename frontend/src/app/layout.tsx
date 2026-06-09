@@ -58,6 +58,20 @@ export default async function RootLayout({
   return (
     <html lang="en" className="dark" style={{ colorScheme: 'dark' }} suppressHydrationWarning>
       <body className={`${inter.variable} font-sans antialiased`}>
+        {/*
+          Turbopack instruments functions with an esbuild-style `__name` keep-names helper that
+          only exists inside its module runtime. next-themes serializes its anti-flash theme
+          function via `Function.prototype.toString()` and injects it as an inline <script>, which
+          then references `__name` in the browser global scope where it is undefined — throwing
+          "ReferenceError: __name is not defined" on every page load. This no-op shim defines it
+          globally and runs before the next-themes script (injected right after, as the next child
+          of <body>).
+        */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: 'window.__name||(window.__name=function(t){return t})',
+          }}
+        />
         <ThemeProvider>
           <QueryProvider>
             <AuthProvider initialUser={user} initialProfile={profile}>
