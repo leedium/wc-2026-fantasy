@@ -6,9 +6,9 @@
 const wmSendMock = jest.fn();
 const wmCloseMock = jest.fn().mockResolvedValue(undefined);
 const wmConnectMock = jest.fn();
-jest.mock('worker-mailer/dist/index.mjs', () => ({
+jest.mock('worker-mailer', () => ({
   WorkerMailer: { connect: (...args: unknown[]) => wmConnectMock(...args) },
-}), { virtual: true });
+}));
 
 // --- nodemailer mock (Node / `next dev` path) ---
 const nmSendMailMock = jest.fn();

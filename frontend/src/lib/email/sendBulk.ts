@@ -141,13 +141,16 @@ export async function sendBulkEmail({
   if (toSend.length === 0) return { sent: 0, failed: 0, skipped, errors: [] };
 
   if (isWorkersRuntime()) {
-    // Import the ESM build explicitly. worker-mailer's `main` (CJS) does
-    // `require("cloudflare:sockets")`, which esbuild emits as a CJS require that
-    // throws "Dynamic require of cloudflare:sockets is not supported" at runtime
-    // on workerd. The `.mjs` build uses a static `import` that workerd resolves
-    // natively (paired with the cloudflare:sockets esbuild external, see
-    // patches/@opennextjs+cloudflare). Lazy so it stays out of the Node build.
-    const { WorkerMailer } = await import('worker-mailer/dist/index.mjs');
+    // Import the package root (not a subpath). worker-mailer is in
+    // `serverExternalPackages`, so OpenNext copies it out and registers it as a
+    // runtime module — but only the package entry, not arbitrary subpaths (a
+    // `/dist/index.mjs` subpath import resolves to an unregistered module id and
+    // throws "No such module" at runtime). A `patches/worker-mailer` patch adds an
+    // `exports` map so the entry resolves to the ESM `.mjs` build, whose static
+    // `import { connect } from "cloudflare:sockets"` workerd resolves natively
+    // (vs the CJS build's `require`, which throws). Lazy so it stays out of the
+    // Node build's module graph (Node uses the nodemailer branch below).
+    const { WorkerMailer } = await import('worker-mailer');
     const mailer = await WorkerMailer.connect({
       host: config.host,
       port: config.port,
