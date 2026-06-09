@@ -5,6 +5,18 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.4] - 2026-06-09
+
+### Fixed
+
+- Admin broadcast email send still 500'd in production (`No such module
+  "worker-mailer-…/dist/index.mjs"`). With `worker-mailer` in `serverExternalPackages`, OpenNext
+  registers the package **entry** as a runtime module but not arbitrary subpaths, so the previous
+  `worker-mailer/dist/index.mjs` subpath import resolved to an unregistered module id. Now import the
+  package **root** (`worker-mailer`) and add a `patches/worker-mailer` `exports` map so the entry
+  resolves to the ESM `.mjs` build (whose static `import { connect } from "cloudflare:sockets"`
+  workerd resolves natively, vs the CJS build's `require`). (#220)
+
 ## [1.1.3] - 2026-06-09
 
 ### Fixed
