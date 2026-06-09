@@ -5,6 +5,19 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.2] - 2026-06-09
+
+### Fixed
+
+- Admin broadcast email send threw a 500 in production (`Dynamic require of "cloudflare:sockets" is
+  not supported`). Next/Turbopack was compiling `worker-mailer` and rewriting its
+  `import { connect } from "cloudflare:sockets"` into a CJS `require`, which the workerd runtime
+  rejects. `worker-mailer` is now declared in `serverExternalPackages` so Next leaves it untouched,
+  and `sendBulk` imports the package's ESM build (`worker-mailer/dist/index.mjs`) so the static
+  `import` survives to the OpenNext bundle (paired with the existing `cloudflare:sockets` esbuild
+  external from 1.1.1). Verified the built worker now emits an ESM `import … from "cloudflare:sockets"`
+  with zero `require(...)`. (#218)
+
 ## [1.1.1] - 2026-06-09
 
 ### Fixed

@@ -141,9 +141,13 @@ export async function sendBulkEmail({
   if (toSend.length === 0) return { sent: 0, failed: 0, skipped, errors: [] };
 
   if (isWorkersRuntime()) {
-    // Imported lazily: worker-mailer pulls in `cloudflare:sockets`, which only
-    // exists in the Workers runtime — keep it out of the Node build's graph.
-    const { WorkerMailer } = await import('worker-mailer');
+    // Import the ESM build explicitly. worker-mailer's `main` (CJS) does
+    // `require("cloudflare:sockets")`, which esbuild emits as a CJS require that
+    // throws "Dynamic require of cloudflare:sockets is not supported" at runtime
+    // on workerd. The `.mjs` build uses a static `import` that workerd resolves
+    // natively (paired with the cloudflare:sockets esbuild external, see
+    // patches/@opennextjs+cloudflare). Lazy so it stays out of the Node build.
+    const { WorkerMailer } = await import('worker-mailer/dist/index.mjs');
     const mailer = await WorkerMailer.connect({
       host: config.host,
       port: config.port,
