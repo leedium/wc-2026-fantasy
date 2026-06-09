@@ -5,6 +5,18 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.13] - 2026-06-09
+
+### Fixed
+
+- Predictions wizard: in a new (Phase 1) prediction, clicking **Save progress** on the Group Stage
+  step no longer skips Best 3rds and jumps to the Gut Feeling Champion step. The create flow requires
+  a champion (the last Phase 1 step) for any server save, so "Save progress" — which can't persist
+  yet — is now hidden until a champion is picked, instead of calling `persist()` and being bounced to
+  the champion step. Picks are still checkpointed locally via the draft; "Save Phase 1 Picks" on the
+  champion step remains the Phase 1 commit. The button is unchanged in edit mode (champion already
+  set) and Phase 2. (#213)
+
 ## [1.0.12] - 2026-06-09
 
 ### Fixed
