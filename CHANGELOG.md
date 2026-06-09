@@ -5,6 +5,17 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.1] - 2026-06-09
+
+### Fixed
+
+- Production deploy: the v1.1.0 build failed during OpenNext bundling for Cloudflare Workers with
+  `Could not resolve "cloudflare:sockets"` — the runtime built-in imported by `worker-mailer` (the
+  admin broadcast email tool's SMTP transport). OpenNext's esbuild server bundle doesn't mark the
+  `cloudflare:` scheme external and exposes no config hook to add one, so a `patch-package` patch
+  appends `cloudflare:sockets` to that external list, with a `postinstall` hook so it applies in CI.
+  `worker-mailer` is still bundled; only the runtime built-in stays external (workerd provides it). (#217)
+
 ## [1.1.0] - 2026-06-09
 
 ### Added
