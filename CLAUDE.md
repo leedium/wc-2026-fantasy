@@ -1,7 +1,7 @@
 # CLAUDE.md
 
-> **Version:** 3.7.1
-> **Last Updated:** 2026-05-30
+> **Version:** 3.8.0
+> **Last Updated:** 2026-06-09
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
@@ -209,6 +209,23 @@ All by client IP. The first three protect against email enumeration / mailbox fl
 - Do not include "Co-Authored-By" lines in commit messages.
 - **Never push directly to `main`.** All changes — including small follow-up fixes — must land on a feature branch and go through a pull request. Even one-line fixes during a session: branch, commit, push, open PR.
 
+
+## Versioning & Releases
+
+This project follows [Semantic Versioning](https://semver.org/) **strictly** — the CHANGELOG header is not aspirational. The version in `frontend/package.json` must match the git tag and GitHub release, and the bump is derived mechanically from the CHANGELOG sections in that release:
+
+- **MAJOR** (`2.0.0`) — any breaking change.
+- **MINOR** (`1.1.0`, resets PATCH to `0`) — any non-breaking `### Added` or `### Changed`.
+- **PATCH** (`1.0.13`) — the release contains **only** `### Fixed` (and/or internal/doc-only changes).
+
+A release that bundles features and fixes takes the **highest** applicable bump — features ⇒ MINOR even if fixes ride along. **Never patch-bump a release that ships a feature** (this is the rule the `1.0.x` line violated through 1.0.12; correct it going forward, but don't renumber already-published tags).
+
+### Release flow
+
+1. Branch `release/vX.Y.Z` off `main`.
+2. Bump `frontend/package.json` to `X.Y.Z` and prepend a `## [X.Y.Z] - YYYY-MM-DD` CHANGELOG section covering **every** PR merged since the last release, grouped into `### Added` / `### Changed` / `### Fixed`, each line referencing its `#PR`. Pick `X.Y.Z` by applying the bump rules above to those grouped sections. Commit: `chore(release): vX.Y.Z — changelog entry and version bump`.
+3. PR → merge to `main`.
+4. Annotated tag `vX.Y.Z` on the merge commit, push it, then publish the GitHub release from the CHANGELOG body: `gh release create vX.Y.Z --latest --notes-file <body>`.
 
 ## SQL Statements
 
