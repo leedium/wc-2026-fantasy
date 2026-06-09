@@ -5,6 +5,17 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.3] - 2026-06-09
+
+### Fixed
+
+- `Uncaught ReferenceError: __name is not defined` on every page load. The OpenNext/esbuild worker
+  build instruments functions with an esbuild `__name` keep-names helper; next-themes serializes its
+  anti-flash theme function via `Function.prototype.toString()` and injects it as an inline `<script>`,
+  which then referenced `__name` in the browser global scope where it doesn't exist. Added a no-op
+  `window.__name` shim as the first child of `<body>` (running before next-themes' injected script).
+  Pre-existing issue (unrelated to the broadcast email work); non-fatal but noisy in the console. (#219)
+
 ## [1.1.2] - 2026-06-09
 
 ### Fixed
