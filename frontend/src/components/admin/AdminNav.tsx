@@ -10,6 +10,7 @@ const links = [
   { label: 'Users', href: '/admin/users' },
   { label: 'Predictions', href: '/admin/predictions' },
   { label: 'Referrals', href: '/admin/referrals' },
+  { label: 'Messages', href: '/admin/messages' },
   { label: 'Tournament', href: '/admin/tournament' },
 ];
 
