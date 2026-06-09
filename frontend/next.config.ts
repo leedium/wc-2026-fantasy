@@ -46,6 +46,13 @@ const securityHeaders = [
 ];
 
 const nextConfig: NextConfig = {
+  // Don't let Next/Turbopack compile worker-mailer: it would rewrite the
+  // package's `import { connect } from "cloudflare:sockets"` into a CJS
+  // `require("cloudflare:sockets")`, which throws "Dynamic require ... not
+  // supported" on the workerd runtime. Left external, its ESM import survives
+  // to the OpenNext esbuild step (where cloudflare:sockets is marked external),
+  // so the final worker keeps a static ESM import that workerd resolves.
+  serverExternalPackages: ['worker-mailer'],
   async headers() {
     return [
       {
