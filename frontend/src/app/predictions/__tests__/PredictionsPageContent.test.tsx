@@ -1258,13 +1258,56 @@ describe('PredictionsPageContent — autosave', () => {
     );
   });
 
-  it('renders Save progress on a Phase 1 round step', async () => {
+  it('hides Save progress in the Phase 1 create flow until a champion is picked (no skip to champion)', async () => {
+    // Repro for the reported bug: on the Group Stage step of a NEW Phase 1
+    // prediction the champion isn't picked yet (it's the last Phase 1 step).
+    // The create RPC requires a champion, so there's nothing to server-save —
+    // yet the old UI showed a "Save progress" button that, when clicked, hit
+    // persist()'s champion guard and bounced the user straight to the Gut
+    // Feeling Champion step, SKIPPING Best 3rds. The button is now hidden
+    // until a champion exists (the draft still checkpoints picks locally), so
+    // the only forward path is Continue → Best 3rds.
     configureQueries(); // phase 1 default
+    const user = userEvent.setup();
     render(<PredictionsPageContent mode="create" />);
 
-    // Group Stage is a "round" — the user can checkpoint here without
-    // advancing to Best 3rds.
     await screen.findByTestId('fill-all-groups');
+    await user.click(screen.getByTestId('fill-all-groups'));
+
+    // Still on Group Stage, no champion → no Save progress button to mis-fire.
+    expect(screen.getByTestId('group-stage-form')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Save progress/i })).toBeNull();
+    // Forward path advances to Best 3rds, not champion.
+    expect(
+      screen.getByRole('button', { name: /Continue to Best 3rds/i })
+    ).toBeInTheDocument();
+  });
+
+  it('renders Save progress on a Phase 1 round once a champion is set (edit mode)', async () => {
+    // With a champion already chosen (e.g. editing an existing Phase 1
+    // prediction) a Phase 1 server save IS possible, so Save progress returns
+    // on the Group Stage round for in-place checkpointing.
+    configureQueries(); // phase 1 default
+    render(
+      <PredictionsPageContent
+        mode="edit"
+        predictionId="pred-1"
+        initial={{
+          id: 'pred-1',
+          name: 'Main',
+          totalGoals: null,
+          championTeamId: 'arg',
+          submittedAt: null,
+          isPaid: false,
+          paidAt: null,
+          groups: [],
+          knockout: [],
+          advancers: [],
+        }}
+      />
+    );
+
+    await screen.findByTestId('group-stage-form');
     expect(screen.getByRole('button', { name: /Save progress/i })).toBeInTheDocument();
   });
 
