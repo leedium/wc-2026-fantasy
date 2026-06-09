@@ -5,6 +5,23 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.0] - 2026-06-09
+
+### Added
+
+- Admin broadcast email tool (`/admin/messages`): compose a subject + raw-HTML body and send it to
+  **all registered users** or **only users with a paid entry** in the active tournament. Includes a
+  sandboxed-iframe HTML preview, a recipient-scope toggle with live count, a "Send test to me" button,
+  and a confirmation dialog showing the recipient count before a broadcast. Sends are individually
+  addressed (no shared BCC), paced, and hard-capped at 250 per send (surplus reported as `skipped`) to
+  respect SMTP daily limits. The transport is runtime-aware — `worker-mailer` on the Cloudflare Workers
+  runtime (production), with a `nodemailer` fallback under Node for local `next dev`; TLS is derived
+  from `SMTP_SECURE` + port (465 implicit TLS, 587 STARTTLS, plain for local Mailpit). Backed by the
+  `admin_list_recipient_emails` RPC (migration `0063`; SECURITY DEFINER + `is_admin()` gate) and
+  `GET /api/admin/messages/recipients` + `POST /api/admin/messages/send`, both behind `requireAdmin()`.
+  SMTP credentials are configured as Cloudflare Worker secrets. A new **Messages** admin nav tab and a
+  reusable `Textarea` component are included. (#215)
+
 ## [1.0.13] - 2026-06-09
 
 ### Fixed
