@@ -19,6 +19,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Admin predictions list (`/admin/predictions`): a new read-only, tournament-wide table of every
+  prediction (drafts + submitted) for the active tournament, ordered by most recently updated, with
+  columns for user (email + username), prediction name, saved/submitted, and updated. Includes
+  debounced search across email / username / prediction name and pagination, mirroring `/admin/users`.
+  Backed by the `admin_list_predictions` RPC (migration `0062`; SECURITY DEFINER + `is_admin()` gate)
+  and `GET /api/admin/predictions`. (`099a7b9`)
 - Admin user search (`/admin/users`): the search box now also matches **prediction name**, scoped to
   the active tournament, so payments referenced by a prediction name (rather than username/email) can
   be linked to the owning account. Migration `0061` adds an `EXISTS` branch to `admin_list_users`;
