@@ -34,13 +34,14 @@ import { FreePickBanner } from '@/components/predictions/FreePickBanner';
 import { UnpaidPaymentNotice } from '@/components/predictions/UnpaidPaymentNotice';
 import { PRICING, ROUTES } from '@/lib/constants';
 import { fetchJSON } from '@/lib/api/fetchJSON';
-import { needsPayment } from '@/lib/predictions/paymentStatus';
+import { isPhase1StagesComplete, needsPayment } from '@/lib/predictions/paymentStatus';
 import { cn } from '@/lib/utils';
 
 interface ApiPrediction {
   id: string;
   name: string;
   totalGoals: number | null;
+  championTeamId: string | null;
   submittedAt: string | null;
   isPaid: boolean;
   paidAt: string | null;
@@ -261,6 +262,13 @@ export function PredictionsListPage() {
                       <Badge variant="secondary" className="gap-1">
                         <CheckCircle2 className="h-3 w-3" /> Submitted
                       </Badge>
+                    ) : isPhase1StagesComplete(p) ? (
+                      <Badge
+                        variant="secondary"
+                        className="gap-1 bg-blue-600/15 text-blue-700 hover:bg-blue-600/15 dark:bg-blue-400/15 dark:text-blue-300"
+                      >
+                        <CheckCircle2 className="h-3 w-3" /> Phase 1 Complete
+                      </Badge>
                     ) : (
                       <Badge variant="outline" className="gap-1">
                         <FileEdit className="h-3 w-3" /> Draft
@@ -283,7 +291,9 @@ export function PredictionsListPage() {
                   <div className="text-muted-foreground mt-1 text-sm">
                     {p.submittedAt
                       ? `Submitted ${formatTime(p.submittedAt)}`
-                      : 'Saved as draft — submit to qualify for the leaderboard'}
+                      : isPhase1StagesComplete(p)
+                        ? 'Phase 1 complete — submit before lock to qualify for the leaderboard'
+                        : 'Saved as draft — submit to qualify for the leaderboard'}
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
