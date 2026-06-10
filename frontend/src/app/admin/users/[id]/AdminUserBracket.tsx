@@ -24,8 +24,6 @@ import {
 } from '@/components/ui/dialog';
 import { BracketPreviewDialog } from '@/components/predictions/BracketPreviewDialog';
 import { fetchJSON } from '@/lib/api/fetchJSON';
-import { useAuthContext } from '@/providers/AuthProvider';
-import { REFERRAL_CODE_REGEX } from '@/lib/constants';
 
 interface AdminPrediction {
   id: string;
@@ -156,113 +154,8 @@ function PaymentRow({
   );
 }
 
-// Super-admin-only tool to overwrite a user's auto-generated referral code with
-// a recognizable vanity code (e.g. an influencer's handle). The PATCH route's
-// coarse gate is is_admin; the super-admin requirement is enforced both here
-// (the card only renders for super-admins) and in the admin_set_referral_code
-// RPC (which raises 'forbidden' otherwise).
-function ReferralCodeCard({ userId }: { userId: string }) {
-  const query = useQuery<{ overview: { referralCode: string | null } }>({
-    queryKey: ['admin-referral-code', userId],
-    queryFn: () => fetchJSON(`/api/admin/referrals?userId=${userId}`),
-  });
-  const currentCode = query.data?.overview.referralCode ?? null;
-
-  const [codeInput, setCodeInput] = React.useState('');
-  const [note, setNote] = React.useState('');
-  const [busy, setBusy] = React.useState(false);
-
-  // Seed the input with the current code once it loads (and whenever it
-  // changes after a successful save).
-  React.useEffect(() => {
-    if (currentCode) setCodeInput(currentCode);
-  }, [currentCode]);
-
-  const trimmedCode = codeInput.trim().toUpperCase();
-  const codeValid = REFERRAL_CODE_REGEX.test(trimmedCode);
-  const unchanged = currentCode != null && trimmedCode === currentCode.toUpperCase();
-  const canSave = codeValid && note.trim().length > 0 && !unchanged && !busy;
-
-  const save = async () => {
-    setBusy(true);
-    try {
-      const res = await fetch(`/api/admin/users/${userId}/referral-code`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ code: trimmedCode, note: note.trim() }),
-      });
-      if (!res.ok) {
-        const body = await res.json().catch(() => ({}));
-        throw new Error(String(body.error ?? 'Failed'));
-      }
-      toast.success(`Referral code set to ${trimmedCode}`);
-      setNote('');
-      await query.refetch();
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'Failed');
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  return (
-    <Card className="mb-4">
-      <CardHeader>
-        <CardTitle className="text-base">Referral code (super-admin)</CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-3">
-        <div>
-          <p className="text-muted-foreground text-xs uppercase tracking-wide">Current code</p>
-          <p className="font-mono text-sm font-medium">
-            {query.isLoading ? '…' : (currentCode ?? '—')}
-          </p>
-        </div>
-        <div className="flex flex-wrap items-end gap-2">
-          <div className="space-y-1">
-            <label className="text-muted-foreground text-xs" htmlFor="referral-code-input">
-              New code (4–32 chars, A–Z and 0–9)
-            </label>
-            <Input
-              id="referral-code-input"
-              value={codeInput}
-              onChange={(e) => setCodeInput(e.target.value.toUpperCase().replace(/\s+/g, ''))}
-              maxLength={32}
-              disabled={busy}
-              className="w-64 font-mono uppercase tracking-widest"
-              placeholder="e.g. GIUSEPPETHEMC"
-              aria-invalid={codeInput.length > 0 && !codeValid ? true : undefined}
-            />
-          </div>
-          <div className="space-y-1">
-            <label className="text-muted-foreground text-xs" htmlFor="referral-code-note">
-              Reason (audit note, required)
-            </label>
-            <Input
-              id="referral-code-note"
-              value={note}
-              onChange={(e) => setNote(e.target.value)}
-              disabled={busy}
-              className="w-64"
-              placeholder="e.g. influencer vanity code"
-            />
-          </div>
-          <Button size="sm" onClick={save} disabled={!canSave}>
-            {busy ? 'Saving…' : 'Save code'}
-          </Button>
-        </div>
-        {codeInput.length > 0 && !codeValid && (
-          <p className="text-destructive text-xs">
-            Code must be 4–32 characters, using only A–Z and 0–9.
-          </p>
-        )}
-      </CardContent>
-    </Card>
-  );
-}
-
 export function AdminUserBracket({ userId }: { userId: string }) {
   const queryClient = useQueryClient();
-  const { profile } = useAuthContext();
   const [pendingDelete, setPendingDelete] = React.useState<AdminPrediction | null>(null);
   const [isDeleting, setIsDeleting] = React.useState(false);
   const [previewId, setPreviewId] = React.useState<string | null>(null);
@@ -372,8 +265,6 @@ export function AdminUserBracket({ userId }: { userId: string }) {
           </CardContent>
         </Card>
       )}
-
-      {profile?.isSuperAdmin && <ReferralCodeCard userId={userId} />}
 
       <div className="mb-4 flex items-center justify-between">
         <h2 className="text-xl font-semibold">User predictions</h2>
