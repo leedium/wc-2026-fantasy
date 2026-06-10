@@ -16,7 +16,6 @@ import {
   PASSWORD_MIN_LENGTH,
   REFERRAL_CODE_REGEX,
 } from '@/lib/constants';
-import { ANALYTICS_EVENTS, trackEvent } from '@/lib/analytics';
 import { cn } from '@/lib/utils';
 
 type FieldName = 'email' | 'password' | 'confirmPassword';
@@ -241,14 +240,12 @@ export function RegisterForm({ initialReferralCode }: RegisterFormProps = {}) {
       // but also swap the form for a persistent "Check your email" view so
       // users can't miss the next step.
       toast.success('Account created — check your email to confirm.');
-      trackEvent(ANALYTICS_EVENTS.signUp, { has_referral: !!passthroughRef });
       setSubmittedEmail(email.trim());
       setIsSubmitting(false);
       return;
     }
 
     toast.success('Account created');
-    trackEvent(ANALYTICS_EVENTS.signUp, { has_referral: !!passthroughRef });
     router.push(ROUTES.predictions);
     router.refresh();
   };

@@ -18,26 +18,13 @@ const devConnect = isDev
 // Note: Next.js App Router embeds inline scripts for hydration data, and
 // Radix UI / Tailwind use inline styles. 'unsafe-inline' is currently
 // required for both. Tightening with nonces is a separate workstream.
-// Google Tag Manager / Analytics endpoints. GTM serves gtm.js from
-// googletagmanager.com; GA4 beacons go to *.google-analytics.com /
-// *.analytics.google.com. The GTM <noscript> fallback embeds an iframe from
-// googletagmanager.com, hence the frame-src entry. img-src already allows
-// https: so the GA collect pixel is covered.
-const gtmScript = ['https://www.googletagmanager.com'];
-const gtmConnect = [
-  'https://www.googletagmanager.com',
-  'https://*.google-analytics.com',
-  'https://*.analytics.google.com',
-];
-
 const csp = [
   "default-src 'self'",
-  `script-src 'self' 'unsafe-inline'${isDev ? " 'unsafe-eval'" : ''} ${gtmScript.join(' ')}`,
+  `script-src 'self' 'unsafe-inline'${isDev ? " 'unsafe-eval'" : ''}`,
   "style-src 'self' 'unsafe-inline'",
   "img-src 'self' data: blob: https:",
-  `connect-src 'self' ${[...supabaseConnect, ...devConnect, ...gtmConnect].join(' ')}`,
+  `connect-src 'self' ${[...supabaseConnect, ...devConnect].join(' ')}`,
   "font-src 'self' data:",
-  "frame-src 'self' https://www.googletagmanager.com",
   "object-src 'none'",
   "base-uri 'self'",
   "form-action 'self'",

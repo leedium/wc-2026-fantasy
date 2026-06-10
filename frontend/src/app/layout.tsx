@@ -1,6 +1,5 @@
 import type { Metadata } from 'next';
 import { Inter } from 'next/font/google';
-import { GoogleTagManager } from '@next/third-parties/google';
 import './globals.css';
 
 import { QueryProvider } from '@/providers/QueryProvider';
@@ -56,15 +55,8 @@ export default async function RootLayout({
       : null;
   }
 
-  // GTM loads only in production builds AND when a container ID is configured,
-  // so local/dev traffic is never tracked. Loaded with the afterInteractive
-  // strategy by @next/third-parties — does not block first paint.
-  const gtmId = process.env.NEXT_PUBLIC_GTM_ID;
-  const gtmEnabled = process.env.NODE_ENV === 'production';
-
   return (
     <html lang="en" className="dark" style={{ colorScheme: 'dark' }} suppressHydrationWarning>
-      {gtmEnabled && gtmId && <GoogleTagManager gtmId={gtmId} />}
       <body className={`${inter.variable} font-sans antialiased`}>
         {/*
           Turbopack instruments functions with an esbuild-style `__name` keep-names helper that

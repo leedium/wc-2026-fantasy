@@ -17,7 +17,6 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { useAuth } from '@/hooks/useAuth';
 import { useTournamentLock } from '@/hooks/useTournamentLock';
 import { ROUTES } from '@/lib/constants';
-import { ANALYTICS_EVENTS, trackEvent } from '@/lib/analytics';
 import type { LeaderboardEntry, LeaderboardRankMatch } from '@/types/tournament';
 
 function LeaderboardSkeleton() {
@@ -154,7 +153,6 @@ export function LeaderboardPageContent() {
 
   const handleFindMyRank = React.useCallback(() => {
     if (!bestMatch) return;
-    trackEvent(ANALYTICS_EVENTS.findMyRank);
     const { rank, page } = bestMatch;
     if (currentPage !== page) setCurrentPage(page);
     setHighlightedRank(rank);

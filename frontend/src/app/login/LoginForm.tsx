@@ -11,7 +11,6 @@ import { Label } from '@/components/ui/label';
 import { FieldError } from '@/components/ui/field-error';
 import { createSupabaseBrowserClient } from '@/lib/supabase/client';
 import { ROUTES, EMAIL_REGEX } from '@/lib/constants';
-import { ANALYTICS_EVENTS, trackEvent } from '@/lib/analytics';
 import { cn } from '@/lib/utils';
 
 interface LoginFormProps {
@@ -89,7 +88,6 @@ export function LoginForm({ redirectTo }: LoginFormProps) {
     }
 
     toast.success('Signed in');
-    trackEvent(ANALYTICS_EVENTS.login);
     router.push(redirectTo);
     router.refresh();
   };
