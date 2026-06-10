@@ -33,7 +33,6 @@ import { BracketPreviewDialog } from '@/components/predictions/BracketPreviewDia
 import { FreePickBanner } from '@/components/predictions/FreePickBanner';
 import { UnpaidPaymentNotice } from '@/components/predictions/UnpaidPaymentNotice';
 import { PRICING, ROUTES } from '@/lib/constants';
-import { ANALYTICS_EVENTS, trackEvent } from '@/lib/analytics';
 import { fetchJSON } from '@/lib/api/fetchJSON';
 import { needsPayment } from '@/lib/predictions/paymentStatus';
 import { cn } from '@/lib/utils';
@@ -116,7 +115,6 @@ export function PredictionsListPage() {
         throw new Error(String(body.error ?? 'Failed to redeem credit'));
       }
       toast.success(`Free credit applied to "${prediction.name}"`);
-      trackEvent(ANALYTICS_EVENTS.freePickRedeemed, { source: body.source });
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ['predictions'] }),
         queryClient.invalidateQueries({ queryKey: REWARDS_STATUS_QUERY_KEY }),
@@ -193,9 +191,6 @@ export function PredictionsListPage() {
                 }
                 aria-disabled={!canCreate}
                 title={createDisabledReason}
-                onClick={() => {
-                  if (canCreate) trackEvent(ANALYTICS_EVENTS.newPrediction);
-                }}
               >
                 <Plus className="mr-2 h-4 w-4" /> New prediction
               </Link>
