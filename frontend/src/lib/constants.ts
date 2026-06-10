@@ -74,7 +74,6 @@ export const OPERATING_COSTS = {
   recurring: [
     { label: 'Domain', amount: 150 },
     { label: 'Hosting / Email', amount: 124 },
-    { label: 'Software Services (AI / tooling)', amount: 78.5 },
   ],
 } as const;
 
