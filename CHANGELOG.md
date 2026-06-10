@@ -5,6 +5,34 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.6.0] - 2026-06-10
+
+### Added
+
+- **"Phase 1 Complete" prediction status.** A new badge state sits between **Draft** and
+  **Submitted** so a fully-completed Phase 1 entry (all 12 group standings + 8 best-3rds advancers +
+  the gut-feeling champion pick) no longer reads as "Draft" — which had confused users into thinking
+  finished entries were unfinished. Derived entirely on the client from data the predictions API
+  already returns (no DB change); shown on the predictions list and the bracket preview dialog. The
+  accompanying subtext was corrected to state that a Phase-1-complete entry already qualifies for the
+  group stage lock, rather than incorrectly telling users to "submit before lock to qualify." (#228)
+- **Resume unsaved drafts on the predictions list.** A new prediction lives only in browser
+  `localStorage` until its first server save (gated on the champion pick, the last Phase 1 step), so a
+  user who entered some picks and navigated away previously saw nothing in their list. The list now
+  reads that draft slot and shows a **"Unsaved draft · This device"** card with **Resume** and
+  **Discard**; it clears automatically once the prediction is saved to the database. (#228)
+
+### Removed
+
+- **Google Tag Manager / third-party analytics.** GTM-based analytics with curated interaction
+  tracking was introduced (#178) and wired into the Cloudflare deploy build (#226) earlier in this
+  cycle, then fully removed before release (#227). 1.6.0 ships with **no** third-party analytics
+  integration.
+
+### Internal
+
+- Synced the `package-lock.json` root `version` field to match the released package version (#225).
+
 ## [1.5.0] - 2026-06-10
 
 ### Added
