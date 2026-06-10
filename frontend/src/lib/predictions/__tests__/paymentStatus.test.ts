@@ -1,4 +1,4 @@
-import { isPhase1Complete, needsPayment } from '../paymentStatus';
+import { isPhase1Complete, isPhase1StagesComplete, needsPayment } from '../paymentStatus';
 import { ADVANCER_COUNT, TOURNAMENT_CONFIG } from '@/lib/constants';
 
 const fullGroups = Array.from({ length: TOURNAMENT_CONFIG.totalGroups }, (_, i) => ({
@@ -22,6 +22,44 @@ describe('isPhase1Complete', () => {
     ).toBe(false);
     expect(
       isPhase1Complete({ isPaid: false, submittedAt: null, groups: fullGroups, advancers: [] })
+    ).toBe(false);
+  });
+});
+
+describe('isPhase1StagesComplete', () => {
+  it('is true with all groups + advancers + a champion pick', () => {
+    expect(
+      isPhase1StagesComplete({
+        isPaid: false,
+        submittedAt: null,
+        groups: fullGroups,
+        advancers: fullAdvancers,
+        championTeamId: 'team-x',
+      })
+    ).toBe(true);
+  });
+
+  it('is false when the champion pick is missing (even if groups + advancers are full)', () => {
+    expect(
+      isPhase1StagesComplete({
+        isPaid: false,
+        submittedAt: null,
+        groups: fullGroups,
+        advancers: fullAdvancers,
+        championTeamId: null,
+      })
+    ).toBe(false);
+  });
+
+  it('is false when groups or advancers are incomplete', () => {
+    expect(
+      isPhase1StagesComplete({
+        isPaid: false,
+        submittedAt: null,
+        groups: fullGroups.slice(0, 5),
+        advancers: fullAdvancers,
+        championTeamId: 'team-x',
+      })
     ).toBe(false);
   });
 });

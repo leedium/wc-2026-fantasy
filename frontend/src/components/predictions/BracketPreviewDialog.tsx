@@ -18,6 +18,7 @@ import { GroupStandingsResults } from '@/components/results/GroupStandingsResult
 import { AdvancersResults } from '@/components/results/AdvancersResults';
 import { TeamFlag } from '@/components/shared/TeamFlag';
 import { fetchJSON } from '@/lib/api/fetchJSON';
+import { isPhase1StagesComplete } from '@/lib/predictions/paymentStatus';
 import type {
   Group,
   GroupStanding,
@@ -125,9 +126,18 @@ export function BracketPreviewDialog({
             {predictionQuery.data?.name ?? 'Bracket'}
             {predictionQuery.data && (
               <>
-                <Badge variant={predictionQuery.data.submittedAt ? 'secondary' : 'outline'}>
-                  {predictionQuery.data.submittedAt ? 'Submitted' : 'Draft'}
-                </Badge>
+                {predictionQuery.data.submittedAt ? (
+                  <Badge variant="secondary">Submitted</Badge>
+                ) : isPhase1StagesComplete(predictionQuery.data) ? (
+                  <Badge
+                    variant="secondary"
+                    className="bg-blue-600/15 text-blue-700 hover:bg-blue-600/15 dark:bg-blue-400/15 dark:text-blue-300"
+                  >
+                    Phase 1 Complete
+                  </Badge>
+                ) : (
+                  <Badge variant="outline">Draft</Badge>
+                )}
                 {predictionQuery.data.isPaid ? (
                   <Badge
                     variant="default"

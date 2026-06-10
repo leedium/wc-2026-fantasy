@@ -9,6 +9,7 @@ export interface PaymentStatusInput {
   submittedAt: string | null;
   groups?: ReadonlyArray<unknown>;
   advancers?: ReadonlyArray<unknown>;
+  championTeamId?: string | null;
 }
 
 /**
@@ -22,6 +23,19 @@ export function isPhase1Complete(p: PaymentStatusInput): boolean {
     (p.groups?.length ?? 0) === TOURNAMENT_CONFIG.totalGroups &&
     (p.advancers?.length ?? 0) === ADVANCER_COUNT
   );
+}
+
+/**
+ * True when *all* Phase 1 stages are filled: groups + advancers (per
+ * {@link isPhase1Complete}) **plus** the gut-feeling champion pick. Distinct
+ * from `isPhase1Complete`, which omits the champion to mirror the DB
+ * `prediction_phase1_complete` leaderboard-eligibility filter. Used to drive
+ * the "Phase 1 Complete" badge so a fully-finished-but-not-yet-submitted entry
+ * no longer reads as "Draft" — matching the wizard's own completeness check
+ * (`isChampionPickComplete && isGroupsComplete && isAdvancersComplete`).
+ */
+export function isPhase1StagesComplete(p: PaymentStatusInput): boolean {
+  return isPhase1Complete(p) && p.championTeamId != null;
 }
 
 /**
