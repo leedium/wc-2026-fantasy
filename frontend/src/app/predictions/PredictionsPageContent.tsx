@@ -22,6 +22,7 @@ import { FieldError } from '@/components/ui/field-error';
 import { Progress } from '@/components/ui/progress';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useAuthContext } from '@/providers/AuthProvider';
+import { ANALYTICS_EVENTS, trackEvent } from '@/lib/analytics';
 import { useTournamentLock } from '@/hooks/useTournamentLock';
 import {
   NEW_PREDICTION_SENTINEL,
@@ -1086,6 +1087,15 @@ export function PredictionsPageContent({
       ]);
       if (!silent) {
         toast.success(markSubmitted ? 'Prediction submitted' : 'Progress saved');
+      }
+
+      // Reached only on a successful save. `markSubmitted` is the full submit;
+      // `redirectTo` (set only by handleSavePhase1) marks the Phase 1 save —
+      // distinct from silent autosaves and plain save-progress.
+      if (markSubmitted) {
+        trackEvent(ANALYTICS_EVENTS.predictionSubmitted, { mode });
+      } else if (redirectTo) {
+        trackEvent(ANALYTICS_EVENTS.phase1Saved);
       }
 
       if (markSubmitted) {
