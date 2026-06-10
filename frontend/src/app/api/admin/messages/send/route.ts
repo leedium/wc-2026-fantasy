@@ -17,11 +17,15 @@ export async function POST(request: NextRequest) {
     subject?: string;
     html?: string;
     segment?: string;
+    email?: string;
     test?: boolean;
   };
 
   const subject = typeof body.subject === 'string' ? body.subject.trim() : '';
   const html = typeof body.html === 'string' ? body.html : '';
+  // 'user' = a single hand-picked recipient (email in the body); the rest map
+  // to a recipient segment resolved server-side.
+  const isSingleUser = body.segment === 'user';
   const segment = normalizeSegment(body.segment);
   const test = body.test === true;
 
@@ -45,6 +49,15 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'your account has no email address' }, { status: 400 });
     }
     recipients = [ctx.user.email];
+  } else if (isSingleUser) {
+    // Admin-picked single recipient. The caller is an authenticated admin (who
+    // can already see every user's email), so we trust the address and only
+    // validate its shape.
+    const email = typeof body.email === 'string' ? body.email.trim() : '';
+    if (!email || !email.includes('@') || email.length > 254) {
+      return NextResponse.json({ error: 'a valid recipient email is required' }, { status: 400 });
+    }
+    recipients = [email];
   } else {
     const { data, error } = await ctx.supabase.rpc('admin_list_recipient_emails', {
       p_segment: segment,
