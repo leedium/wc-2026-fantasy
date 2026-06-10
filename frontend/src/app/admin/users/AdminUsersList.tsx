@@ -31,7 +31,12 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { useAuthContext } from '@/providers/AuthProvider';
-import { EMAIL_REGEX, PASSWORD_MIN_LENGTH, USERNAME_REGEX } from '@/lib/constants';
+import {
+  EMAIL_REGEX,
+  PASSWORD_MIN_LENGTH,
+  REFERRAL_CODE_REGEX,
+  USERNAME_REGEX,
+} from '@/lib/constants';
 
 interface AdminUser {
   id: string;
@@ -61,7 +66,7 @@ async function readError(res: Response): Promise<string> {
 
 export function AdminUsersList() {
   const queryClient = useQueryClient();
-  const { user: currentUser } = useAuthContext();
+  const { user: currentUser, profile } = useAuthContext();
   const [search, setSearch] = React.useState('');
   const [debounced, setDebounced] = React.useState('');
   const [page, setPage] = React.useState(1);
@@ -275,6 +280,7 @@ export function AdminUsersList() {
       />
       <EditUserDialog
         target={editTarget}
+        canEditReferralCode={!!profile?.isSuperAdmin}
         onOpenChange={(open) => !open && setEditTarget(null)}
         onSaved={refetchUsers}
       />
@@ -436,10 +442,12 @@ function CreateUserDialog({
 
 function EditUserDialog({
   target,
+  canEditReferralCode,
   onOpenChange,
   onSaved,
 }: {
   target: AdminUser | null;
+  canEditReferralCode: boolean;
   onOpenChange: (open: boolean) => void;
   onSaved: () => void;
 }) {
@@ -547,8 +555,112 @@ function EditUserDialog({
             </Button>
           </DialogFooter>
         </form>
+        {canEditReferralCode && target && (
+          <ReferralCodeSection userId={target.id} open={open} />
+        )}
       </DialogContent>
     </Dialog>
+  );
+}
+
+// Super-admin-only referral-code override, shown inside the Edit user dialog.
+// Independent of the username form (its own Save), so it never piggybacks on
+// the profile PATCH. The PATCH route's coarse gate is is_admin; the super-admin
+// requirement is enforced in the admin_set_referral_code RPC.
+function ReferralCodeSection({ userId, open }: { userId: string; open: boolean }) {
+  const query = useQuery<{ overview: { referralCode: string | null } }>({
+    queryKey: ['admin-referral-code', userId],
+    enabled: open,
+    queryFn: async () => {
+      const res = await fetch(`/api/admin/referrals?userId=${userId}`);
+      if (!res.ok) throw new Error('Failed to load referral code');
+      return res.json();
+    },
+  });
+  const currentCode = query.data?.overview.referralCode ?? null;
+
+  const [codeInput, setCodeInput] = React.useState('');
+  const [note, setNote] = React.useState('');
+  const [busy, setBusy] = React.useState(false);
+
+  // Seed the input with the current code once it loads (and after a save).
+  React.useEffect(() => {
+    if (currentCode) setCodeInput(currentCode);
+  }, [currentCode]);
+
+  const trimmedCode = codeInput.trim().toUpperCase();
+  const codeValid = REFERRAL_CODE_REGEX.test(trimmedCode);
+  const unchanged = currentCode != null && trimmedCode === currentCode.toUpperCase();
+  const canSave = codeValid && note.trim().length > 0 && !unchanged && !busy;
+
+  const save = async () => {
+    setBusy(true);
+    try {
+      const res = await fetch(`/api/admin/users/${userId}/referral-code`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code: trimmedCode, note: note.trim() }),
+      });
+      if (!res.ok) throw new Error(await readError(res));
+      toast.success(`Referral code set to ${trimmedCode}`);
+      setNote('');
+      await query.refetch();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Failed');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <div className="mt-2 space-y-3 border-t pt-4">
+      <div>
+        <p className="text-sm font-medium">Referral code (super admin)</p>
+        <p className="text-muted-foreground text-xs">
+          Override the auto-generated code with a vanity code, e.g. an influencer&apos;s handle.
+        </p>
+      </div>
+      <div className="space-y-1">
+        <Label className="text-muted-foreground text-xs">Current code</Label>
+        <p className="font-mono text-sm font-medium">
+          {query.isLoading ? '…' : (currentCode ?? '—')}
+        </p>
+      </div>
+      <div className="space-y-1">
+        <Label htmlFor="edit-referral-code">New code (4–32 chars, A–Z and 0–9)</Label>
+        <Input
+          id="edit-referral-code"
+          value={codeInput}
+          onChange={(e) => setCodeInput(e.target.value.toUpperCase().replace(/\s+/g, ''))}
+          maxLength={32}
+          disabled={busy}
+          className="font-mono uppercase tracking-widest"
+          placeholder="e.g. GIUSEPPETHEMC"
+          aria-invalid={codeInput.length > 0 && !codeValid ? true : undefined}
+        />
+        {codeInput.length > 0 && !codeValid && (
+          <FieldError
+            id="edit-referral-code-error"
+            message="Code must be 4–32 characters, using only A–Z and 0–9."
+          />
+        )}
+      </div>
+      <div className="space-y-1">
+        <Label htmlFor="edit-referral-note">Reason (audit note, required)</Label>
+        <Input
+          id="edit-referral-note"
+          value={note}
+          onChange={(e) => setNote(e.target.value)}
+          disabled={busy}
+          placeholder="e.g. influencer vanity code"
+        />
+      </div>
+      <div className="flex justify-end">
+        <Button type="button" size="sm" onClick={save} disabled={!canSave}>
+          {busy ? 'Saving…' : 'Save code'}
+        </Button>
+      </div>
+    </div>
   );
 }
 

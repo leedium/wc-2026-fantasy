@@ -5,6 +5,18 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.5.0] - 2026-06-10
+
+### Added
+
+- Custom (vanity) referral codes: a super-admin can overwrite any user's auto-generated referral
+  code with a recognizable one — e.g. an influencer's handle. A super-admin-only **"Referral code"**
+  section in the **Edit user** dialog (admin users list) sets it via a new gated
+  `admin_set_referral_code` RPC (format-validated `^[A-Z0-9]{4,32}$`, case-insensitive uniqueness,
+  written to the referral admin audit trail). The signup referral validation (`REFERRAL_CODE_REGEX`)
+  was widened to 4–32 chars over `A–Z`/`0–9` so vanity deep-links (`/register?ref=…`) resolve
+  end-to-end through the existing validate + signup paths. (#224)
+
 ## [1.2.0] - 2026-06-09
 
 ### Changed

@@ -401,7 +401,7 @@ export function RegisterForm({ initialReferralCode }: RegisterFormProps = {}) {
               type="text"
               autoComplete="off"
               inputMode="text"
-              maxLength={8}
+              maxLength={32}
               value={referralCode}
               onChange={(e) =>
                 setReferralCode(e.target.value.toUpperCase().replace(/\s+/g, ''))
@@ -423,7 +423,7 @@ export function RegisterForm({ initialReferralCode }: RegisterFormProps = {}) {
               aria-live="polite"
             >
               {referralLookup.status === 'idle' &&
-                'Enter the 8-character code shared by a friend.'}
+                'Enter the code shared by a friend.'}
               {referralLookup.status === 'checking' && 'Checking…'}
               {referralLookup.status === 'valid' && (
                 <>
