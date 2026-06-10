@@ -19,7 +19,7 @@ jest.mock('sonner', () => ({
 import { AdminMessages } from '../AdminMessages';
 
 function mockRecipients(count: number) {
-  mockUseQuery.mockReturnValue({ data: { count, paidOnly: false }, isLoading: false, isError: false });
+  mockUseQuery.mockReturnValue({ data: { count, segment: 'all' }, isLoading: false, isError: false });
 }
 
 const fetchMock = jest.fn();
@@ -46,12 +46,12 @@ describe('AdminMessages', () => {
     expect(iframe.getAttribute('sandbox')).toBe('');
   });
 
-  it('refetches the count with paidOnly=true when switching scope', async () => {
+  it('refetches the count with the chosen segment when switching recipients', async () => {
     mockRecipients(5);
     render(<AdminMessages />);
-    await userEvent.click(screen.getByRole('button', { name: /paid users only/i }));
+    await userEvent.click(screen.getByRole('button', { name: 'Prediction, unpaid' }));
     const lastCall = mockUseQuery.mock.calls.at(-1)?.[0] as { queryKey: unknown[] };
-    expect(lastCall.queryKey).toEqual(['admin-message-recipients', true]);
+    expect(lastCall.queryKey).toEqual(['admin-message-recipients', 'unpaid']);
   });
 
   it('shows a confirm dialog before a real broadcast, then sends with test:false', async () => {

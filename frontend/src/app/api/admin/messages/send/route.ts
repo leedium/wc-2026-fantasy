@@ -2,12 +2,13 @@ import { NextResponse, type NextRequest } from 'next/server';
 import { requireAdmin, isAdminGateError } from '@/lib/auth/requireAdmin';
 import { safeMessage } from '@/lib/api/errors';
 import { sendBulkEmail } from '@/lib/email/sendBulk';
+import { normalizeSegment } from '../recipients/route';
 
 const MAX_SUBJECT_LENGTH = 200;
 const MAX_HTML_LENGTH = 200_000;
 
 // Sends a broadcast email. test:true delivers only to the calling admin;
-// test:false fetches recipients (all users, or paid-only) and sends to each.
+// test:false fetches recipients for the chosen segment and sends to each.
 export async function POST(request: NextRequest) {
   const ctx = await requireAdmin();
   if (isAdminGateError(ctx)) return ctx.response;
@@ -15,13 +16,13 @@ export async function POST(request: NextRequest) {
   const body = (await request.json().catch(() => ({}))) as {
     subject?: string;
     html?: string;
-    paidOnly?: boolean;
+    segment?: string;
     test?: boolean;
   };
 
   const subject = typeof body.subject === 'string' ? body.subject.trim() : '';
   const html = typeof body.html === 'string' ? body.html : '';
-  const paidOnly = body.paidOnly === true;
+  const segment = normalizeSegment(body.segment);
   const test = body.test === true;
 
   if (!subject || subject.length > MAX_SUBJECT_LENGTH) {
@@ -46,7 +47,7 @@ export async function POST(request: NextRequest) {
     recipients = [ctx.user.email];
   } else {
     const { data, error } = await ctx.supabase.rpc('admin_list_recipient_emails', {
-      p_paid_only: paidOnly,
+      p_segment: segment,
     });
     if (error) {
       return NextResponse.json({ error: safeMessage(error) }, { status: 500 });

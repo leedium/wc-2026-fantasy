@@ -46,31 +46,37 @@ describe('GET /api/admin/messages/recipients', () => {
     expect(res.status).toBe(403);
   });
 
-  it('returns the recipient count for all users', async () => {
+  it('defaults to the "all" segment and returns the count', async () => {
     supabaseMock.auth.getUser.mockResolvedValue({ data: { user: { id: 'u1' } } });
     mockAdminProfile(true);
     supabaseMock.rpc.mockResolvedValue({
       data: [{ email: 'a@x.com' }, { email: 'b@x.com' }],
       error: null,
     });
-    const res = await GET(req('?paidOnly=false'));
+    const res = await GET(req());
     expect(res.status).toBe(200);
     const body = await res.json();
-    expect(body).toEqual({ count: 2, paidOnly: false });
-    expect(supabaseMock.rpc).toHaveBeenCalledWith('admin_list_recipient_emails', {
-      p_paid_only: false,
-    });
+    expect(body).toEqual({ count: 2, segment: 'all' });
+    expect(supabaseMock.rpc).toHaveBeenCalledWith('admin_list_recipient_emails', { p_segment: 'all' });
   });
 
-  it('passes paidOnly=true through to the RPC', async () => {
+  it.each(['paid', 'unpaid', 'no_prediction'])('passes the %s segment to the RPC', async (segment) => {
     supabaseMock.auth.getUser.mockResolvedValue({ data: { user: { id: 'u1' } } });
     mockAdminProfile(true);
     supabaseMock.rpc.mockResolvedValue({ data: [{ email: 'a@x.com' }], error: null });
-    const res = await GET(req('?paidOnly=true'));
+    const res = await GET(req(`?segment=${segment}`));
     const body = await res.json();
-    expect(body).toEqual({ count: 1, paidOnly: true });
-    expect(supabaseMock.rpc).toHaveBeenCalledWith('admin_list_recipient_emails', {
-      p_paid_only: true,
-    });
+    expect(body).toEqual({ count: 1, segment });
+    expect(supabaseMock.rpc).toHaveBeenCalledWith('admin_list_recipient_emails', { p_segment: segment });
+  });
+
+  it('falls back to "all" for an unknown segment', async () => {
+    supabaseMock.auth.getUser.mockResolvedValue({ data: { user: { id: 'u1' } } });
+    mockAdminProfile(true);
+    supabaseMock.rpc.mockResolvedValue({ data: [], error: null });
+    const res = await GET(req('?segment=bogus'));
+    const body = await res.json();
+    expect(body.segment).toBe('all');
+    expect(supabaseMock.rpc).toHaveBeenCalledWith('admin_list_recipient_emails', { p_segment: 'all' });
   });
 });

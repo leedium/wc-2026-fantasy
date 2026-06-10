@@ -96,12 +96,12 @@ describe('POST /api/admin/messages/send', () => {
       error: null,
     });
     sendBulkEmailMock.mockResolvedValue({ sent: 2, failed: 0, skipped: 0, errors: [] });
-    const res = await POST(postReq({ subject: 'Hi', html: '<p>x</p>', paidOnly: true }));
+    const res = await POST(postReq({ subject: 'Hi', html: '<p>x</p>', segment: 'unpaid' }));
     expect(res.status).toBe(200);
     const body = await res.json();
     expect(body).toMatchObject({ sent: 2, test: false });
     expect(supabaseMock.rpc).toHaveBeenCalledWith('admin_list_recipient_emails', {
-      p_paid_only: true,
+      p_segment: 'unpaid',
     });
     expect(sendBulkEmailMock).toHaveBeenCalledWith(
       expect.objectContaining({ recipients: ['a@x.com', 'b@x.com'] })

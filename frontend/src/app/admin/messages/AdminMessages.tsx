@@ -22,11 +22,17 @@ import {
 } from '@/components/ui/dialog';
 import { cn } from '@/lib/utils';
 
-type Scope = 'all' | 'paid';
+const SEGMENTS = [
+  { key: 'all', label: 'All users' },
+  { key: 'no_prediction', label: 'No prediction' },
+  { key: 'unpaid', label: 'Prediction, unpaid' },
+  { key: 'paid', label: 'Paid' },
+] as const;
+type Segment = (typeof SEGMENTS)[number]['key'];
 
 interface RecipientsResponse {
   count: number;
-  paidOnly: boolean;
+  segment: Segment;
 }
 
 interface SendResponse {
@@ -44,16 +50,16 @@ async function readError(res: Response): Promise<string> {
 export function AdminMessages() {
   const [subject, setSubject] = React.useState('');
   const [html, setHtml] = React.useState('');
-  const [scope, setScope] = React.useState<Scope>('all');
+  const [segment, setSegment] = React.useState<Segment>('all');
   const [confirmOpen, setConfirmOpen] = React.useState(false);
   const [sending, setSending] = React.useState(false);
 
-  const paidOnly = scope === 'paid';
+  const segmentLabel = SEGMENTS.find((s) => s.key === segment)?.label ?? 'All users';
 
   const recipients = useQuery<RecipientsResponse>({
-    queryKey: ['admin-message-recipients', paidOnly],
+    queryKey: ['admin-message-recipients', segment],
     queryFn: async () => {
-      const res = await fetch(`/api/admin/messages/recipients?paidOnly=${paidOnly}`);
+      const res = await fetch(`/api/admin/messages/recipients?segment=${segment}`);
       if (!res.ok) throw new Error(await readError(res));
       return res.json();
     },
@@ -68,7 +74,7 @@ export function AdminMessages() {
       const res = await fetch('/api/admin/messages/send', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ subject, html, paidOnly, test }),
+        body: JSON.stringify({ subject, html, segment, test }),
       });
       if (!res.ok) throw new Error(await readError(res));
       const data = (await res.json()) as SendResponse;
@@ -129,23 +135,18 @@ export function AdminMessages() {
 
             <div className="space-y-1.5">
               <Label>Recipients</Label>
-              <div className="flex gap-2">
-                <Button
-                  type="button"
-                  variant={scope === 'all' ? 'default' : 'outline'}
-                  size="sm"
-                  onClick={() => setScope('all')}
-                >
-                  All users
-                </Button>
-                <Button
-                  type="button"
-                  variant={scope === 'paid' ? 'default' : 'outline'}
-                  size="sm"
-                  onClick={() => setScope('paid')}
-                >
-                  Paid users only
-                </Button>
+              <div className="flex flex-wrap gap-2">
+                {SEGMENTS.map((s) => (
+                  <Button
+                    key={s.key}
+                    type="button"
+                    variant={segment === s.key ? 'default' : 'outline'}
+                    size="sm"
+                    onClick={() => setSegment(s.key)}
+                  >
+                    {s.label}
+                  </Button>
+                ))}
               </div>
               <p className="text-muted-foreground text-xs">
                 {recipients.isLoading
@@ -204,8 +205,8 @@ export function AdminMessages() {
           <DialogHeader>
             <DialogTitle>Send broadcast?</DialogTitle>
             <DialogDescription>
-              This will email &quot;{subject}&quot; to {recipientCount}{' '}
-              {scope === 'paid' ? 'paid ' : ''}recipient{recipientCount === 1 ? '' : 's'}. This
+              This will email &quot;{subject}&quot; to {recipientCount} recipient
+              {recipientCount === 1 ? '' : 's'} in the <strong>{segmentLabel}</strong> group. This
               cannot be undone.
             </DialogDescription>
           </DialogHeader>

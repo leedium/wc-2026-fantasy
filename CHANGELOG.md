@@ -20,6 +20,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   the function's secrets (`supabase secrets set ...`); the Worker now needs `BROADCAST_SHARED_SECRET`,
   and the function must be deployed (`supabase functions deploy send-broadcast`). (#221)
 
+## [1.3.0] - 2026-06-10
+
+### Added
+
+- Admin broadcast email: two more recipient segments alongside **All users** and **Paid** —
+  **No prediction** (users with no prediction in the active tournament) and **Prediction, unpaid**
+  (users with a prediction but no payment). The four segments partition the user base, so admins can
+  target non-participants and unpaid participants directly. Migration `0064` adds an
+  `admin_list_recipient_emails(p_segment text)` overload (`all|paid|unpaid|no_prediction`); the
+  recipients/send API and the Messages UI switch from a boolean `paidOnly` to the `segment` selector.
+  (#222)
+
 ## [1.2.0] - 2026-06-10
 
 ### Changed
