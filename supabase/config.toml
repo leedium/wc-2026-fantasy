@@ -61,3 +61,9 @@ pop3_port = 54326
 
 [analytics]
 enabled = false
+
+# Admin broadcast email sender. JWT verification is off — the function is gated
+# by a shared secret (BROADCAST_SHARED_SECRET) that only the server-side Next
+# route knows. Sends SMTP from Deno (the Cloudflare Worker can't open sockets).
+[functions.send-broadcast]
+verify_jwt = false

@@ -5,6 +5,36 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.0] - 2026-06-09
+
+### Changed
+
+- Broadcast email now sends via a new `send-broadcast` **Supabase Edge Function** (Deno) instead of
+  from the Cloudflare Worker. The Worker can't open raw sockets or bundle a socket SMTP client —
+  `worker-mailer` hit unresolvable OpenNext/workerd build + runtime failures (unresolved
+  `cloudflare:sockets` → unsupported `require` → unregistered external module). Deno speaks SMTP
+  natively, so the send moved there; the Worker calls it over HTTPS gated by a shared secret. The
+  function uses a small native SMTP client (plain / implicit-TLS / STARTTLS + AUTH LOGIN), verified
+  end-to-end against local Mailpit. Removes `worker-mailer`, `nodemailer`, and the OpenNext/
+  worker-mailer `patch-package` patches. **Deploy note:** SMTP_* config moves from Worker secrets to
+  the function's secrets (`supabase secrets set ...`); the Worker now needs `BROADCAST_SHARED_SECRET`,
+  and the function must be deployed (`supabase functions deploy send-broadcast`). (#221)
+
+## [1.2.0] - 2026-06-10
+
+### Changed
+
+- Broadcast email now sends via a new `send-broadcast` **Supabase Edge Function** (Deno) instead of
+  from the Cloudflare Worker. The Worker can't open raw sockets or bundle a socket SMTP client —
+  `worker-mailer` hit unresolvable OpenNext/workerd build + runtime failures (unresolved
+  `cloudflare:sockets` → unsupported `require` → unregistered external module). Deno speaks SMTP
+  natively, so the send moved there; the Worker calls it over HTTPS gated by a shared secret. The
+  function uses a small native SMTP client (plain / implicit-TLS / STARTTLS + AUTH LOGIN), verified
+  end-to-end against local Mailpit. Removes `worker-mailer`, `nodemailer`, and the OpenNext/
+  worker-mailer `patch-package` patches. **Deploy note:** SMTP_* config moves from Worker secrets to
+  the function's secrets (`supabase secrets set ...`); the Worker now needs `BROADCAST_SHARED_SECRET`,
+  and the function must be deployed (`supabase functions deploy send-broadcast`). (#221)
+
 ## [1.1.4] - 2026-06-09
 
 ### Fixed

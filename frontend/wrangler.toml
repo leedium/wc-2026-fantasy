@@ -8,7 +8,9 @@ directory = ".open-next/assets"
 binding = "ASSETS"
 
 [secrets]
-required = ["SUPABASE_SERVICE_ROLE_KEY","RESET_INTENT_SECRET", "SMTP_HOST","SMTP_PORT","SMTP_USER","SMTP_PASS","SMTP_FROM"]
+# SMTP_* now live on the send-broadcast Supabase Edge Function, not the Worker.
+# The Worker only needs the shared secret it uses to call that function.
+required = ["SUPABASE_SERVICE_ROLE_KEY","RESET_INTENT_SECRET","BROADCAST_SHARED_SECRET"]
 
 
 # Environment variables are set via the Cloudflare dashboard or `wrangler secret put`.
