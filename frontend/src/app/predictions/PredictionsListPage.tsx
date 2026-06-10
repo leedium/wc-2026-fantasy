@@ -3,7 +3,17 @@
 import * as React from 'react';
 import Link from 'next/link';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { ArrowRight, CheckCircle2, Clock, Eye, FileEdit, Gift, Plus, Trash2 } from 'lucide-react';
+import {
+  ArrowRight,
+  CheckCircle2,
+  Clock,
+  Eye,
+  FileEdit,
+  Gift,
+  Pencil,
+  Plus,
+  Trash2,
+} from 'lucide-react';
 import { toast } from 'sonner';
 
 import { PageLayout } from '@/components/layout/PageLayout';
@@ -23,6 +33,7 @@ import { useAuthContext } from '@/providers/AuthProvider';
 import {
   NEW_PREDICTION_SENTINEL,
   clearDraftForPrediction,
+  useDraftPersistence,
 } from '@/hooks/useDraftPersistence';
 import { useTournamentLock } from '@/hooks/useTournamentLock';
 import {
@@ -35,6 +46,10 @@ import { UnpaidPaymentNotice } from '@/components/predictions/UnpaidPaymentNotic
 import { PRICING, ROUTES } from '@/lib/constants';
 import { fetchJSON } from '@/lib/api/fetchJSON';
 import { isPhase1StagesComplete, needsPayment } from '@/lib/predictions/paymentStatus';
+import {
+  newDraftHasContent,
+  type NewDraftData,
+} from '@/lib/predictions/draftSummary';
 import { cn } from '@/lib/utils';
 
 interface ApiPrediction {
@@ -101,6 +116,33 @@ export function PredictionsListPage() {
     : !canCreate
       ? 'New predictions are only accepted during the group stage'
       : undefined;
+
+  // A new prediction lives only in localStorage until its first server save
+  // (gated on the champion pick — the last Phase 1 step), so a user who enters
+  // some picks and navigates away has no DB row and nothing in this list. Read
+  // that `:new` slot and offer to resume it. Only meaningful while the user can
+  // still create (phase 1 / super admin); the wizard discards it once locked.
+  const tournamentId = query.data?.tournament.id ?? null;
+  const { loadDraft: loadNewDraft, clearDraft: clearNewDraft } =
+    useDraftPersistence<NewDraftData>(user?.id, tournamentId, NEW_PREDICTION_SENTINEL);
+  const [newDraft, setNewDraft] = React.useState<{ savedAt: string } | null>(null);
+  React.useEffect(() => {
+    if (!user?.id || !tournamentId || !canCreate) {
+      setNewDraft(null);
+      return;
+    }
+    const payload = loadNewDraft();
+    setNewDraft(
+      payload && newDraftHasContent(payload.data) ? { savedAt: payload.savedAt } : null
+    );
+    // query.dataUpdatedAt re-checks after a create clears the `:new` slot.
+  }, [user?.id, tournamentId, canCreate, loadNewDraft, query.dataUpdatedAt]);
+
+  const handleDiscardNewDraft = () => {
+    clearNewDraft();
+    setNewDraft(null);
+    toast.success('Unsaved draft discarded');
+  };
 
   const handleRedeem = async (prediction: ApiPrediction) => {
     if (redeemingId) return;
@@ -222,6 +264,41 @@ export function PredictionsListPage() {
         <FreePickBanner />
       </div>
 
+      {newDraft && (
+        <Card className="mb-3 border-blue-500/40 bg-blue-500/5 dark:bg-blue-500/10">
+          <CardContent className="flex flex-col gap-3 py-4 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <div className="flex flex-wrap items-center gap-2">
+                <h2 className="text-lg font-semibold">Unsaved draft</h2>
+                <Badge variant="outline" className="gap-1">
+                  <FileEdit className="h-3 w-3" /> This device
+                </Badge>
+              </div>
+              <p className="text-muted-foreground mt-1 text-sm">
+                You have a prediction in progress, saved only in this browser. Finish it
+                to add it to your predictions. Last edited {formatTime(newDraft.savedAt)}.
+              </p>
+            </div>
+            <div className="flex items-center gap-2">
+              <Button asChild size="sm">
+                <Link href={`${ROUTES.predictions}/${NEW_PREDICTION_SENTINEL}`}>
+                  <Pencil className="mr-2 h-4 w-4" /> Resume
+                </Link>
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleDiscardNewDraft}
+                title="Discard this unsaved draft"
+              >
+                <Trash2 className="h-4 w-4" />
+                <span className="sr-only">Discard</span>
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {query.isLoading ? (
         <div className="space-y-3">
           {Array.from({ length: 3 }).map((_, i) => (
@@ -292,7 +369,7 @@ export function PredictionsListPage() {
                     {p.submittedAt
                       ? `Submitted ${formatTime(p.submittedAt)}`
                       : isPhase1StagesComplete(p)
-                        ? 'Phase 1 complete — submit before lock to qualify for the leaderboard'
+                        ? 'Phase 1 complete — your group-stage predictions qualify for the group stage lock'
                         : 'Saved as draft — submit to qualify for the leaderboard'}
                   </div>
                 </div>
