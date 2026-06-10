@@ -3,7 +3,7 @@
 import * as React from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { toast } from 'sonner';
-import { Loader2, Mail, Send } from 'lucide-react';
+import { Loader2, Mail, Send, X } from 'lucide-react';
 
 import { PageLayout } from '@/components/layout/PageLayout';
 import { AdminNav } from '@/components/admin/AdminNav';
@@ -12,6 +12,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import {
   Dialog,
   DialogContent,
@@ -22,11 +23,14 @@ import {
 } from '@/components/ui/dialog';
 import { cn } from '@/lib/utils';
 
+// 'user' is a UI-only option (a single hand-picked recipient); the other four
+// map to the admin_list_recipient_emails segments.
 const SEGMENTS = [
   { key: 'all', label: 'All users' },
   { key: 'no_prediction', label: 'No prediction' },
   { key: 'unpaid', label: 'Prediction, unpaid' },
   { key: 'paid', label: 'Paid' },
+  { key: 'user', label: 'Specific user' },
 ] as const;
 type Segment = (typeof SEGMENTS)[number]['key'];
 
@@ -42,6 +46,12 @@ interface SendResponse {
   test: boolean;
 }
 
+interface PickUser {
+  id: string;
+  username: string;
+  email: string;
+}
+
 async function readError(res: Response): Promise<string> {
   const body = (await res.json().catch(() => ({}))) as { error?: string };
   return body.error ?? 'Failed';
@@ -54,10 +64,22 @@ export function AdminMessages() {
   const [confirmOpen, setConfirmOpen] = React.useState(false);
   const [sending, setSending] = React.useState(false);
 
+  // Single-user picker state.
+  const [userSearch, setUserSearch] = React.useState('');
+  const [debouncedUserSearch, setDebouncedUserSearch] = React.useState('');
+  const [selectedUser, setSelectedUser] = React.useState<PickUser | null>(null);
+
+  React.useEffect(() => {
+    const t = setTimeout(() => setDebouncedUserSearch(userSearch), 250);
+    return () => clearTimeout(t);
+  }, [userSearch]);
+
+  const isSingle = segment === 'user';
   const segmentLabel = SEGMENTS.find((s) => s.key === segment)?.label ?? 'All users';
 
   const recipients = useQuery<RecipientsResponse>({
     queryKey: ['admin-message-recipients', segment],
+    enabled: !isSingle,
     queryFn: async () => {
       const res = await fetch(`/api/admin/messages/recipients?segment=${segment}`);
       if (!res.ok) throw new Error(await readError(res));
@@ -65,7 +87,20 @@ export function AdminMessages() {
     },
   });
 
-  const recipientCount = recipients.data?.count ?? 0;
+  const usersQuery = useQuery<{ users: Array<{ id: string; username: string; email: string | null }> }>({
+    queryKey: ['admin-message-users', debouncedUserSearch],
+    enabled: isSingle && !selectedUser,
+    queryFn: async () => {
+      const res = await fetch(
+        `/api/admin/users?search=${encodeURIComponent(debouncedUserSearch)}&page=1&pageSize=8`
+      );
+      if (!res.ok) throw new Error(await readError(res));
+      return res.json();
+    },
+  });
+  const userResults = (usersQuery.data?.users ?? []).filter((u): u is PickUser => Boolean(u.email));
+
+  const recipientCount = isSingle ? (selectedUser ? 1 : 0) : (recipients.data?.count ?? 0);
   const canCompose = subject.trim().length > 0 && html.trim().length > 0;
 
   const send = async (test: boolean) => {
@@ -74,7 +109,13 @@ export function AdminMessages() {
       const res = await fetch('/api/admin/messages/send', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ subject, html, segment, test }),
+        body: JSON.stringify({
+          subject,
+          html,
+          segment,
+          email: isSingle ? selectedUser?.email : undefined,
+          test,
+        }),
       });
       if (!res.ok) throw new Error(await readError(res));
       const data = (await res.json()) as SendResponse;
@@ -133,27 +174,82 @@ export function AdminMessages() {
               </p>
             </div>
 
-            <div className="space-y-1.5">
+            <div className="space-y-2">
               <Label>Recipients</Label>
-              <div className="flex flex-wrap gap-2">
+              <RadioGroup value={segment} onValueChange={(v) => setSegment(v as Segment)}>
                 {SEGMENTS.map((s) => (
-                  <Button
-                    key={s.key}
-                    type="button"
-                    variant={segment === s.key ? 'default' : 'outline'}
-                    size="sm"
-                    onClick={() => setSegment(s.key)}
-                  >
-                    {s.label}
-                  </Button>
+                  <div key={s.key} className="flex items-center gap-2">
+                    <RadioGroupItem value={s.key} id={`seg-${s.key}`} />
+                    <Label htmlFor={`seg-${s.key}`} className="cursor-pointer font-normal">
+                      {s.label}
+                    </Label>
+                  </div>
                 ))}
-              </div>
+              </RadioGroup>
+
+              {/* Single-user picker */}
+              {isSingle && (
+                <div className="space-y-2 pt-1">
+                  {selectedUser ? (
+                    <div className="flex items-center justify-between rounded-md border px-3 py-2 text-sm">
+                      <span className="truncate">
+                        <span className="font-medium">{selectedUser.username}</span>
+                        <span className="text-muted-foreground"> · {selectedUser.email}</span>
+                      </span>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setSelectedUser(null)}
+                      >
+                        <X className="h-4 w-4" /> Change
+                      </Button>
+                    </div>
+                  ) : (
+                    <>
+                      <Input
+                        aria-label="Search users"
+                        placeholder="Search users by name or email"
+                        value={userSearch}
+                        onChange={(e) => setUserSearch(e.target.value)}
+                      />
+                      <div className="max-h-48 overflow-auto rounded-md border">
+                        {usersQuery.isLoading ? (
+                          <p className="text-muted-foreground p-2 text-sm">Searching…</p>
+                        ) : userResults.length === 0 ? (
+                          <p className="text-muted-foreground p-2 text-sm">No users found.</p>
+                        ) : (
+                          userResults.map((u) => (
+                            <button
+                              key={u.id}
+                              type="button"
+                              onClick={() => {
+                                setSelectedUser(u);
+                                setUserSearch('');
+                              }}
+                              className="hover:bg-accent flex w-full flex-col items-start px-3 py-1.5 text-left text-sm"
+                            >
+                              <span className="font-medium">{u.username}</span>
+                              <span className="text-muted-foreground text-xs">{u.email}</span>
+                            </button>
+                          ))
+                        )}
+                      </div>
+                    </>
+                  )}
+                </div>
+              )}
+
               <p className="text-muted-foreground text-xs">
-                {recipients.isLoading
-                  ? 'Counting recipients…'
-                  : recipients.isError
-                    ? 'Could not load recipient count.'
-                    : `${recipientCount} recipient${recipientCount === 1 ? '' : 's'}.`}
+                {isSingle
+                  ? selectedUser
+                    ? `1 recipient — ${selectedUser.email}`
+                    : 'Select a user above.'
+                  : recipients.isLoading
+                    ? 'Counting recipients…'
+                    : recipients.isError
+                      ? 'Could not load recipient count.'
+                      : `${recipientCount} recipient${recipientCount === 1 ? '' : 's'}.`}
               </p>
             </div>
 
@@ -205,9 +301,18 @@ export function AdminMessages() {
           <DialogHeader>
             <DialogTitle>Send broadcast?</DialogTitle>
             <DialogDescription>
-              This will email &quot;{subject}&quot; to {recipientCount} recipient
-              {recipientCount === 1 ? '' : 's'} in the <strong>{segmentLabel}</strong> group. This
-              cannot be undone.
+              {isSingle ? (
+                <>
+                  This will email &quot;{subject}&quot; to <strong>{selectedUser?.email}</strong>.
+                  This cannot be undone.
+                </>
+              ) : (
+                <>
+                  This will email &quot;{subject}&quot; to {recipientCount} recipient
+                  {recipientCount === 1 ? '' : 's'} in the <strong>{segmentLabel}</strong> group.
+                  This cannot be undone.
+                </>
+              )}
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>

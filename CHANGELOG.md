@@ -20,6 +20,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   the function's secrets (`supabase secrets set ...`); the Worker now needs `BROADCAST_SHARED_SECRET`,
   and the function must be deployed (`supabase functions deploy send-broadcast`). (#221)
 
+## [1.4.0] - 2026-06-10
+
+### Added
+
+- Admin broadcast email: a **"Specific user"** recipient option to address a single user. Selecting
+  it reveals a searchable user picker (search by name/email, debounced, backed by `/api/admin/users`);
+  the chosen user's email is the sole recipient. The send route validates the address (admin-gated).
+
+### Changed
+
+- Admin broadcast recipient selection is now a **radio group** (one option per line) instead of a row
+  of toggle buttons, and includes the new "Specific user" choice. Adds `@radix-ui/react-radio-group`
+  and a shadcn `RadioGroup` component. (#223)
+
 ## [1.3.0] - 2026-06-10
 
 ### Added

@@ -18,8 +18,24 @@ jest.mock('sonner', () => ({
 
 import { AdminMessages } from '../AdminMessages';
 
-function mockRecipients(count: number) {
-  mockUseQuery.mockReturnValue({ data: { count, segment: 'all' }, isLoading: false, isError: false });
+type QueryUser = { id: string; username: string; email: string };
+
+// The component runs two useQuery calls (recipient count + user search); return
+// the right shape per queryKey.
+function mockRecipients(count: number, users: QueryUser[] = []) {
+  mockUseQuery.mockImplementation((opts: { queryKey: unknown[] }) => {
+    if (opts.queryKey[0] === 'admin-message-users') {
+      return { data: { users }, isLoading: false, isError: false };
+    }
+    return { data: { count, segment: 'all' }, isLoading: false, isError: false };
+  });
+}
+
+function lastRecipientsQueryKey(): unknown[] {
+  const calls = mockUseQuery.mock.calls.filter(
+    (c) => (c[0] as { queryKey: unknown[] }).queryKey[0] === 'admin-message-recipients'
+  );
+  return (calls.at(-1)?.[0] as { queryKey: unknown[] }).queryKey;
 }
 
 const fetchMock = jest.fn();
@@ -46,12 +62,35 @@ describe('AdminMessages', () => {
     expect(iframe.getAttribute('sandbox')).toBe('');
   });
 
-  it('refetches the count with the chosen segment when switching recipients', async () => {
+  it('refetches the count with the chosen segment when switching the radio', async () => {
     mockRecipients(5);
     render(<AdminMessages />);
-    await userEvent.click(screen.getByRole('button', { name: 'Prediction, unpaid' }));
-    const lastCall = mockUseQuery.mock.calls.at(-1)?.[0] as { queryKey: unknown[] };
-    expect(lastCall.queryKey).toEqual(['admin-message-recipients', 'unpaid']);
+    await userEvent.click(screen.getByRole('radio', { name: 'Prediction, unpaid' }));
+    expect(lastRecipientsQueryKey()).toEqual(['admin-message-recipients', 'unpaid']);
+  });
+
+  it('picks a specific user and sends to just that email', async () => {
+    mockRecipients(0, [{ id: 'u9', username: 'charlie', email: 'charlie@x.com' }]);
+    render(<AdminMessages />);
+    await userEvent.type(screen.getByLabelText(/subject/i), 'Hi');
+    await userEvent.type(screen.getByLabelText(/message body/i), '<p>hi</p>');
+
+    await userEvent.click(screen.getByRole('radio', { name: 'Specific user' }));
+    // pick the user from the results list
+    await userEvent.click(screen.getByRole('button', { name: /charlie/i }));
+
+    await userEvent.click(screen.getByRole('button', { name: /send to 1 recipient/i }));
+    const dialog = await screen.findByRole('dialog');
+    expect(within(dialog).getByText(/charlie@x\.com/)).toBeInTheDocument();
+    await userEvent.click(within(dialog).getByRole('button', { name: /send now/i }));
+
+    await waitFor(() => expect(fetchMock).toHaveBeenCalled());
+    const sendCall = fetchMock.mock.calls.find((c) => c[0] === '/api/admin/messages/send');
+    expect(JSON.parse((sendCall![1] as RequestInit).body as string)).toMatchObject({
+      segment: 'user',
+      email: 'charlie@x.com',
+      test: false,
+    });
   });
 
   it('shows a confirm dialog before a real broadcast, then sends with test:false', async () => {

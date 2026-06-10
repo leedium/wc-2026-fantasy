@@ -117,6 +117,28 @@ describe('POST /api/admin/messages/send', () => {
     expect(sendBulkEmailMock).not.toHaveBeenCalled();
   });
 
+  it('segment "user" sends to the provided email and skips the RPC', async () => {
+    supabaseMock.auth.getUser.mockResolvedValue({ data: { user: adminUser } });
+    mockAdminProfile(true);
+    sendBulkEmailMock.mockResolvedValue({ sent: 1, failed: 0, skipped: 0, errors: [] });
+    const res = await POST(
+      postReq({ subject: 'Hi', html: '<p>x</p>', segment: 'user', email: 'pick@x.com' })
+    );
+    expect(res.status).toBe(200);
+    expect(supabaseMock.rpc).not.toHaveBeenCalled();
+    expect(sendBulkEmailMock).toHaveBeenCalledWith(
+      expect.objectContaining({ recipients: ['pick@x.com'] })
+    );
+  });
+
+  it('segment "user" returns 400 when the email is missing/invalid', async () => {
+    supabaseMock.auth.getUser.mockResolvedValue({ data: { user: adminUser } });
+    mockAdminProfile(true);
+    const res = await POST(postReq({ subject: 'Hi', html: '<p>x</p>', segment: 'user', email: 'nope' }));
+    expect(res.status).toBe(400);
+    expect(sendBulkEmailMock).not.toHaveBeenCalled();
+  });
+
   it('returns 500 when sendBulkEmail throws (e.g. SMTP not configured)', async () => {
     supabaseMock.auth.getUser.mockResolvedValue({ data: { user: adminUser } });
     mockAdminProfile(true);
