@@ -71,6 +71,11 @@ const KNOWN_ERROR_FRAGMENTS = [
   'referrer not found',
   'note is required',
   'referral not found',
+  // Custom referral code (migration 0065)
+  'code is required',
+  'invalid code format',
+  'code already in use',
+  'referral code row missing',
 ] as const;
 
 export function safeMessage(

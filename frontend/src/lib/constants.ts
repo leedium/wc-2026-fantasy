@@ -144,8 +144,9 @@ export const CHARITIES = [
 
 export type Charity = (typeof CHARITIES)[number];
 
-/** 8 uppercase chars from a 31-symbol alphabet (no 0/O/1/I/L). */
-export const REFERRAL_CODE_REGEX = /^[ABCDEFGHJKMNPQRSTUVWXYZ23456789]{8}$/;
+/** Uppercase A–Z and digits, 4–32 chars. Auto-generated codes are 8 chars from a
+ *  restricted alphabet; admins may set longer vanity codes (e.g. GIUSEPPETHEMC). */
+export const REFERRAL_CODE_REGEX = /^[A-Z0-9]{4,32}$/;
 
 export const API_ENDPOINTS = {
   tournament: '/api/tournament',
