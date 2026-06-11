@@ -52,7 +52,7 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
 
   if (error) {
     const msg = error.message ?? '';
-    const status = msg.includes('not found') ? 404 : 400;
+    const status = msg.includes('not found') ? 404 : msg.includes('locked') ? 403 : 400;
     return NextResponse.json({ error: safeMessage(error) }, { status });
   }
   return NextResponse.json({ paid: body.paid, paidAt: body.paid ? paidAt : null });

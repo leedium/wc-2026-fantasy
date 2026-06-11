@@ -24,6 +24,8 @@ import {
 } from '@/components/ui/dialog';
 import { BracketPreviewDialog } from '@/components/predictions/BracketPreviewDialog';
 import { fetchJSON } from '@/lib/api/fetchJSON';
+import { useAuth } from '@/hooks/useAuth';
+import { useTournamentLock } from '@/hooks/useTournamentLock';
 
 interface AdminPrediction {
   id: string;
@@ -69,6 +71,14 @@ function PaymentRow({
       : toLocalDatetimeInput(new Date().toISOString())
   );
   const [busy, setBusy] = React.useState(false);
+  const { profile } = useAuth();
+  const { isPhase1Open, isLoading: lockLoading } = useTournamentLock();
+
+  // Once the tournament lock_time has passed (any phase other than phase1),
+  // only super admins may change payment state — this keeps late/backdated
+  // payments off the leaderboard (get_leaderboard counts paid_at <= lock_time).
+  // The RPC enforces this; here we simply hide the controls for everyone else.
+  const paymentsLocked = !lockLoading && !isPhase1Open && !profile?.isSuperAdmin;
 
   const submit = async (paid: boolean, paidAt: string | null) => {
     setBusy(true);
@@ -120,36 +130,42 @@ function PaymentRow({
           </span>
         )}
       </div>
-      <div className="flex flex-wrap items-end gap-2">
-        <div className="space-y-1">
-          <label className="text-muted-foreground text-xs" htmlFor={`paid-at-${prediction.id}`}>
-            Paid at (optional)
-          </label>
-          <Input
-            id={`paid-at-${prediction.id}`}
-            type="datetime-local"
-            value={paidAtInput}
-            onChange={(e) => setPaidAtInput(e.target.value)}
-            className="w-56"
+      {paymentsLocked ? (
+        <p className="text-muted-foreground text-xs">
+          Payments are locked after lock time.
+        </p>
+      ) : (
+        <div className="flex flex-wrap items-end gap-2">
+          <div className="space-y-1">
+            <label className="text-muted-foreground text-xs" htmlFor={`paid-at-${prediction.id}`}>
+              Paid at (optional)
+            </label>
+            <Input
+              id={`paid-at-${prediction.id}`}
+              type="datetime-local"
+              value={paidAtInput}
+              onChange={(e) => setPaidAtInput(e.target.value)}
+              className="w-56"
+              disabled={busy}
+            />
+          </div>
+          <Button
+            size="sm"
+            onClick={() => submit(true, paidAtInput ? new Date(paidAtInput).toISOString() : null)}
             disabled={busy}
-          />
+          >
+            Mark paid
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => submit(false, null)}
+            disabled={busy || !prediction.isPaid}
+          >
+            Mark unpaid
+          </Button>
         </div>
-        <Button
-          size="sm"
-          onClick={() => submit(true, paidAtInput ? new Date(paidAtInput).toISOString() : null)}
-          disabled={busy}
-        >
-          Mark paid
-        </Button>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => submit(false, null)}
-          disabled={busy || !prediction.isPaid}
-        >
-          Mark unpaid
-        </Button>
-      </div>
+      )}
     </div>
   );
 }
