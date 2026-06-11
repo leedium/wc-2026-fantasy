@@ -15,7 +15,8 @@
     "typecheck": "tsc --noEmit",
     "test": "jest",
     "test:watch": "jest --watch",
-    "test:coverage": "jest --coverage"
+    "test:coverage": "jest --coverage",
+    "db:backup": "bash ../scripts/backup-remote-db.sh"
   },
   "dependencies": {
     "@radix-ui/react-dialog": "^1.1.15",
