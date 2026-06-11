@@ -116,6 +116,30 @@ Key entities:
 
 The trust boundary is the `submit_predictions(jsonb)` RPC: it validates that every team belongs to the claimed group, enforces the lock time, and runs the upsert in a single transaction. The leaderboard goes through two SECURITY DEFINER RPCs (`get_leaderboard`, `get_leaderboard_rank`) so it can read across users without violating the RLS policy on `predictions`.
 
+### Backing up the remote database
+
+`scripts/backup-remote-db.sh` dumps a full, restorable snapshot (roles + schema + data) of a remote Supabase Postgres to the local filesystem. It is **read-only** — it only runs `SELECT`/`COPY` against the remote and never writes to it.
+
+The connection string is never read from git: pass it via `SUPABASE_DB_URL`. Get it from the Supabase Dashboard → **Project Settings → Database → Connection string**, using the **Session** connection (port `5432`), not the transaction pooler (`6543`).
+
+```bash
+# from frontend/
+SUPABASE_DB_URL='postgresql://postgres:...@db.<ref>.supabase.co:5432/postgres' npm run db:backup
+
+# or call the script directly from the repo root
+SUPABASE_DB_URL='postgresql://...' scripts/backup-remote-db.sh
+```
+
+Dumps land in `supabase/backups/<UTC-timestamp>/` as `roles.sql`, `schema.sql`, and `data.sql`. That folder is **gitignored** (the files contain real production data) — only its `.gitignore` is tracked.
+
+To restore into a **fresh/empty** Postgres (a recovery project or local stack — never your live DB), apply the files in order:
+
+```bash
+psql "$TARGET_DB_URL" -f roles.sql
+psql "$TARGET_DB_URL" -f schema.sql
+psql "$TARGET_DB_URL" -f data.sql
+```
+
 ## Auth
 
 Email + password via Supabase Auth. Username is collected at signup and stored in `profiles` by the `handle_new_user` trigger. The trigger raises `'username taken'` (errcode `P0001`) on collision and `'username invalid format'` on format violations; `RegisterForm` branches on these strings.

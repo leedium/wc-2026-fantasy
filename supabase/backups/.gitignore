@@ -1,0 +1,5 @@
+# Database dumps land here (scripts/backup-remote-db.sh). They contain real
+# production data and must NEVER be committed. Keep the directory, ignore
+# everything in it except this file.
+*
+!.gitignore
