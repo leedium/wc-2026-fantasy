@@ -59,13 +59,13 @@ export async function GET(
   const { data: predictions } = await supabase
     .from('predictions')
     .select(
-      'id, prediction_name, total_goals, champion_team_id, submitted_at, tournament_payments!prediction_id(paid_at, marked_by)'
+      'id, prediction_name, total_goals, champion_team_id, submitted_at, tournament_payments!prediction_id(paid_at, marked_by, is_free)'
     )
     .eq('user_id', userId)
     .eq('tournament_id', tournament.id)
     .order('submitted_at', { ascending: true });
 
-  type Payment = { paid_at: string | null; marked_by: string | null };
+  type Payment = { paid_at: string | null; marked_by: string | null; is_free: boolean | null };
   type Pred = {
     id: string;
     prediction_name: string;
@@ -101,6 +101,7 @@ export async function GET(
         isPaid: payment != null,
         paidAt: payment?.paid_at ?? null,
         markedBy: payment?.marked_by ?? null,
+        isFreePaid: payment?.is_free === true,
       };
     }),
   });

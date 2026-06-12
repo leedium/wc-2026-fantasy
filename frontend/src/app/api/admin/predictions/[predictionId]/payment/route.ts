@@ -11,7 +11,7 @@ export async function GET(_request: NextRequest, context: RouteContext) {
 
   const { data, error } = await ctx.supabase
     .from('tournament_payments')
-    .select('paid_at, marked_by')
+    .select('paid_at, marked_by, is_free')
     .eq('prediction_id', predictionId)
     .maybeSingle();
 
@@ -21,6 +21,7 @@ export async function GET(_request: NextRequest, context: RouteContext) {
     paid: !!data,
     paidAt: data?.paid_at ?? null,
     markedBy: data?.marked_by ?? null,
+    isFree: data?.is_free ?? false,
   });
 }
 
@@ -29,10 +30,17 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
   if (isAdminGateError(ctx)) return ctx.response;
   const { predictionId } = await context.params;
 
-  const body = (await request.json()) as { paid?: boolean; paidAt?: string | null };
+  const body = (await request.json()) as {
+    paid?: boolean;
+    paidAt?: string | null;
+    isFree?: boolean;
+  };
 
   if (typeof body.paid !== 'boolean') {
     return NextResponse.json({ error: 'paid must be a boolean' }, { status: 400 });
+  }
+  if (body.isFree !== undefined && typeof body.isFree !== 'boolean') {
+    return NextResponse.json({ error: 'isFree must be a boolean' }, { status: 400 });
   }
 
   let paidAt: string | null = null;
@@ -44,16 +52,26 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
     paidAt = parsed.toISOString();
   }
 
+  const isFree = body.isFree ?? false;
+
   const { error } = await ctx.supabase.rpc('admin_set_prediction_payment', {
     p_prediction_id: predictionId,
     p_paid: body.paid,
     p_paid_at: paidAt,
+    p_is_free: isFree,
   });
 
   if (error) {
     const msg = error.message ?? '';
-    const status = msg.includes('not found') ? 404 : msg.includes('locked') ? 403 : 400;
+    const status =
+      msg.includes('not found') ? 404
+      : msg.includes('locked') || msg.includes('forbidden') ? 403
+      : 400;
     return NextResponse.json({ error: safeMessage(error) }, { status });
   }
-  return NextResponse.json({ paid: body.paid, paidAt: body.paid ? paidAt : null });
+  return NextResponse.json({
+    paid: body.paid,
+    paidAt: body.paid ? paidAt : null,
+    isFree: body.paid ? isFree : false,
+  });
 }
