@@ -5,6 +5,7 @@ export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const page = Math.max(1, parseInt(searchParams.get('page') ?? '1', 10));
   const pageSize = Math.min(100, Math.max(1, parseInt(searchParams.get('pageSize') ?? '25', 10)));
+  const search = searchParams.get('search') ?? '';
 
   const supabase = await getServerSupabase();
 
@@ -42,6 +43,7 @@ export async function GET(request: NextRequest) {
     p_tournament_id: tournament.id,
     p_page: page,
     p_page_size: pageSize,
+    p_search: search,
   });
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });

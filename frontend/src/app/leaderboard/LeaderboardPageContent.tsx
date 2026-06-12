@@ -13,6 +13,7 @@ import { Pagination, DEFAULT_ITEMS_PER_PAGE } from '@/components/shared/Paginati
 import { needsPayment } from '@/lib/predictions/paymentStatus';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useAuth } from '@/hooks/useAuth';
 import { useTournamentLock } from '@/hooks/useTournamentLock';
@@ -64,6 +65,15 @@ export function LeaderboardPageContent() {
   const { isLocked, phase } = useTournamentLock();
   const [currentPage, setCurrentPage] = React.useState(1);
   const [highlightedRank, setHighlightedRank] = React.useState<number | null>(null);
+  // `search` tracks the input instantly; `debounced` (250ms) drives the fetch so
+  // we don't hit the API on every keystroke. Mirrors AdminUsersList.
+  const [search, setSearch] = React.useState('');
+  const [debounced, setDebounced] = React.useState('');
+
+  React.useEffect(() => {
+    const t = setTimeout(() => setDebounced(search.trim()), 250);
+    return () => clearTimeout(t);
+  }, [search]);
 
   const currentUsername = profile?.username ?? null;
   // Staff (admin or super-admin — the latter doesn't imply the former) can
@@ -91,10 +101,10 @@ export function LeaderboardPageContent() {
       : 'anon';
 
   const query = useQuery<LeaderboardResponse>({
-    queryKey: ['leaderboard', currentPage, viewerKey],
+    queryKey: ['leaderboard', currentPage, viewerKey, debounced],
     queryFn: async () => {
       const res = await fetch(
-        `/api/leaderboard?page=${currentPage}&pageSize=${DEFAULT_ITEMS_PER_PAGE}`
+        `/api/leaderboard?page=${currentPage}&pageSize=${DEFAULT_ITEMS_PER_PAGE}&search=${encodeURIComponent(debounced)}`
       );
       if (!res.ok) throw new Error('Failed to fetch leaderboard');
       return res.json();
@@ -262,7 +272,9 @@ export function LeaderboardPageContent() {
         </div>
       )}
 
-      {user && (
+      {/* Hide the user's own unpaid-predictions surface while a search is active —
+          it's noise unrelated to the filtered results. */}
+      {user && !debounced && (
         <>
           <UnpaidPaymentNotice
             unpaidCount={unpaidPredictions.length}
@@ -272,10 +284,29 @@ export function LeaderboardPageContent() {
         </>
       )}
 
+      <div className="relative mb-4 max-w-sm">
+        <Search className="text-muted-foreground absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
+        <Input
+          type="search"
+          placeholder="Search player or prediction name…"
+          value={search}
+          onChange={(e) => {
+            setSearch(e.target.value);
+            setCurrentPage(1);
+          }}
+          className="pl-9"
+          aria-label="Search the leaderboard"
+        />
+      </div>
+
       <Card className="mb-6">
         <CardContent className="p-0">
           {isLoading ? (
             <LeaderboardSkeleton />
+          ) : debounced && entries.length === 0 ? (
+            <p className="text-muted-foreground px-4 py-12 text-center text-sm">
+              No players match &ldquo;{debounced}&rdquo;.
+            </p>
           ) : (
             <LeaderboardTable
               entries={entries}

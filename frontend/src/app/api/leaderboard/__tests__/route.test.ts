@@ -119,7 +119,23 @@ describe('GET /api/leaderboard', () => {
       p_tournament_id: 't1',
       p_page: 1,
       p_page_size: 100,
+      p_search: '',
     });
+  });
+
+  it('forwards the search term to the RPC as p_search', async () => {
+    let callIdx = 0;
+    supabaseMock.from.mockImplementation(() => {
+      const handler = callIdx === 0 ? mockTournamentLookup() : mockProfileLookup(false);
+      callIdx += 1;
+      return handler;
+    });
+    supabaseMock.rpc.mockResolvedValue({ data: [], error: null });
+    await GET(req('?page=1&pageSize=25&search=alice'));
+    expect(supabaseMock.rpc).toHaveBeenCalledWith(
+      'get_leaderboard',
+      expect.objectContaining({ p_search: 'alice' })
+    );
   });
 
   it('uses get_leaderboard (no email) for an authenticated non-admin', async () => {
