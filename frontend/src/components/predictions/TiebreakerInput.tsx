@@ -111,7 +111,7 @@ export function TiebreakerInput({ value, onChange, disabled = false }: Tiebreake
           <div className="text-muted-foreground space-y-1">
             <p>
               <strong>How it works:</strong> In the event of a tie, the closest prediction wins.
-              If two predictions are equally close, the least recently updated prediction wins.
+              If two predictions are equally close, the earliest submission wins.
             </p>
             <p className="text-xs">
               <strong>Includes:</strong> Regulation, extra time, and penalty shootout goals.

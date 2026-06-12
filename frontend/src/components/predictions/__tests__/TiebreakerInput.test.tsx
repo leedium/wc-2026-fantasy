@@ -34,7 +34,7 @@ describe('TiebreakerInput', () => {
 
       expect(screen.getByText(/How it works:/i)).toBeInTheDocument();
       expect(
-        screen.getByText(/the least recently updated prediction wins/i)
+        screen.getByText(/the earliest submission wins/i)
       ).toBeInTheDocument();
       expect(screen.getByText(/Includes:/i)).toBeInTheDocument();
       expect(

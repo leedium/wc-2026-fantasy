@@ -224,7 +224,7 @@ export function ScoringBreakdown() {
             </p>
             <p className="text-muted-foreground mt-1 text-xs">
               <strong>How it works:</strong> In the event of a tie, the closest prediction wins.
-              If two predictions are equally close, the least recently updated prediction wins.
+              If two predictions are equally close, the earliest submission wins.
             </p>
             <p className="text-muted-foreground mt-1 text-xs">
               <strong>Includes:</strong> Regulation, extra time, and penalty shootout goals.
