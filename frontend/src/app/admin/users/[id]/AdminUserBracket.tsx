@@ -35,6 +35,7 @@ interface AdminPrediction {
   isPaid: boolean;
   paidAt: string | null;
   markedBy: string | null;
+  isFreePaid: boolean;
 }
 
 interface AdminUserSummary {
@@ -80,7 +81,7 @@ function PaymentRow({
   // The RPC enforces this; here we simply hide the controls for everyone else.
   const paymentsLocked = !lockLoading && !isPhase1Open && !profile?.isSuperAdmin;
 
-  const submit = async (paid: boolean, paidAt: string | null) => {
+  const submit = async (paid: boolean, paidAt: string | null, isFree = false) => {
     setBusy(true);
     try {
       const res = await fetch(
@@ -88,14 +89,14 @@ function PaymentRow({
         {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ paid, paidAt }),
+          body: JSON.stringify({ paid, paidAt, isFree }),
         }
       );
       if (!res.ok) {
         const body = await res.json().catch(() => ({}));
         throw new Error(String(body.error ?? 'Failed'));
       }
-      toast.success(`Marked ${paid ? 'paid' : 'unpaid'}`);
+      toast.success(`Marked ${isFree ? 'free' : paid ? 'paid' : 'unpaid'}`);
       onChanged();
     } catch (e) {
       toast.error(e instanceof Error ? e.message : 'Failed');
@@ -115,10 +116,12 @@ function PaymentRow({
       <div className="flex items-center gap-2 text-sm">
         {prediction.isPaid ? (
           isLate ? (
-            <Badge variant="destructive">paid (after lock — not eligible)</Badge>
+            <Badge variant="destructive">
+              {prediction.isFreePaid ? 'free' : 'paid'} (after lock — not eligible)
+            </Badge>
           ) : (
             <Badge variant="default" className="bg-green-600 hover:bg-green-600/90">
-              paid — eligible
+              {prediction.isFreePaid ? 'free' : 'paid'} — eligible
             </Badge>
           )
         ) : (
@@ -156,6 +159,18 @@ function PaymentRow({
           >
             Mark paid
           </Button>
+          {profile?.isSuperAdmin && (
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={() =>
+                submit(true, paidAtInput ? new Date(paidAtInput).toISOString() : null, true)
+              }
+              disabled={busy}
+            >
+              Mark free
+            </Button>
+          )}
           <Button
             variant="outline"
             size="sm"
