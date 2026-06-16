@@ -34,6 +34,7 @@ const navLinks: NavLink[] = [
   { label: 'Home', href: ROUTES.home, tier: 'always' },
   { label: 'Predictions', href: ROUTES.predictions, tier: 'always' },
   { label: 'Leaderboard', href: ROUTES.leaderboard, tier: 'always' },
+  { label: 'Prizes', href: ROUTES.prizes, tier: 'reveal-1' },
   { label: 'Results', href: ROUTES.results, tier: 'reveal-1' },
   { label: 'Rules & Scoring', href: ROUTES.rules, tier: 'reveal-2' },
   { label: 'About', href: ROUTES.about, tier: 'more' },

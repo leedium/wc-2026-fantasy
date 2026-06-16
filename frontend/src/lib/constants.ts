@@ -51,6 +51,41 @@ export const PRICING = {
 } as const;
 
 /**
+ * Fixed cash prizes per finishing position, in CAD. Two independent payouts:
+ * Phase 1 rewards the top of the group-stage standings (top 3); Phase 2 rewards
+ * the final knockout standings (top 5). Values are set by the pool organizer and
+ * are not pot-derived, so they live here as a static source of truth surfaced on
+ * the /prizes page, the leaderboard, and the predictions list. `rank` mirrors the
+ * leaderboard rank a prediction must hold to win that amount.
+ */
+export const PRIZES = {
+  phase1: [
+    { rank: 1, amountCAD: 400 },
+    { rank: 2, amountCAD: 200 },
+    { rank: 3, amountCAD: 100 },
+  ],
+  phase2: [
+    { rank: 1, amountCAD: 2000 },
+    { rank: 2, amountCAD: 700 },
+    { rank: 3, amountCAD: 400 },
+    { rank: 4, amountCAD: 215 },
+    { rank: 5, amountCAD: 142 },
+  ],
+} as const;
+
+/** Number of prize-winning leaderboard positions per phase (Phase 1 pays top 3,
+ *  Phase 2 pays top 5). Drives how many standings rows the leaderboard flags. */
+export const PRIZE_RANK_CUTOFF = {
+  phase1: PRIZES.phase1.length,
+  phase2: PRIZES.phase2.length,
+} as const;
+
+/** Format a whole-dollar CAD prize amount, e.g. 2000 → "$2,000". */
+export function formatPrizeCAD(amount: number): string {
+  return `$${amount.toLocaleString('en-CA')}`;
+}
+
+/**
  * Address for out-of-band entry payments (Interac e-transfer / PayPal). Surfaced
  * in the rules page and the unpaid-prediction payment notice. Single source so
  * the email only ever lives in one place.
@@ -98,6 +133,7 @@ export const ROUTES = {
   home: '/',
   predictions: '/predictions',
   leaderboard: '/leaderboard',
+  prizes: '/prizes',
   results: '/results',
   login: '/login',
   register: '/register',

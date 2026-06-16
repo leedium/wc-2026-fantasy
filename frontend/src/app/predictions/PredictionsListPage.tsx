@@ -13,6 +13,7 @@ import {
   Pencil,
   Plus,
   Trash2,
+  Trophy,
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -41,6 +42,7 @@ import {
   useRewardsStatus,
 } from '@/hooks/useRewardsStatus';
 import { BracketPreviewDialog } from '@/components/predictions/BracketPreviewDialog';
+import { getRankBadge } from '@/components/leaderboard/rankBadge';
 import { FreePickBanner } from '@/components/predictions/FreePickBanner';
 import { UnpaidPaymentNotice } from '@/components/predictions/UnpaidPaymentNotice';
 import { PRICING, ROUTES } from '@/lib/constants';
@@ -51,6 +53,7 @@ import {
   type NewDraftData,
 } from '@/lib/predictions/draftSummary';
 import { cn } from '@/lib/utils';
+import type { LeaderboardRankMatch } from '@/types/tournament';
 
 interface ApiPrediction {
   id: string;
@@ -90,6 +93,20 @@ export function PredictionsListPage() {
     queryKey: ['predictions'],
     queryFn: () => fetchJSON('/api/predictions'),
   });
+
+  // Per-prediction leaderboard rank — only paid + ranked predictions come back,
+  // so the map naturally excludes unpaid/draft entries. Shared cache key with the
+  // leaderboard's own "find me" query.
+  const rankQuery = useQuery<{ matches: LeaderboardRankMatch[] }>({
+    queryKey: ['leaderboard-me', user?.id ?? null],
+    queryFn: () => fetchJSON('/api/leaderboard/me'),
+    enabled: !!user,
+  });
+  const rankByPrediction = React.useMemo(() => {
+    const map = new Map<string, LeaderboardRankMatch>();
+    for (const m of rankQuery.data?.matches ?? []) map.set(m.predictionId, m);
+    return map;
+  }, [rankQuery.data]);
 
   // Skew-adjusted phase state — robust to client clock manipulation. The
   // server-side RPC enforces the actual write boundary; this is purely UX.
@@ -364,6 +381,20 @@ export function PredictionsListPage() {
                         <Clock className="h-3 w-3" /> Unpaid
                       </Badge>
                     )}
+                    {(() => {
+                      const match = rankByPrediction.get(p.id);
+                      if (!match) return null;
+                      const rankColor = getRankBadge(match.rank)?.color;
+                      return (
+                        <Badge
+                          variant="secondary"
+                          className={cn('gap-1', rankColor)}
+                          title={`Currently ranked #${match.rank} on the leaderboard`}
+                        >
+                          <Trophy className="h-3 w-3" /> Rank #{match.rank}
+                        </Badge>
+                      );
+                    })()}
                   </div>
                   <div className="text-muted-foreground mt-1 text-sm">
                     {p.submittedAt

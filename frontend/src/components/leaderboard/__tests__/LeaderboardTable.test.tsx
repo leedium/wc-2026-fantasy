@@ -77,6 +77,27 @@ describe('LeaderboardTable', () => {
     expect(screen.getByText('3rd')).toBeInTheDocument();
   });
 
+  const fivePlaces: LeaderboardEntry[] = [
+    ...entries,
+    { ...entries[0], rank: 4, predictionId: 'p4', predictionName: 'Fourth', username: 'dave' },
+    { ...entries[0], rank: 5, predictionId: 'p5', predictionName: 'Fifth', username: 'erin' },
+  ];
+
+  it('does not flag 4th/5th by default (Phase 1 cutoff of 3)', () => {
+    render(<LeaderboardTable entries={fivePlaces} />);
+    expect(screen.queryByText('4th')).not.toBeInTheDocument();
+    expect(screen.queryByText('5th')).not.toBeInTheDocument();
+    // The rank still renders as plain text.
+    expect(screen.getByText('4')).toBeInTheDocument();
+    expect(screen.getByText('5')).toBeInTheDocument();
+  });
+
+  it('flags 4th and 5th when prizeRankCutoff is 5 (Phase 2)', () => {
+    render(<LeaderboardTable entries={fivePlaces} prizeRankCutoff={5} />);
+    expect(screen.getByText('4th')).toBeInTheDocument();
+    expect(screen.getByText('5th')).toBeInTheDocument();
+  });
+
   it('renders email in place of username when present (admin view)', () => {
     const adminEntries: LeaderboardEntry[] = [
       { ...entries[0], email: 'alice@example.com' },

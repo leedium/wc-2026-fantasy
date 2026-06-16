@@ -7,6 +7,7 @@ import { ArrowRight, Lock, Search, Trophy, Users } from 'lucide-react';
 
 import { PageLayout } from '@/components/layout/PageLayout';
 import { LeaderboardTable } from '@/components/leaderboard/LeaderboardTable';
+import { PrizeTables } from '@/components/shared/PrizeTables';
 import { UnpaidPredictionsTable } from '@/components/leaderboard/UnpaidPredictionsTable';
 import { UnpaidPaymentNotice } from '@/components/predictions/UnpaidPaymentNotice';
 import { Pagination, DEFAULT_ITEMS_PER_PAGE } from '@/components/shared/Pagination';
@@ -17,7 +18,7 @@ import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useAuth } from '@/hooks/useAuth';
 import { useTournamentLock } from '@/hooks/useTournamentLock';
-import { ROUTES } from '@/lib/constants';
+import { PRIZE_RANK_CUTOFF, ROUTES } from '@/lib/constants';
 import type { LeaderboardEntry, LeaderboardRankMatch } from '@/types/tournament';
 
 function LeaderboardSkeleton() {
@@ -62,7 +63,13 @@ interface PredictionsResponse {
 
 export function LeaderboardPageContent() {
   const { user, profile } = useAuth();
-  const { isLocked, phase } = useTournamentLock();
+  const { isLocked, phase, knockoutUnlocked } = useTournamentLock();
+  // Phase 2 (knockout) pays the top 5; Phase 1 (group stage) pays the top 3.
+  // Once the admin opens the knockout, flag 4th/5th as prize-winning rows.
+  const prizeRankCutoff = knockoutUnlocked
+    ? PRIZE_RANK_CUTOFF.phase2
+    : PRIZE_RANK_CUTOFF.phase1;
+  const activePrizePhase = knockoutUnlocked ? 'phase2' : 'phase1';
   const [currentPage, setCurrentPage] = React.useState(1);
   const [highlightedRank, setHighlightedRank] = React.useState<number | null>(null);
   // `search` tracks the input instantly; `debounced` (250ms) drives the fetch so
@@ -284,6 +291,19 @@ export function LeaderboardPageContent() {
         </>
       )}
 
+      <section className="mb-6">
+        <div className="mb-3 flex items-center justify-between">
+          <h2 className="text-xl font-bold">Prizes</h2>
+          <Button variant="link" size="sm" asChild className="text-muted-foreground">
+            <Link href={ROUTES.prizes}>
+              Details
+              <ArrowRight className="ml-1 h-3.5 w-3.5" />
+            </Link>
+          </Button>
+        </div>
+        <PrizeTables activePhase={activePrizePhase} />
+      </section>
+
       <div className="relative mb-4 max-w-sm">
         <Search className="text-muted-foreground absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
         <Input
@@ -316,6 +336,7 @@ export function LeaderboardPageContent() {
               canPreviewOthers={canPreviewOthers}
               // Edit deep-link only while predictions are still editable.
               enableEdit={!!user && !isLocked}
+              prizeRankCutoff={prizeRankCutoff}
             />
           )}
         </CardContent>
