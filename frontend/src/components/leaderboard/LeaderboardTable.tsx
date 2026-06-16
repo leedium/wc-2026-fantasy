@@ -14,6 +14,7 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { BracketPreviewDialog } from '@/components/predictions/BracketPreviewDialog';
+import { getRankBadge } from '@/components/leaderboard/rankBadge';
 import { ROUTES } from '@/lib/constants';
 import { cn } from '@/lib/utils';
 import type { LeaderboardEntry } from '@/types/tournament';
@@ -44,6 +45,13 @@ export interface LeaderboardTableProps {
    * still gated on `currentUsername` so other players' rows never get one.
    */
   enableEdit?: boolean;
+  /**
+   * Number of top finishing positions that win a prize, used to flag the
+   * prize-winning rows with a coloured rank badge. Phase 1 pays the top 3, so
+   * 4th/5th stay un-flagged; once Phase 2 begins the leaderboard passes 5 so
+   * 4th and 5th light up too. Defaults to 3.
+   */
+  prizeRankCutoff?: number;
 }
 
 function formatUpdated(value?: string | null): string | null {
@@ -56,19 +64,6 @@ function formatUpdated(value?: string | null): string | null {
     hour: 'numeric',
     minute: '2-digit',
   });
-}
-
-function getRankBadge(rank: number): { color: string; label: string } | null {
-  switch (rank) {
-    case 1:
-      return { color: 'bg-yellow-500 text-yellow-950', label: '1st' };
-    case 2:
-      return { color: 'bg-gray-400 dark:bg-gray-300 text-gray-950', label: '2nd' };
-    case 3:
-      return { color: 'bg-amber-600 text-amber-950', label: '3rd' };
-    default:
-      return null;
-  }
 }
 
 function ChangeIndicator({ change }: { change: number }) {
@@ -104,6 +99,7 @@ export function LeaderboardTable({
   enablePreview = false,
   canPreviewOthers = false,
   enableEdit = false,
+  prizeRankCutoff = 3,
 }: LeaderboardTableProps) {
   const [previewId, setPreviewId] = React.useState<string | null>(null);
 
@@ -129,7 +125,9 @@ export function LeaderboardTable({
             const isCurrentUser =
               currentUsername && entry.username.toLowerCase() === currentUsername.toLowerCase();
             const isHighlighted = highlightedRank && entry.rank === highlightedRank;
-            const rankBadge = getRankBadge(entry.rank);
+            // Only flag rows that actually win a prize this phase — beyond the
+            // cutoff the rank shows as plain text.
+            const rankBadge = entry.rank <= prizeRankCutoff ? getRankBadge(entry.rank) : null;
             const isEvenRow = index % 2 === 0;
             const canPreviewThisRow = isCurrentUser || canPreviewOthers;
 
