@@ -5,6 +5,42 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.7.0] - 2026-06-18
+
+### Added
+
+- **Prize display.** A new `/prizes` page plus prize callouts on the leaderboard and predictions
+  surfaces show the pool's announced prizes to players. (#236)
+- **Leaderboard search.** A player / prediction-name search filter on the leaderboard lets users find
+  a specific entrant or entry by name. (#234)
+- **Super-admin "Mark Free".** Super admins can comp an entry by marking a prediction as a free
+  (`is_free`) paid entry, so promotional / comped entries rank on the leaderboard without recording
+  cash. (#233)
+- **Read-only remote DB backup script.** A new script captures a read-only backup of the remote
+  database for operational safety. (#232)
+
+### Changed
+
+- **Payment changes locked to super admins after lock time.** Once the tournament lock time passes,
+  only super admins can toggle a prediction's payment state, protecting payment history from
+  post-lock edits by regular admins. (#231)
+
+### Fixed
+
+- **Knockout-lock banner no longer misfires during the group stage.** Entering the real-world
+  best-3rd advancers mid-group-stage previously tripped the "The knockout stage has begun. Predictions
+  are locked." banner even though Phase 2 was never opened. The banner now keys off whether Phase 2
+  was actually opened (`knockout_lock_time`) rather than whether advancers were posted, and shows
+  "Group stage in progress. Knockout predictions will open once the knockout bracket is determined."
+  in that state. (#237)
+- **Leaderboard tie-break uses last-updated time.** Point ties are now broken by `updated_at` instead
+  of `submitted_at`, so the most recently updated entry is ordered consistently. (#235)
+
+### Internal
+
+- Removed the Software Services (AI / tooling) operating-cost line from the audit stats. (#230)
+- Synced the `package-lock.json` root `version` field to match the released package version.
+
 ## [1.6.0] - 2026-06-10
 
 ### Added
