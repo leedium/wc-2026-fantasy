@@ -31,12 +31,12 @@ function mockTournament({
   lockOffsetMs,
   serverOffsetMs = 0,
   phase,
-  advancersSet = false,
+  knockoutLockTime = null,
 }: {
   lockOffsetMs: number;
   serverOffsetMs?: number;
   phase?: 'phase1' | 'phase1_locked' | 'phase2_open' | 'phase2_locked';
-  advancersSet?: boolean;
+  knockoutLockTime?: string | null;
 }) {
   const lockTime = new Date(Date.now() + lockOffsetMs).toISOString();
   const serverTime = new Date(Date.now() + serverOffsetMs).toISOString();
@@ -51,9 +51,8 @@ function mockTournament({
       name: 'WC',
       status: 'upcoming',
       lockTime,
-      knockoutLockTime: null,
+      knockoutLockTime,
       knockoutUnlocked: false,
-      advancersSet,
       phase: phase ?? inferredPhase,
       totalEntries: 0,
       serverTime,
@@ -83,16 +82,31 @@ describe('LockStatusBanner', () => {
     expect(screen.getByRole('status').className).toContain('bg-amber-600');
   });
 
-  it('renders the between-phases state when phase 1 has ended and advancers not yet posted', async () => {
+  it('renders the between-phases state when phase 1 has ended and phase 2 not yet opened', async () => {
     mockTournament({ lockOffsetMs: -60_000 });
     render(wrap(<LockStatusBanner />));
     await waitFor(() => expect(screen.getByRole('status')).toBeInTheDocument());
     expect(screen.getByRole('status')).toHaveTextContent(/Group stage in progress/i);
+    expect(screen.getByRole('status')).toHaveTextContent(/knockout bracket is determined/i);
+    expect(screen.getByRole('status').className).toContain('bg-slate-600');
+  });
+
+  it('stays in the between-phases state when advancers are posted but phase 2 never opened', async () => {
+    // Regression: posting best-3rd advancers mid-group-stage must NOT trip the
+    // "knockout has begun" message. The only signal that matters is whether
+    // Phase 2 was ever opened (knockoutLockTime non-null).
+    mockTournament({ lockOffsetMs: -60_000, phase: 'phase1_locked', knockoutLockTime: null });
+    render(wrap(<LockStatusBanner />));
+    await waitFor(() => expect(screen.getByRole('status')).toBeInTheDocument());
+    expect(screen.getByRole('status')).toHaveTextContent(/Group stage in progress/i);
+    expect(screen.getByRole('status')).not.toHaveTextContent(/knockout stage has begun/i);
     expect(screen.getByRole('status').className).toContain('bg-slate-600');
   });
 
   it('renders the knockout-stage message when phase 2 was opened and then closed by admin', async () => {
-    mockTournament({ lockOffsetMs: -60_000, phase: 'phase1_locked', advancersSet: true });
+    // Manual close reverts the phase to phase1_locked but leaves knockoutLockTime set.
+    const knockoutLockTime = new Date(Date.now() - 30_000).toISOString();
+    mockTournament({ lockOffsetMs: -60_000, phase: 'phase1_locked', knockoutLockTime });
     render(wrap(<LockStatusBanner />));
     await waitFor(() => expect(screen.getByRole('status')).toBeInTheDocument());
     expect(screen.getByRole('status')).toHaveTextContent(/knockout stage has begun/i);

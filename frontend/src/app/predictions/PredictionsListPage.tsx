@@ -110,13 +110,16 @@ export function PredictionsListPage() {
 
   // Skew-adjusted phase state — robust to client clock manipulation. The
   // server-side RPC enforces the actual write boundary; this is purely UX.
-  const { isLocked, phase, advancersSet } = useTournamentLock();
+  const { isLocked, phase, knockoutLockTime } = useTournamentLock();
   const isSuperAdmin = profile?.isSuperAdmin === true;
   // Once the knockout stage has begun (phase2 closed naturally, or admin
-  // closed phase2 after posting advancers) there's nothing for a regular
-  // user to edit. The Preview button still covers viewing the bracket.
+  // opened then closed phase2) there's nothing for a regular user to edit.
+  // The Preview button still covers viewing the bracket. `knockout_lock_time`
+  // is set only by opening Phase 2 and never cleared, so a non-null value
+  // during phase1_locked marks an opened-then-closed Phase 2.
   const knockoutStageLocked =
-    phase === 'phase2_locked' || (phase === 'phase1_locked' && advancersSet);
+    phase === 'phase2_locked' ||
+    (phase === 'phase1_locked' && knockoutLockTime !== null);
 
   const predictions = query.data?.predictions ?? [];
   // Unpaid entries that would rank once paid — drive the red payment notice +

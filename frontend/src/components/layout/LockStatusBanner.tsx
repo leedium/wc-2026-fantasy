@@ -35,7 +35,7 @@ export function LockStatusBanner() {
     remainingMs,
     hasActiveDeadline,
     clockSuspect,
-    advancersSet,
+    knockoutLockTime,
   } = useTournamentLock();
   const { profile } = useAuth();
   const [dismissed, setDismissed] = React.useState(false);
@@ -71,11 +71,15 @@ export function LockStatusBanner() {
   const urgent =
     (phase === 'phase1' || phase === 'phase2_open') && remainingMs <= ONE_DAY_MS;
 
-  // Once advancers are posted, phase1_locked means the admin opened and
-  // then closed phase 2 (or hasn't reopened it yet). The knockout stage is
-  // now underway either way, so we display it the same as phase2_locked.
+  // The knockout stage has begun once Phase 2 was opened (a knockout lock
+  // time was set) and is no longer accepting writes. `knockout_lock_time` is
+  // only ever written by opening Phase 2 and is never cleared on close, so a
+  // non-null value during phase1_locked means the admin opened then closed
+  // Phase 2 (or hasn't reopened it). Entering best-3rd advancers no longer
+  // factors in — it's a scoring input that can be filled mid-group-stage.
   const knockoutLocked =
-    phase === 'phase2_locked' || (phase === 'phase1_locked' && advancersSet);
+    phase === 'phase2_locked' ||
+    (phase === 'phase1_locked' && knockoutLockTime !== null);
 
   // Tone + icon per phase.
   let tone: 'open' | 'urgent' | 'between' | 'locked' = 'open';
@@ -103,8 +107,8 @@ export function LockStatusBanner() {
           <span className="font-medium">
             {phase === 'phase1' &&
               `You have ${formatRemaining(remainingMs)} left to choose your group + best-3rd picks before the tournament starts! Don't miss out!`}
-            {phase === 'phase1_locked' && !advancersSet &&
-              'Group stage in progress. Knockout predictions will open once the admin posts the best-3rd advancers.'}
+            {phase === 'phase1_locked' && !knockoutLocked &&
+              'Group stage in progress. Knockout predictions will open once the knockout bracket is determined.'}
             {phase === 'phase2_open' && hasActiveDeadline &&
               `You have ${formatRemaining(remainingMs)} left to make your knockout picks!`}
             {phase === 'phase2_open' && !hasActiveDeadline &&
