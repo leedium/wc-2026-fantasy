@@ -127,6 +127,21 @@ export interface LeaderboardRankMatch {
   points: number;
 }
 
+/**
+ * A frozen Phase 1 (group + advancer) top-3 standing, snapshotted by an admin when
+ * Phase 2 opens. Backed by the phase1_winners table (migration 0070) and surfaced
+ * on the leaderboard + prizes page.
+ */
+export interface Phase1Winner {
+  rank: number;
+  predictionId: string;
+  predictionName: string;
+  username: string;
+  groupPoints: number;
+  advancerPoints: number;
+  phase1Points: number;
+}
+
 export interface UserEntry {
   username: string;
   predictions: Predictions;

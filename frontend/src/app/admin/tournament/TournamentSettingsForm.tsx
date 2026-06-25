@@ -103,6 +103,7 @@ export function TournamentSettingsForm() {
   const [championGoals, setChampionGoals] = React.useState('');
   const [savingSettings, setSavingSettings] = React.useState(false);
   const [savingPhase1, setSavingPhase1] = React.useState(false);
+  const [snapshotting, setSnapshotting] = React.useState(false);
   const [busyPhase2, setBusyPhase2] = React.useState(false);
   const [resetDialogOpen, setResetDialogOpen] = React.useState(false);
   const [resetConfirm, setResetConfirm] = React.useState('');
@@ -189,6 +190,28 @@ export function TournamentSettingsForm() {
       toast.error(e instanceof Error ? e.message : 'Failed to save');
     } finally {
       setSavingPhase1(false);
+    }
+  };
+
+  const handleSnapshotPhase1Winners = async () => {
+    if (!tournament.data) return;
+    setSnapshotting(true);
+    try {
+      const res = await fetch('/api/admin/tournament/snapshot-phase1-winners', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: tournament.data.id }),
+      });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body.error ?? 'Failed to snapshot');
+      }
+      toast.success('Phase 1 winners snapshotted');
+      await queryClient.invalidateQueries({ queryKey: ['phase1-winners'] });
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Failed to snapshot');
+    } finally {
+      setSnapshotting(false);
     }
   };
 
@@ -439,6 +462,21 @@ export function TournamentSettingsForm() {
             <Button onClick={handleSavePhase1Lock} disabled={savingPhase1}>
               {savingPhase1 ? 'Saving…' : 'Save Phase 1 lock time'}
             </Button>
+
+            <div className="space-y-1 border-t pt-3">
+              <Button
+                variant="outline"
+                onClick={handleSnapshotPhase1Winners}
+                disabled={snapshotting || !tournament.data}
+              >
+                {snapshotting ? 'Snapshotting…' : 'Snapshot Phase 1 Winners'}
+              </Button>
+              <p className="text-muted-foreground text-xs">
+                Freezes the current group-stage top 3 (group + advancer points) for the
+                Phase 1 prize and shows it on the leaderboard + prizes page. Run after group
+                standings + advancers are final; safe to re-run (overwrites).
+              </p>
+            </div>
           </CardContent>
         </Card>
 
