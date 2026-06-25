@@ -1,3 +1,5 @@
+'use client';
+
 import Link from 'next/link';
 import { Trophy } from 'lucide-react';
 
@@ -12,6 +14,8 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { getRankBadge } from '@/components/leaderboard/rankBadge';
+import { Phase1WinnersCard } from '@/components/leaderboard/Phase1WinnersCard';
+import { usePhase1Winners } from '@/hooks/usePhase1Winners';
 import { PRIZES, ROUTES, formatPrizeCAD } from '@/lib/constants';
 import { cn } from '@/lib/utils';
 
@@ -85,13 +89,21 @@ export interface PrizeTablesProps {
 
 /**
  * Side-by-side Phase 1 / Phase 2 prize tables. Single source of truth for prize
- * rendering, shared by the /prizes page and the leaderboard.
+ * rendering, shared by the /prizes page and the leaderboard. Once an admin has
+ * snapshotted the Phase 1 winners, the actual winners table replaces the generic
+ * Phase 1 prize card in place (Phase 2 stays a prize card until its own results).
  */
 export function PrizeTables({ activePhase, className }: PrizeTablesProps) {
+  const { winners } = usePhase1Winners();
+  const hasPhase1Winners = winners.length > 0;
   return (
     <div className={className}>
       <div className="grid gap-4 sm:grid-cols-2">
-        <PrizeCard phase="phase1" active={activePhase === 'phase1'} />
+        {hasPhase1Winners ? (
+          <Phase1WinnersCard />
+        ) : (
+          <PrizeCard phase="phase1" active={activePhase === 'phase1'} />
+        )}
         <PrizeCard phase="phase2" active={activePhase === 'phase2'} />
       </div>
       <p className="text-muted-foreground mt-3 text-xs">
