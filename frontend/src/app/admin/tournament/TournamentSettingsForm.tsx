@@ -108,6 +108,8 @@ export function TournamentSettingsForm() {
   const [resetDialogOpen, setResetDialogOpen] = React.useState(false);
   const [resetConfirm, setResetConfirm] = React.useState('');
   const [resetting, setResetting] = React.useState(false);
+  const [autofillDialogOpen, setAutofillDialogOpen] = React.useState(false);
+  const [autofilling, setAutofilling] = React.useState(false);
 
   React.useEffect(() => {
     if (!tournament.data) return;
@@ -235,6 +237,25 @@ export function TournamentSettingsForm() {
   const canOpenPhaseTwo = allStandingsSet && allAssignmentsSet;
   const phase = tournament.data?.phase ?? 'phase1';
 
+  // Bracket auto-fill preview — how many paid/Phase-1-complete entries have an
+  // unfinished bracket. Only meaningful (and only fetched) once Phase 2 is
+  // locked and the viewer is a super admin (the RPC is super-admin-gated).
+  const autofillPreview = useQuery<{
+    ok: boolean;
+    preview: { eligible_count: number; resolution_data_ok: boolean; phase: string };
+  }>({
+    queryKey: ['admin-autofill-preview', tournament.data?.id],
+    queryFn: () =>
+      fetchJSON('/api/admin/tournament/autofill-brackets/preview', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: tournament.data!.id }),
+      }),
+    enabled: !!tournament.data?.id && isSuperAdmin && phase === 'phase2_locked',
+  });
+  const eligibleCount = autofillPreview.data?.preview.eligible_count ?? 0;
+  const resolutionOk = autofillPreview.data?.preview.resolution_data_ok ?? false;
+
   const phaseTwoLockIso = React.useMemo(() => {
     if (!phaseTwoLockInput.trim()) return null;
     const ms = new Date(phaseTwoLockInput).getTime();
@@ -322,6 +343,36 @@ export function TournamentSettingsForm() {
       toast.error(e instanceof Error ? e.message : 'Failed to reset tournament');
     } finally {
       setResetting(false);
+    }
+  };
+
+  const handleAutofill = async () => {
+    if (!tournament.data) return;
+    setAutofilling(true);
+    try {
+      const res = await fetch('/api/admin/tournament/autofill-brackets', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: tournament.data.id }),
+      });
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(body.error ?? 'Failed to auto-fill brackets');
+      const s = body.summary ?? {};
+      toast.success(
+        `Auto-filled ${s.matches_filled ?? 0} matches across ${s.predictions_touched ?? 0} ${
+          (s.predictions_touched ?? 0) === 1 ? 'entry' : 'entries'
+        }`
+      );
+      setAutofillDialogOpen(false);
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['leaderboard'] }),
+        queryClient.invalidateQueries({ queryKey: ['admin-stats'] }),
+        queryClient.invalidateQueries({ queryKey: ['admin-autofill-preview'] }),
+      ]);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Failed to auto-fill brackets');
+    } finally {
+      setAutofilling(false);
     }
   };
 
@@ -576,6 +627,54 @@ export function TournamentSettingsForm() {
           </CardContent>
         </Card>
 
+        {isSuperAdmin && (
+          <Card>
+            <CardHeader>
+              <CardTitle>Auto-fill missing brackets</CardTitle>
+              <p className="text-muted-foreground text-sm">
+                Super-admin only. After the Phase 2 deadline, fill blank knockout picks for paid
+                / credited entries that completed Phase 1 but never submitted a bracket. The
+                champion pick advances along its real path (and wins the final if it gets there);
+                otherwise the team with the better real group finish wins. Never overwrites a
+                user&apos;s existing picks; safe to re-run.
+              </p>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <p className="text-sm">
+                {phase !== 'phase2_locked'
+                  ? 'Available only once Phase 2 is locked (the knockout deadline has passed).'
+                  : autofillPreview.isLoading
+                    ? 'Checking eligible entries…'
+                    : autofillPreview.isError
+                      ? 'Could not load eligibility.'
+                      : `${eligibleCount} eligible ${eligibleCount === 1 ? 'entry' : 'entries'}${
+                          resolutionOk ? '' : ' · ⚠ resolution data incomplete (fill standings + bracket first)'
+                        }`}
+              </p>
+              <Button
+                onClick={() => setAutofillDialogOpen(true)}
+                disabled={
+                  autofilling ||
+                  phase !== 'phase2_locked' ||
+                  eligibleCount === 0 ||
+                  !resolutionOk
+                }
+                title={
+                  phase !== 'phase2_locked'
+                    ? 'Phase 2 must be locked first'
+                    : !resolutionOk
+                      ? 'Enter all group standings + R32 bracket assignments first'
+                      : eligibleCount === 0
+                        ? 'No eligible entries'
+                        : undefined
+                }
+              >
+                Auto-fill missing brackets
+              </Button>
+            </CardContent>
+          </Card>
+        )}
+
         <Card className="border-destructive/40">
           <CardHeader>
             <CardTitle className="text-destructive">Danger zone</CardTitle>
@@ -651,6 +750,33 @@ export function TournamentSettingsForm() {
               disabled={resetting || resetConfirm !== 'RESET'}
             >
               {resetting ? 'Resetting…' : 'Reset tournament'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={autofillDialogOpen} onOpenChange={setAutofillDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Auto-fill missing brackets</DialogTitle>
+            <DialogDescription>
+              Fill blank knockout picks for{' '}
+              <span className="font-semibold">{eligibleCount}</span> paid / credited{' '}
+              {eligibleCount === 1 ? 'entry' : 'entries'} that completed Phase 1 but never
+              finished a bracket. Existing user picks are preserved, and this can be re-run
+              safely.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setAutofillDialogOpen(false)}
+              disabled={autofilling}
+            >
+              Cancel
+            </Button>
+            <Button onClick={handleAutofill} disabled={autofilling}>
+              {autofilling ? 'Filling…' : 'Auto-fill brackets'}
             </Button>
           </DialogFooter>
         </DialogContent>
