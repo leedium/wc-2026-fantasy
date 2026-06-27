@@ -11,15 +11,26 @@
 #
 # The connection string is NEVER read from git — pass it via the
 # SUPABASE_DB_URL env var or as the first argument. Get it from the Supabase
-# Dashboard → Project Settings → Database → Connection string. Use the
-# direct/session connection (port 5432), NOT the transaction pooler (6543),
-# so the dump can hold a consistent read.
+# Dashboard → Project Settings → Database → Connection string.
+#
+# Use the SESSION POOLER connection (port 5432), NOT the transaction pooler
+# (port 6543). The session pooler holds a consistent read for the dump; the
+# transaction pooler does not.
+#
+#   postgresql://postgres.<ref>:<password>@aws-0-<region>.pooler.supabase.com:5432/postgres
+#
+# Notes:
+#   - Username is "postgres.<ref>" (project ref embedded), NOT bare "postgres".
+#   - Do NOT use the direct host "db.<ref>.supabase.co" — on current Supabase
+#     infra it no longer resolves over IPv4 and pg_dump fails with
+#     'could not translate host name ... No address associated with hostname'.
+#   - URL-encode special characters in the password (e.g. '@' -> '%40').
 #
 # Examples:
-#   SUPABASE_DB_URL='postgresql://postgres:...@db.<ref>.supabase.co:5432/postgres' \
+#   SUPABASE_DB_URL='postgresql://postgres.<ref>:...@aws-0-<region>.pooler.supabase.com:5432/postgres' \
 #     scripts/backup-remote-db.sh
 #
-#   scripts/backup-remote-db.sh 'postgresql://postgres:...@db.<ref>.supabase.co:5432/postgres'
+#   scripts/backup-remote-db.sh 'postgresql://postgres.<ref>:...@aws-0-<region>.pooler.supabase.com:5432/postgres'
 #
 # Exit codes:
 #   0  snapshot written successfully
