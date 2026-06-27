@@ -150,3 +150,6 @@ vite.config.ts.timestamp-*
 supabase/.branches/
 supabase/.temp/
 
+# Local-only dev seeds / fixtures (never committed)
+supabase/dev/
+

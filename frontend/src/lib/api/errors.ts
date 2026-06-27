@@ -64,6 +64,9 @@ const KNOWN_ERROR_FRAGMENTS = [
   'tournament_id is required',
   // Reset tournament (migration 0046)
   'tournament not found',
+  // Phase 2 bracket auto-fill (migration 0071)
+  'tournament is not phase2_locked',
+  'resolution data incomplete',
   // Referral admin tool (migration 0059)
   'referee account not found',
   'referee already referred',
