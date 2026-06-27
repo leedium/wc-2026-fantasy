@@ -1,7 +1,7 @@
 # CLAUDE.md
 
-> **Version:** 3.8.0
-> **Last Updated:** 2026-06-09
+> **Version:** 3.8.1
+> **Last Updated:** 2026-06-27
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
@@ -35,7 +35,7 @@ WC2026/
 │   └── wrangler.toml            Cloudflare Workers config
 └── supabase/
     ├── migrations/              0001 schema, 0002 RLS, 0003 triggers + RPCs, 0004 leaderboard RPCs
-    ├── seed.sql                 12 groups, 48 teams, 31 knockout matches, 1 active tournament
+    ├── seed.sql                 12 groups, 48 teams, 32 knockout matches, 1 active tournament
     └── config.toml
 ```
 
@@ -47,7 +47,7 @@ All schema/policies/RPCs live in `supabase/migrations/`. Run `supabase db reset`
 
 - `profiles` — 1:1 with `auth.users`. Holds `username` (citext, unique, 3–24 chars, `[A-Za-z0-9_]`), `display_name`, `avatar_url`, `is_admin`. Auto-created via `handle_new_user` trigger; if `raw_user_meta_data.username` is missing (default for self-signup), the trigger generates `user_<8 hex chars>` with a 10-attempt collision retry. Admin-create flows still pass an explicit username.
 - `tournaments` — single active tournament enforced by partial unique index. Holds `lock_time` (single tournament-wide deadline) and `status` (`upcoming|group_stage|knockout|completed`).
-- `groups` (12: A–L), `teams` (48, FK to groups), `knockout_matches` (31, R32 → final, with `team1_source`/`team2_source` strings like `"M1"` or `"A1"`).
+- `groups` (12: A–L), `teams` (48, FK to groups), `knockout_matches` (32: M73–M104, R32 → final including the third-place match M103, with `team1_source`/`team2_source` strings like `"M1"` or `"A1"`).
 - `predictions` — **many per `(user, tournament)`**, no quantity limit. Each has a unique `prediction_name` per user/tournament (case-insensitive), 1–60 chars matching `^[A-Za-z0-9 _\-.''‘’]+$`. Holds `total_goals` tiebreaker, `champion_team_id` (the Phase 1 Champions Pick — nullable for legacy rows; required on new prediction creation), and submission timestamp.
 - `group_predictions` — normalized: 12 rows per prediction with `first_team_id`/`second_team_id`/`third_team_id`/`fourth_team_id`. CHECK enforces all four are distinct. PK is `(prediction_id, group_id)`.
 - `knockout_predictions` — one per `(prediction, match)` with predicted winner.
