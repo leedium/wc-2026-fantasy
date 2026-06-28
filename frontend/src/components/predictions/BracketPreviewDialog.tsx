@@ -17,6 +17,8 @@ import { BracketView } from '@/components/predictions/BracketView';
 import { GroupStandingsResults } from '@/components/results/GroupStandingsResults';
 import { AdvancersResults } from '@/components/results/AdvancersResults';
 import { TeamFlag } from '@/components/shared/TeamFlag';
+import { useTournamentLock } from '@/hooks/useTournamentLock';
+import { useAuthContext } from '@/providers/AuthProvider';
 import { fetchJSON } from '@/lib/api/fetchJSON';
 import { isPhase1StagesComplete } from '@/lib/predictions/paymentStatus';
 import type {
@@ -60,6 +62,9 @@ export function BracketPreviewDialog({
   onOpenChange,
 }: BracketPreviewDialogProps) {
   const open = predictionId !== null;
+
+  const { phase } = useTournamentLock();
+  const { profile } = useAuthContext();
 
   const predictionQuery = useQuery<PredictionDetail>({
     queryKey: ['prediction', apiBasePath, predictionId],
@@ -117,6 +122,16 @@ export function BracketPreviewDialog({
     finalMatch && predictionQuery.data
       ? (predictionQuery.data.knockout.find((k) => k.matchId === finalMatch.id)?.winner ?? null)
       : null;
+
+  // Knockout picks are sealed in the preview UNLESS the entry is the viewer's own
+  // (you can always see your own picks), the viewer is an admin/super-admin, or
+  // Phase 2 has locked (everyone's picks frozen). For another member's entry
+  // before lock the leaderboard RPC also redacts the knockout server-side — this
+  // shows the "revealed when Phase 2 is locked" message instead of an empty bracket.
+  const isOwn =
+    !!profile?.username && predictionQuery.data?.username === profile.username;
+  const revealKnockout =
+    !!profile?.isAdmin || !!profile?.isSuperAdmin || isOwn || phase === 'phase2_locked';
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -176,7 +191,9 @@ export function BracketPreviewDialog({
             <PredictionMetaBar
               username={predictionQuery.data!.username}
               championTeamId={predictionQuery.data!.championTeamId}
-              bracketChampionTeamId={bracketChampionTeamId}
+              // The bracket champion is the user's Final (M104) pick — a knockout
+              // selection — so it stays sealed alongside the bracket until lock.
+              bracketChampionTeamId={revealKnockout ? bracketChampionTeamId : null}
               totalGoals={predictionQuery.data!.totalGoals}
               teams={teamsQuery.data!}
             />
@@ -204,22 +221,31 @@ export function BracketPreviewDialog({
             </PreviewSection>
 
             <PreviewSection title="Phase 2 — Knockout Bracket">
-              <BracketView
-                matches={matchesQuery.data!}
-                teams={teamsQuery.data!}
-                // The preview resolves the bracket strictly from the admin's
-                // standings (Phase 2). The user's Phase-1 group picks are shown
-                // in the section above, so we deliberately omit them here —
-                // group slots render as TBD until standings are posted rather
-                // than as a what-if shape derived from those picks.
-                groupPredictions={[]}
-                knockoutPredictions={(predictionQuery.data!.knockout ?? []).map((k) => ({
-                  matchId: k.matchId,
-                  winnerId: k.winner,
-                }))}
-                bracketAssignments={bracketAssignments}
-                groupStandings={standingsQuery.data?.standings ?? []}
-              />
+              {revealKnockout ? (
+                <BracketView
+                  matches={matchesQuery.data!}
+                  teams={teamsQuery.data!}
+                  // The preview resolves the bracket strictly from the admin's
+                  // standings (Phase 2). The user's Phase-1 group picks are shown
+                  // in the section above, so we deliberately omit them here —
+                  // group slots render as TBD until standings are posted rather
+                  // than as a what-if shape derived from those picks.
+                  groupPredictions={[]}
+                  knockoutPredictions={(predictionQuery.data!.knockout ?? []).map((k) => ({
+                    matchId: k.matchId,
+                    winnerId: k.winner,
+                  }))}
+                  bracketAssignments={bracketAssignments}
+                  groupStandings={standingsQuery.data?.standings ?? []}
+                />
+              ) : (
+                <div
+                  className="bg-muted/40 text-muted-foreground flex items-center justify-center rounded-md border border-dashed px-4 py-10 text-center text-sm"
+                  role="status"
+                >
+                  Predictions will be revealed when Phase 2 is locked.
+                </div>
+              )}
             </PreviewSection>
           </>
         )}

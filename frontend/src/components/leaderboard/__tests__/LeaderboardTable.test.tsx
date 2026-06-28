@@ -152,7 +152,7 @@ describe('LeaderboardTable', () => {
     expect(ownPreview).toBeEnabled();
     // Other players' Preview buttons are still rendered but disabled.
     const lockedPreviews = screen.getAllByRole('button', {
-      name: /unlocks when the knockout bracket locks$/,
+      name: /unlocks once the group stage locks$/,
     });
     expect(lockedPreviews).toHaveLength(2);
     lockedPreviews.forEach((btn) => expect(btn).toBeDisabled());
@@ -173,7 +173,7 @@ describe('LeaderboardTable', () => {
     expect(previews).toHaveLength(3);
     previews.forEach((btn) => expect(btn).toBeEnabled());
     expect(
-      screen.queryByRole('button', { name: /unlocks when the knockout bracket locks$/ })
+      screen.queryByRole('button', { name: /unlocks once the group stage locks$/ })
     ).not.toBeInTheDocument();
   });
 });
