@@ -5,6 +5,17 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.9.1] - 2026-06-28
+
+### Fixed
+
+- **Phase 1 winners card showed nothing after a snapshot.** Migration 0070 created the
+  `phase1_winners` table with a select-all policy but never granted table-level `SELECT` to the API
+  roles. Local default privileges masked it, but on the hosted project the read 500'd, so the Phase 1
+  group-stage top 3 never appeared even after a successful admin snapshot (the snapshot writes via a
+  SECURITY DEFINER RPC, so the data was already there — only the read was blocked). Adds the explicit
+  `grant select … to anon, authenticated`. (#247)
+
 ## [1.9.0] - 2026-06-28
 
 ### Added
