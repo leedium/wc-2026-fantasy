@@ -1,7 +1,9 @@
 'use client';
 
 import * as React from 'react';
-import { CheckCircle2, Circle, Trophy } from 'lucide-react';
+import { CheckCircle2, Circle, Clock, Lock, Trophy } from 'lucide-react';
+
+import { formatRemaining } from '@/lib/formatRemaining';
 
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -88,6 +90,13 @@ interface KnockoutBracketProps {
   onPredictionChange: (matchId: string, winnerId: string | null) => void;
   disabled?: boolean;
   stage: KnockoutStage;
+  /**
+   * Per-fixture lock state. A fixture that has individually locked (kicked off)
+   * is frozen: its card is disabled with a "Locked" badge regardless of the
+   * bracket-wide `disabled` flag. A fixture with a future lock shows a countdown
+   * to kickoff. Defaults to never-locked.
+   */
+  getMatchLockInfo?: (matchId: string) => { locked: boolean; remainingMs: number | null };
 }
 
 // resolveTeamSource lives in @/lib/knockoutResolver so both this editor and
@@ -129,6 +138,8 @@ function MatchCard({
   selectedWinnerId,
   onSelect,
   disabled,
+  locked = false,
+  lockRemainingMs = null,
 }: {
   match: KnockoutMatch;
   team1Id: string | null;
@@ -137,6 +148,9 @@ function MatchCard({
   selectedWinnerId: string | null;
   onSelect: (winnerId: string | null) => void;
   disabled?: boolean;
+  locked?: boolean;
+  /** Ms until this fixture locks, when a future lock is scheduled (else null). */
+  lockRemainingMs?: number | null;
 }) {
   const team1 = getTeamDisplay(team1Id, teams);
   const team2 = getTeamDisplay(team2Id, teams);
@@ -145,22 +159,26 @@ function MatchCard({
   const isWinnerValid =
     selectedWinnerId === null || selectedWinnerId === team1Id || selectedWinnerId === team2Id;
 
-  // Auto-clear invalid selection when teams change
+  // Auto-clear invalid selection when teams change. Never auto-clear a locked
+  // fixture: its stored pick is frozen and must keep showing even if upstream
+  // resolution shifts.
   React.useEffect(() => {
-    if (selectedWinnerId && !isWinnerValid) {
+    if (!locked && selectedWinnerId && !isWinnerValid) {
       onSelect(null);
     }
-  }, [selectedWinnerId, isWinnerValid, onSelect]);
+  }, [locked, selectedWinnerId, isWinnerValid, onSelect]);
 
-  const effectiveWinnerId = isWinnerValid ? selectedWinnerId : null;
+  // A locked fixture always renders its stored winner and is never editable.
+  const effectiveWinnerId = locked || isWinnerValid ? selectedWinnerId : null;
   const hasWinner = effectiveWinnerId !== null;
-  const canSelect = team1Id !== null && team2Id !== null && !disabled;
+  const canSelect = team1Id !== null && team2Id !== null && !disabled && !locked;
 
   return (
     <Card
       className={cn(
         'w-full transition-colors',
-        hasWinner && 'border-green-500/50 bg-green-500/5 dark:bg-green-500/10'
+        hasWinner && 'border-green-500/50 bg-green-500/5 dark:bg-green-500/10',
+        locked && 'opacity-90'
       )}
     >
       <CardHeader className="p-3 pb-2">
@@ -171,10 +189,23 @@ function MatchCard({
               {formatSourcePair(match.team1Source, match.team2Source)}
             </span>
           </div>
-          <Badge variant="outline" className="shrink-0 text-xs">
-            {STAGE_CONFIG[match.stage].pointsHint}
-          </Badge>
+          {locked ? (
+            <Badge variant="secondary" className="shrink-0 text-xs">
+              <Lock className="mr-1 h-3 w-3" />
+              Locked
+            </Badge>
+          ) : (
+            <Badge variant="outline" className="shrink-0 text-xs">
+              {STAGE_CONFIG[match.stage].pointsHint}
+            </Badge>
+          )}
         </div>
+        {!locked && lockRemainingMs !== null && (
+          <p className="mt-1 flex items-center gap-1 text-xs font-medium text-amber-600 dark:text-amber-500">
+            <Clock className="h-3 w-3 shrink-0" />
+            Locks in {formatRemaining(lockRemainingMs)}
+          </p>
+        )}
       </CardHeader>
       <CardContent className="space-y-2 p-3 pt-0">
         {/* Team 1 */}
@@ -242,6 +273,7 @@ function StageSection({
   groupStandings,
   onPredictionChange,
   disabled,
+  getMatchLockInfo,
 }: {
   stage: KnockoutStage;
   matches: KnockoutMatch[];
@@ -253,6 +285,7 @@ function StageSection({
   groupStandings: GroupStanding[];
   onPredictionChange: (matchId: string, winnerId: string | null) => void;
   disabled?: boolean;
+  getMatchLockInfo?: (matchId: string) => { locked: boolean; remainingMs: number | null };
 }) {
   const config = STAGE_CONFIG[stage];
   const completedCount = matches.filter((match) => {
@@ -317,6 +350,7 @@ function StageSection({
           );
           const prediction = knockoutPredictions.find((p) => p.matchId === match.id);
           const selectedWinnerId = prediction?.winnerId ?? null;
+          const lockInfo = getMatchLockInfo?.(match.id);
 
           return (
             <MatchCard
@@ -328,6 +362,8 @@ function StageSection({
               selectedWinnerId={selectedWinnerId}
               onSelect={(winnerId) => onPredictionChange(match.id, winnerId)}
               disabled={disabled}
+              locked={lockInfo?.locked ?? false}
+              lockRemainingMs={lockInfo && !lockInfo.locked ? lockInfo.remainingMs : null}
             />
           );
         })}
@@ -346,6 +382,7 @@ export function KnockoutBracket({
   onPredictionChange,
   disabled = false,
   stage,
+  getMatchLockInfo,
 }: KnockoutBracketProps) {
   const stageMatches = React.useMemo(
     () => matches.filter((m) => m.stage === stage),
@@ -421,6 +458,7 @@ export function KnockoutBracket({
         groupStandings={groupStandings}
         onPredictionChange={onPredictionChange}
         disabled={disabled}
+        getMatchLockInfo={getMatchLockInfo}
       />
     </div>
   );

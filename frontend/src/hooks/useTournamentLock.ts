@@ -5,6 +5,11 @@ import { useQuery } from '@tanstack/react-query';
 
 type Phase = 'phase1' | 'phase1_locked' | 'phase2_open' | 'phase2_locked';
 
+interface KnockoutLock {
+  matchId: string;
+  lockedAt: string;
+}
+
 interface TournamentResponse {
   id: string;
   slug: string;
@@ -15,6 +20,7 @@ interface TournamentResponse {
   knockoutUnlocked: boolean;
   phase: Phase;
   totalEntries: number;
+  knockoutLocks?: KnockoutLock[];
   serverTime: string;
 }
 
@@ -47,6 +53,21 @@ export interface TournamentLockState {
   hasActiveDeadline: boolean;
   /** True if |skewMs| > 5 minutes — surface a hint to the user. */
   clockSuspect: boolean;
+  /**
+   * True when a specific knockout fixture has individually locked (its kickoff
+   * has passed), evaluated against server time. Independent of the global phase
+   * lock — a fixture can lock while phase 2 is still open.
+   */
+  /** Ids of fixtures currently locked — handy for the cascade's immovable set. */
+  lockedMatchIds: Set<string>;
+  /**
+   * Per-fixture lock state for the wizard card:
+   *   - no lock scheduled → `{ locked: false, remainingMs: null }`
+   *   - lock in the future → `{ locked: false, remainingMs: > 0 }` (countdown)
+   *   - lock passed → `{ locked: true, remainingMs: 0 }`
+   * Evaluated against server time; recomputed every second.
+   */
+  getMatchLockInfo: (matchId: string) => { locked: boolean; remainingMs: number | null };
 }
 
 const FIVE_MINUTES_MS = 5 * 60 * 1000;
@@ -108,6 +129,42 @@ export function useTournamentLock(): TournamentLockState {
   const hasActiveDeadline = activeDeadline !== null;
   const clockSuspect = Math.abs(skewMs) > FIVE_MINUTES_MS;
 
+  // Map of fixture id -> lock time (ms). Rebuilt only when the lock list changes.
+  const lockMsByMatch = React.useMemo(() => {
+    const m = new Map<string, number>();
+    for (const lock of data?.knockoutLocks ?? []) {
+      m.set(lock.matchId, new Date(lock.lockedAt).getTime());
+    }
+    return m;
+  }, [data?.knockoutLocks]);
+
+  // Set of fixtures whose lock time has passed, against server time (Date.now()
+  // + skew). Depends on `tick` so a fixture flips to locked the moment its
+  // kickoff passes, without a refetch.
+  const lockedMatchIds = React.useMemo(() => {
+    const ids = new Set<string>();
+    const nowServer = Date.now() + skewMs;
+    for (const [matchId, lockedMs] of lockMsByMatch) {
+      if (nowServer >= lockedMs) ids.add(matchId);
+    }
+    return ids;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [lockMsByMatch, skewMs, tick]);
+
+  const getMatchLockInfo = React.useCallback(
+    (matchId: string): { locked: boolean; remainingMs: number | null } => {
+      const lockedMs = lockMsByMatch.get(matchId);
+      if (lockedMs === undefined) return { locked: false, remainingMs: null };
+      const remaining = lockedMs - (Date.now() + skewMs);
+      return remaining <= 0
+        ? { locked: true, remainingMs: 0 }
+        : { locked: false, remainingMs: remaining };
+    },
+    // `tick` drives a fresh function each second so the card countdown re-renders.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [lockMsByMatch, skewMs, tick]
+  );
+
   return {
     tournamentId: data?.id ?? null,
     lockTime,
@@ -122,5 +179,7 @@ export function useTournamentLock(): TournamentLockState {
     remainingMs,
     hasActiveDeadline,
     clockSuspect,
+    lockedMatchIds,
+    getMatchLockInfo,
   };
 }

@@ -189,4 +189,36 @@ describe('cascadeKnockoutPick', () => {
     expect(winnerOf(next, 'M97')).toBe('arg'); // stale pick left as-is
     expect(changedMatchIds).not.toContain('M97');
   });
+
+  it('never rewrites a locked downstream fixture (and the chain below it stays put)', () => {
+    // mex picked all the way to the Final. M90 has individually locked (kicked
+    // off), so flipping the still-editable M73 must NOT touch M90 — and since
+    // M90 keeps emitting mex, the matches below it stay mex too.
+    const predictions = withWinners({
+      M73: 'mex',
+      M75: 'ger',
+      M90: 'mex',
+      M97: 'mex',
+      M101: 'mex',
+      M104: 'mex',
+    });
+
+    const { predictions: next, changedMatchIds } = cascadeKnockoutPick(
+      'M73',
+      'sui',
+      fixtureKnockoutMatches,
+      predictions,
+      groupPredictions,
+      [],
+      [],
+      new Set(['M90'])
+    );
+
+    expect(winnerOf(next, 'M73')).toBe('sui'); // the edited match still changes
+    expect(winnerOf(next, 'M90')).toBe('mex'); // locked — frozen
+    expect(winnerOf(next, 'M97')).toBe('mex'); // fed by frozen M90 — unchanged
+    expect(winnerOf(next, 'M101')).toBe('mex');
+    expect(winnerOf(next, 'M104')).toBe('mex');
+    expect(changedMatchIds).not.toContain('M90');
+  });
 });

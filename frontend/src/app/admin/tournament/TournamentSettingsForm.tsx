@@ -110,6 +110,7 @@ export function TournamentSettingsForm() {
   const [resetting, setResetting] = React.useState(false);
   const [autofillDialogOpen, setAutofillDialogOpen] = React.useState(false);
   const [autofilling, setAutofilling] = React.useState(false);
+  const [autofillingLocked, setAutofillingLocked] = React.useState(false);
 
   React.useEffect(() => {
     if (!tournament.data) return;
@@ -232,9 +233,10 @@ export function TournamentSettingsForm() {
   }, [matchesQuery.data]);
 
   const allStandingsSet = standingsCount === 12;
-  const allAssignmentsSet =
-    thirdPlaceSlotCount > 0 && assignmentsCount === thirdPlaceSlotCount;
-  const canOpenPhaseTwo = allStandingsSet && allAssignmentsSet;
+  // Phase 2 may open with partial 3rd-place bracket assignments (progressive
+  // per-fixture model): only the 12 group standings are required. Unassigned
+  // "3-XXXX" slots render TBD until the admin fills them.
+  const canOpenPhaseTwo = allStandingsSet;
   const phase = tournament.data?.phase ?? 'phase1';
 
   // Bracket auto-fill preview — how many paid/Phase-1-complete entries have an
@@ -373,6 +375,39 @@ export function TournamentSettingsForm() {
       toast.error(e instanceof Error ? e.message : 'Failed to auto-fill brackets');
     } finally {
       setAutofilling(false);
+    }
+  };
+
+  // Fill blanks only for fixtures that have ALREADY kicked off (individually
+  // locked), while Phase 2 is still open. Reuses the same outcome-blind rule as
+  // the whole-bracket autofill; safe to re-run after each kickoff.
+  const handleAutofillLocked = async () => {
+    if (!tournament.data) return;
+    setAutofillingLocked(true);
+    try {
+      const res = await fetch('/api/admin/tournament/autofill-locked-fixtures', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: tournament.data.id }),
+      });
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(body.error ?? 'Failed to fill locked fixtures');
+      const s = body.summary ?? {};
+      toast.success(
+        `Filled ${s.matches_filled ?? 0} locked ${
+          (s.matches_filled ?? 0) === 1 ? 'fixture' : 'fixtures'
+        } across ${s.predictions_touched ?? 0} ${
+          (s.predictions_touched ?? 0) === 1 ? 'entry' : 'entries'
+        }`
+      );
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['leaderboard'] }),
+        queryClient.invalidateQueries({ queryKey: ['admin-stats'] }),
+      ]);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Failed to fill locked fixtures');
+    } finally {
+      setAutofillingLocked(false);
     }
   };
 
@@ -562,9 +597,10 @@ export function TournamentSettingsForm() {
               />
               <p className="text-muted-foreground text-xs">
                 When knockout predictions freeze. Set + click Open Phase 2 to start the knockout
-                window. Group standings + R32 bracket assignments must be filled on the{' '}
-                <span className="font-mono">/admin/results</span> and{' '}
-                <span className="font-mono">/admin/advancers</span> tabs first.
+                window. All 12 group standings must be filled on the{' '}
+                <span className="font-mono">/admin/results</span> tab first. R32 3rd-place bracket
+                assignments (<span className="font-mono">/admin/advancers</span>) can be completed
+                after opening — unassigned slots show TBD until you fill them.
               </p>
             </div>
             <div className="flex flex-wrap gap-2">
@@ -580,15 +616,13 @@ export function TournamentSettingsForm() {
                 title={
                   !allStandingsSet
                     ? 'Enter all 12 group standings first'
-                    : !allAssignmentsSet
-                      ? 'Assign every R32 3rd-place slot first'
-                      : !phaseTwoLockIso
-                        ? 'Pick a Phase 2 lock time first'
-                        : phaseTwoLockInPast
-                          ? 'Phase 2 lock time must be in the future'
-                          : phase === 'phase2_locked'
-                            ? 'Phase 2 lock time has passed — set a new lock time above and click to reopen'
-                            : undefined
+                    : !phaseTwoLockIso
+                      ? 'Pick a Phase 2 lock time first'
+                      : phaseTwoLockInPast
+                        ? 'Phase 2 lock time must be in the future'
+                        : phase === 'phase2_locked'
+                          ? 'Phase 2 lock time has passed — set a new lock time above and click to reopen'
+                          : undefined
                 }
               >
                 {phase === 'phase2_locked' ? 'Reopen Phase 2' : 'Open Phase 2'}
@@ -626,6 +660,46 @@ export function TournamentSettingsForm() {
             </div>
           </CardContent>
         </Card>
+
+        {isSuperAdmin && (
+          <Card>
+            <CardHeader>
+              <CardTitle>Fill kicked-off fixtures</CardTitle>
+              <p className="text-muted-foreground text-sm">
+                Super-admin only. While Phase 2 is open, fill blank picks for fixtures that have
+                already individually locked (kicked off) — so users who missed a fixture&apos;s
+                window get an outcome-blind default (same rule as the whole-bracket auto-fill) and
+                keep a complete downstream bracket. &ldquo;Outcome-blind&rdquo; means the default
+                winner is picked <strong>without looking at the real result</strong>: the
+                user&apos;s Champion pick wins if it&apos;s in the match; otherwise the team with
+                the better group-stage finish (group winner &gt; runner-up &gt; 3rd place), with
+                the higher bracket slot breaking a tie. Because it runs at kickoff — before the
+                match is decided — it&apos;s a fair forecast, not a backfill of the actual score.
+                Run shortly after each kickoff. Never overwrites an existing pick; safe to re-run.
+              </p>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <p className="text-sm">
+                {phase !== 'phase2_open' && phase !== 'phase2_locked'
+                  ? 'Available once Phase 2 is open.'
+                  : 'Fills only fixtures whose lock time has passed.'}
+              </p>
+              <Button
+                onClick={handleAutofillLocked}
+                disabled={
+                  autofillingLocked || (phase !== 'phase2_open' && phase !== 'phase2_locked')
+                }
+                title={
+                  phase !== 'phase2_open' && phase !== 'phase2_locked'
+                    ? 'Phase 2 must be open'
+                    : undefined
+                }
+              >
+                {autofillingLocked ? 'Filling…' : 'Fill kicked-off fixtures'}
+              </Button>
+            </CardContent>
+          </Card>
+        )}
 
         {isSuperAdmin && (
           <Card>

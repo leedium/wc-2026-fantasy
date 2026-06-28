@@ -39,12 +39,25 @@ export async function GET() {
   // RPC bypasses RLS and returns only two aggregates — safe for public
   // display. Eligibility predicate (paid_at <= lock_time, is_free split)
   // matches get_leaderboard.
-  const potStatsRes = await supabase.rpc('get_tournament_pot_stats', {
-    p_tournament_id: data.id,
-  });
+  const [potStatsRes, locksRes] = await Promise.all([
+    supabase.rpc('get_tournament_pot_stats', { p_tournament_id: data.id }),
+    // Per-fixture knockout locks for this tournament. Read-all RLS; powers the
+    // wizard's per-match disable. Time-sensitive, so it rides this uncached route
+    // (not the 1h-cached /api/knockout-matches metadata).
+    supabase
+      .from('knockout_match_locks')
+      .select('match_id, locked_at')
+      .eq('tournament_id', data.id),
+  ]);
   if (potStatsRes.error) {
     return NextResponse.json({ error: potStatsRes.error.message }, { status: 500 });
   }
+  if (locksRes.error) {
+    return NextResponse.json({ error: locksRes.error.message }, { status: 500 });
+  }
+  const knockoutLocks = (
+    (locksRes.data ?? []) as { match_id: string; locked_at: string }[]
+  ).map((l) => ({ matchId: l.match_id, lockedAt: l.locked_at }));
   const potStats = (potStatsRes.data?.[0] ?? { total_entries: 0, cash_paid_count: 0 }) as {
     total_entries: number;
     cash_paid_count: number;
@@ -82,6 +95,7 @@ export async function GET() {
     knockoutLockTime: data.knockout_lock_time,
     knockoutUnlocked: data.knockout_unlocked,
     phase,
+    knockoutLocks,
     totalEntries,
     cashPaidPredictionCount,
     potTotalCAD,

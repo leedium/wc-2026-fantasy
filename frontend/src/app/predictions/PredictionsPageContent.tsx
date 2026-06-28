@@ -308,7 +308,7 @@ export function PredictionsPageContent({
   const router = useRouter();
   const queryClient = useQueryClient();
   const { user, profile } = useAuthContext();
-  const { phase, isLocked } = useTournamentLock();
+  const { phase, isLocked, getMatchLockInfo, lockedMatchIds } = useTournamentLock();
   const isSuperAdmin = profile?.isSuperAdmin === true;
   // Super admin user-side writes route through the admin RPC so they can edit
   // their own predictions in any phase (including phase1_locked / phase2_*).
@@ -823,7 +823,8 @@ export function PredictionsPageContent({
         prev,
         groupPredictions,
         bracketAssignments,
-        groupStandings
+        groupStandings,
+        lockedMatchIds
       );
       persistDraft({ knockoutPredictions: next });
       if (changedMatchIds.length > 0) {
@@ -1473,6 +1474,7 @@ export function PredictionsPageContent({
               onPredictionChange={handleKnockoutPredictionChange}
               disabled={!phase2Editable}
               stage={currentStep}
+              getMatchLockInfo={getMatchLockInfo}
             />
           )}
 

@@ -6,21 +6,9 @@ import { AlertCircle, Lock, Unlock, X } from 'lucide-react';
 import { useTournamentLock } from '@/hooks/useTournamentLock';
 import { useAuth } from '@/hooks/useAuth';
 import { cn } from '@/lib/utils';
+import { formatRemaining } from '@/lib/formatRemaining';
 
 const ONE_DAY_MS = 24 * 60 * 60 * 1000;
-
-function formatRemaining(ms: number): string {
-  if (ms <= 0) return '0m';
-  const totalSec = Math.floor(ms / 1000);
-  const days = Math.floor(totalSec / 86400);
-  const hours = Math.floor((totalSec % 86400) / 3600);
-  const minutes = Math.floor((totalSec % 3600) / 60);
-  const seconds = totalSec % 60;
-  if (days > 0) return `${days}d ${hours}h ${minutes}m`;
-  if (hours > 0) return `${hours}h ${minutes}m`;
-  if (minutes > 0) return `${minutes}m ${seconds}s`;
-  return `${seconds}s`;
-}
 
 function dismissKey(tournamentId: string, phase: string): string {
   return `wc2026:banner-dismissed:${tournamentId}:${phase}`;

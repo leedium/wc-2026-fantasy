@@ -63,7 +63,13 @@ export function cascadeKnockoutPick(
   predictions: KnockoutMatchPrediction[],
   groupPredictions: GroupPrediction[],
   bracketAssignments: R32BracketAssignment[] = [],
-  groupStandings: GroupStanding[] = []
+  groupStandings: GroupStanding[] = [],
+  /**
+   * Ids of fixtures that have individually locked (kicked off). A locked pick is
+   * frozen server-side, so the cascade must treat it as immovable: never rewrite
+   * a locked downstream match when an upstream winner changes.
+   */
+  lockedMatchIds: Set<string> = new Set()
 ): CascadeResult {
   // Snapshot each match's two contestants from the *current* predictions, so we
   // know which side every existing winner pick sat on before the change.
@@ -126,6 +132,7 @@ export function cascadeKnockoutPick(
 
   const changedMatchIds: string[] = [];
   for (const m of downstream) {
+    if (lockedMatchIds.has(m.id)) continue; // locked (kicked off) — frozen, never rewrite
     const oldWinner = winnerOf(m.id);
     if (oldWinner === null) continue; // nothing picked here — leave it
 

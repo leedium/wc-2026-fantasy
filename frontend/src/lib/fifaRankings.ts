@@ -1,6 +1,10 @@
 // Source: FIFA Men's World Ranking (https://www.fifa.com/fifa-world-ranking).
 // Hand-maintained; refresh after each official FIFA ranking publication.
 // Last updated: 2026-05.
+//
+// NOTE: these rankings are duplicated server-side in teams.fifa_ranking
+// (supabase migration 0074), which the SQL autofills use as their equal-group-
+// finish tiebreaker. Keep BOTH in sync when refreshing.
 
 import { ADVANCER_COUNT } from '@/lib/constants';
 import type { AdvancerPrediction, Group, GroupPrediction, Team } from '@/types/tournament';
