@@ -5,6 +5,15 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.9.0] - 2026-06-28
+
+### Added
+
+- **Reset Phase 2.** A super-admin "Reset Phase 2" control reverts a tournament to its locked
+  Phase 1 state — closing Phase 2, clearing the Phase 2 lock time, and removing all per-fixture
+  knockout locks — while **preserving** everyone's knockout predictions (they reappear if Phase 2 is
+  re-opened). Backed by a new `admin_reset_phase_two` RPC behind a confirmation dialog. (#245)
+
 ## [1.8.1] - 2026-06-28
 
 ### Fixed
