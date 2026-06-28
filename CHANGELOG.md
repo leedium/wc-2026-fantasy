@@ -5,6 +5,36 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.8.0] - 2026-06-28
+
+### Added
+
+- **Per-fixture knockout locking.** Knockout fixtures can be locked individually at their own
+  kickoff while Phase 2 stays open, so users keep editing later rounds but cannot change a pick once
+  a match has started. Each fixture shows a live "Locks in …" countdown, admins get a per-fixture
+  lock control, and a new "Fill kicked-off fixtures" action fills blanks for already-started matches
+  with the outcome-blind default rule. (#243)
+- **Phase 1 winners snapshot.** Snapshots the Phase 1 (group stage + best-3rd advancers) top 3 when
+  Phase 2 opens and surfaces it on the prize modules, preserving the standalone Phase 1 result before
+  the live leaderboard folds in knockout points. (#239)
+- **Auto-fill for missing knockout brackets.** Super admins can fill blank knockout picks for paid,
+  Phase-1-complete entries after the knockout deadline, using an outcome-blind default so those
+  entries stay competitive. (#240)
+
+### Changed
+
+- **Phase 2 can open with incomplete 3rd-place assignments.** Opening Phase 2 no longer requires all
+  eight R32 best-3rd bracket slots to be assigned (the 12-group-standings requirement remains);
+  unassigned slots render TBD until filled. (#243)
+- **Autofill ties broken by FIFA ranking.** When two teams share the same real group finish, the
+  knockout auto-fills now pick the higher FIFA-ranked team rather than an arbitrary slot, via a new
+  `teams.fifa_ranking` column shared by both auto-fill paths. (#243)
+
+### Internal
+
+- Correct the knockout match count (31 → 32) in CLAUDE.md. (#241)
+- Document the backup script's session-pooler connection string. (#242)
+
 ## [1.7.0] - 2026-06-18
 
 ### Added
