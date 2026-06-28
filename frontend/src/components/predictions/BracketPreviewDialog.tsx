@@ -63,14 +63,8 @@ export function BracketPreviewDialog({
 }: BracketPreviewDialogProps) {
   const open = predictionId !== null;
 
-  // Knockout picks stay sealed in the preview until Phase 2 locks, so a bracket
-  // can't be read off another entry before the knockout deadline. Admins /
-  // super-admins bypass (consistent with the server-side preview gate in
-  // migration 0057) so they can still moderate.
   const { phase } = useTournamentLock();
   const { profile } = useAuthContext();
-  const revealKnockout =
-    phase === 'phase2_locked' || !!profile?.isAdmin || !!profile?.isSuperAdmin;
 
   const predictionQuery = useQuery<PredictionDetail>({
     queryKey: ['prediction', apiBasePath, predictionId],
@@ -128,6 +122,16 @@ export function BracketPreviewDialog({
     finalMatch && predictionQuery.data
       ? (predictionQuery.data.knockout.find((k) => k.matchId === finalMatch.id)?.winner ?? null)
       : null;
+
+  // Knockout picks are sealed in the preview UNLESS the entry is the viewer's own
+  // (you can always see your own picks), the viewer is an admin/super-admin, or
+  // Phase 2 has locked (everyone's picks frozen). For another member's entry
+  // before lock the leaderboard RPC also redacts the knockout server-side — this
+  // shows the "revealed when Phase 2 is locked" message instead of an empty bracket.
+  const isOwn =
+    !!profile?.username && predictionQuery.data?.username === profile.username;
+  const revealKnockout =
+    !!profile?.isAdmin || !!profile?.isSuperAdmin || isOwn || phase === 'phase2_locked';
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>

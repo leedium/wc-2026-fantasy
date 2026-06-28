@@ -65,16 +65,29 @@ describe('BracketPreviewDialog — knockout seal until Phase 2 locks', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockFetch();
-    useAuthContext.mockReturnValue({ profile: { isAdmin: false, isSuperAdmin: false } });
+    // Default viewer is a different member (bob) than the entry owner (alice).
+    useAuthContext.mockReturnValue({
+      profile: { username: 'bob', isAdmin: false, isSuperAdmin: false },
+    });
   });
 
-  it('seals the knockout bracket with a reveal message before Phase 2 locks', async () => {
+  it("seals another member's knockout with a reveal message before Phase 2 locks", async () => {
     useTournamentLock.mockReturnValue({ phase: 'phase2_open' });
     renderDialog();
     expect(await screen.findByText(MSG)).toBeInTheDocument();
   });
 
-  it('reveals the knockout bracket once Phase 2 is locked', async () => {
+  it('always shows the knockout for the entry owner, even during phase2_open', async () => {
+    useTournamentLock.mockReturnValue({ phase: 'phase2_open' });
+    useAuthContext.mockReturnValue({
+      profile: { username: 'alice', isAdmin: false, isSuperAdmin: false },
+    });
+    renderDialog();
+    expect(await screen.findByText(SECTION)).toBeInTheDocument();
+    expect(screen.queryByText(MSG)).not.toBeInTheDocument();
+  });
+
+  it('reveals the knockout to everyone once Phase 2 is locked', async () => {
     useTournamentLock.mockReturnValue({ phase: 'phase2_locked' });
     renderDialog();
     // Wait until the dialog has loaded (the section title only renders when ready).
@@ -84,7 +97,9 @@ describe('BracketPreviewDialog — knockout seal until Phase 2 locks', () => {
 
   it('bypasses the seal for admins', async () => {
     useTournamentLock.mockReturnValue({ phase: 'phase2_open' });
-    useAuthContext.mockReturnValue({ profile: { isAdmin: true, isSuperAdmin: false } });
+    useAuthContext.mockReturnValue({
+      profile: { username: 'bob', isAdmin: true, isSuperAdmin: false },
+    });
     renderDialog();
     expect(await screen.findByText(SECTION)).toBeInTheDocument();
     expect(screen.queryByText(MSG)).not.toBeInTheDocument();
