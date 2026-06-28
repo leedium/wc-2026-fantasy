@@ -17,6 +17,8 @@ import { BracketView } from '@/components/predictions/BracketView';
 import { GroupStandingsResults } from '@/components/results/GroupStandingsResults';
 import { AdvancersResults } from '@/components/results/AdvancersResults';
 import { TeamFlag } from '@/components/shared/TeamFlag';
+import { useTournamentLock } from '@/hooks/useTournamentLock';
+import { useAuthContext } from '@/providers/AuthProvider';
 import { fetchJSON } from '@/lib/api/fetchJSON';
 import { isPhase1StagesComplete } from '@/lib/predictions/paymentStatus';
 import type {
@@ -60,6 +62,15 @@ export function BracketPreviewDialog({
   onOpenChange,
 }: BracketPreviewDialogProps) {
   const open = predictionId !== null;
+
+  // Knockout picks stay sealed in the preview until Phase 2 locks, so a bracket
+  // can't be read off another entry before the knockout deadline. Admins /
+  // super-admins bypass (consistent with the server-side preview gate in
+  // migration 0057) so they can still moderate.
+  const { phase } = useTournamentLock();
+  const { profile } = useAuthContext();
+  const revealKnockout =
+    phase === 'phase2_locked' || !!profile?.isAdmin || !!profile?.isSuperAdmin;
 
   const predictionQuery = useQuery<PredictionDetail>({
     queryKey: ['prediction', apiBasePath, predictionId],
@@ -176,7 +187,9 @@ export function BracketPreviewDialog({
             <PredictionMetaBar
               username={predictionQuery.data!.username}
               championTeamId={predictionQuery.data!.championTeamId}
-              bracketChampionTeamId={bracketChampionTeamId}
+              // The bracket champion is the user's Final (M104) pick — a knockout
+              // selection — so it stays sealed alongside the bracket until lock.
+              bracketChampionTeamId={revealKnockout ? bracketChampionTeamId : null}
               totalGoals={predictionQuery.data!.totalGoals}
               teams={teamsQuery.data!}
             />
@@ -204,22 +217,31 @@ export function BracketPreviewDialog({
             </PreviewSection>
 
             <PreviewSection title="Phase 2 — Knockout Bracket">
-              <BracketView
-                matches={matchesQuery.data!}
-                teams={teamsQuery.data!}
-                // The preview resolves the bracket strictly from the admin's
-                // standings (Phase 2). The user's Phase-1 group picks are shown
-                // in the section above, so we deliberately omit them here —
-                // group slots render as TBD until standings are posted rather
-                // than as a what-if shape derived from those picks.
-                groupPredictions={[]}
-                knockoutPredictions={(predictionQuery.data!.knockout ?? []).map((k) => ({
-                  matchId: k.matchId,
-                  winnerId: k.winner,
-                }))}
-                bracketAssignments={bracketAssignments}
-                groupStandings={standingsQuery.data?.standings ?? []}
-              />
+              {revealKnockout ? (
+                <BracketView
+                  matches={matchesQuery.data!}
+                  teams={teamsQuery.data!}
+                  // The preview resolves the bracket strictly from the admin's
+                  // standings (Phase 2). The user's Phase-1 group picks are shown
+                  // in the section above, so we deliberately omit them here —
+                  // group slots render as TBD until standings are posted rather
+                  // than as a what-if shape derived from those picks.
+                  groupPredictions={[]}
+                  knockoutPredictions={(predictionQuery.data!.knockout ?? []).map((k) => ({
+                    matchId: k.matchId,
+                    winnerId: k.winner,
+                  }))}
+                  bracketAssignments={bracketAssignments}
+                  groupStandings={standingsQuery.data?.standings ?? []}
+                />
+              ) : (
+                <div
+                  className="bg-muted/40 text-muted-foreground flex items-center justify-center rounded-md border border-dashed px-4 py-10 text-center text-sm"
+                  role="status"
+                >
+                  Predictions will be revealed when Phase 2 is locked.
+                </div>
+              )}
             </PreviewSection>
           </>
         )}
