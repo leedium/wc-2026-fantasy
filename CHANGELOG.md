@@ -5,6 +5,16 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.8.1] - 2026-06-28
+
+### Fixed
+
+- **Production 500 on `/api/tournament`.** Migration 0072 created the
+  `knockout_match_locks` table with RLS but never granted table-level `SELECT` to the API roles.
+  Local default privileges masked the omission, but on the hosted project the public `anon` role
+  hit `permission denied for table knockout_match_locks`, 500-ing every tournament read. Adds the
+  explicit `grant select … to anon, authenticated` per the project's read-all-table convention. (#244)
+
 ## [1.8.0] - 2026-06-28
 
 ### Added
