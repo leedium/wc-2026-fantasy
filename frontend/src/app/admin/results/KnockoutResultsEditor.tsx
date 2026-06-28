@@ -43,6 +43,11 @@ interface BracketAssignmentsResponse {
   assignments: Array<{ matchId: string; slot: 1 | 2; teamId: string }>;
 }
 
+interface KnockoutLockRow {
+  matchId: string;
+  lockedAt: string;
+}
+
 const STAGE_LABELS: Record<KnockoutMatch['stage'], string> = {
   round_of_32: 'Round of 32',
   round_of_16: 'Round of 16',
@@ -99,6 +104,23 @@ export function KnockoutResultsEditor({
       return { tournamentId, assignments: [] };
     },
   });
+
+  const locks = useQuery<KnockoutLockRow[]>({
+    queryKey: ['knockout-locks', tournamentId],
+    queryFn: async () => {
+      const res = await fetch(`/api/admin/knockout-locks?tournamentId=${tournamentId}`).catch(
+        () => null
+      );
+      if (res && res.ok) return res.json();
+      return [];
+    },
+  });
+
+  const lockedAtById = React.useMemo(() => {
+    const map = new Map<string, string>();
+    for (const l of locks.data ?? []) map.set(l.matchId, l.lockedAt);
+    return map;
+  }, [locks.data]);
 
   const submittedById = React.useMemo(() => {
     const map = new Map<string, KnockoutResultRow>();
@@ -236,6 +258,27 @@ export function KnockoutResultsEditor({
     }
   };
 
+  // Set (ISO string) or clear (null) the per-fixture prediction lock.
+  const handleSetLock = async (matchId: string, lockedAt: string | null) => {
+    try {
+      const res = await fetch(`/api/admin/knockout-matches/${matchId}/lock`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tournamentId, lockedAt }),
+      });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body.error ?? 'Failed to update lock');
+      }
+      toast.success(lockedAt ? `Match ${matchId} lock set` : `Match ${matchId} unlocked`);
+      await queryClient.invalidateQueries({ queryKey: ['knockout-locks', tournamentId] });
+      // The wizard reads locks from /api/tournament; nudge that cache too.
+      await queryClient.invalidateQueries({ queryKey: ['tournament'] });
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Failed to update lock');
+    }
+  };
+
   const grouped = React.useMemo(() => {
     const map = new Map<KnockoutMatch['stage'], KnockoutMatch[]>();
     for (const m of matches) {
@@ -324,6 +367,11 @@ export function KnockoutResultsEditor({
                     >
                       {savingId === m.id ? 'Saving…' : submitted ? 'Update' : 'Save'}
                     </Button>
+                    <MatchLockControl
+                      matchId={m.id}
+                      lockedAt={lockedAtById.get(m.id) ?? null}
+                      onSetLock={handleSetLock}
+                    />
                   </CardContent>
                 </Card>
               );
@@ -331,6 +379,95 @@ export function KnockoutResultsEditor({
           </div>
         </section>
       ))}
+    </div>
+  );
+}
+
+// Convert an ISO string to the value a <input type="datetime-local"> expects
+// (local wall-clock "YYYY-MM-DDTHH:mm", no timezone). Returns '' for null.
+function toDatetimeLocalValue(iso: string | null): string {
+  if (!iso) return '';
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return '';
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
+// Per-fixture prediction-lock control. A fixture locked at a past time freezes
+// every user's pick for it; a future time schedules the lock at kickoff. This is
+// independent of the match RESULT entered above — it gates predictions, not truth.
+function MatchLockControl({
+  matchId,
+  lockedAt,
+  onSetLock,
+}: {
+  matchId: string;
+  lockedAt: string | null;
+  onSetLock: (matchId: string, lockedAt: string | null) => void | Promise<void>;
+}) {
+  const [draft, setDraft] = React.useState<string>(() => toDatetimeLocalValue(lockedAt));
+  // Clock read in an effect (never during render) so the lock status label stays
+  // current without tripping the purity rule.
+  const [nowMs, setNowMs] = React.useState<number | null>(null);
+
+  React.useEffect(() => {
+    setDraft(toDatetimeLocalValue(lockedAt));
+  }, [lockedAt]);
+
+  React.useEffect(() => {
+    setNowMs(Date.now());
+    const id = setInterval(() => setNowMs(Date.now()), 30_000);
+    return () => clearInterval(id);
+  }, []);
+
+  const lockedMs = lockedAt ? new Date(lockedAt).getTime() : null;
+  const isLockedNow = lockedMs !== null && nowMs !== null && nowMs >= lockedMs;
+  const isScheduled = lockedMs !== null && nowMs !== null && nowMs < lockedMs;
+
+  const statusLabel = isLockedNow
+    ? `🔒 Locked since ${new Date(lockedAt as string).toLocaleString()}`
+    : isScheduled
+      ? `⏳ Locks at ${new Date(lockedAt as string).toLocaleString()}`
+      : 'Predictions open';
+
+  return (
+    <div className="bg-muted/30 mt-1 space-y-2 rounded-md border px-3 py-2">
+      <p className="text-muted-foreground text-xs">{statusLabel}</p>
+      <div className="flex flex-wrap items-center gap-2">
+        <input
+          type="datetime-local"
+          value={draft}
+          onChange={(e) => setDraft(e.target.value)}
+          className="border-input bg-background h-8 rounded-md border px-2 text-xs"
+        />
+        <Button
+          size="sm"
+          variant="outline"
+          className="h-8"
+          disabled={!draft}
+          onClick={() => onSetLock(matchId, draft ? new Date(draft).toISOString() : null)}
+        >
+          Set lock
+        </Button>
+        <Button
+          size="sm"
+          variant="outline"
+          className="h-8"
+          onClick={() => onSetLock(matchId, new Date().toISOString())}
+        >
+          Lock now
+        </Button>
+        {lockedAt ? (
+          <Button
+            size="sm"
+            variant="ghost"
+            className="h-8"
+            onClick={() => onSetLock(matchId, null)}
+          >
+            Unlock
+          </Button>
+        ) : null}
+      </div>
     </div>
   );
 }

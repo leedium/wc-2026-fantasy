@@ -141,4 +141,32 @@ describe('KnockoutBracket', () => {
       expect(onPredictionChange).toHaveBeenCalledWith('M73', 'mex');
     });
   });
+
+  describe('per-fixture lock', () => {
+    it('shows a Locked badge and disables a fixture that has locked', () => {
+      renderBracket({
+        groupPredictions: createCompleteGroupPredictions(),
+        getMatchLockInfo: (matchId) =>
+          matchId === 'M73'
+            ? { locked: true, remainingMs: 0 }
+            : { locked: false, remainingMs: null },
+      });
+      // M73 = 1A vs 2B -> mex vs sui; both buttons disabled while locked.
+      expect(screen.getByText('Locked')).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /MEX.*Mexico/i })).toBeDisabled();
+    });
+
+    it('shows a countdown for a fixture with a future lock, still editable', () => {
+      renderBracket({
+        groupPredictions: createCompleteGroupPredictions(),
+        getMatchLockInfo: (matchId) =>
+          matchId === 'M73'
+            ? { locked: false, remainingMs: 2 * 60 * 60 * 1000 + 15 * 60 * 1000 }
+            : { locked: false, remainingMs: null },
+      });
+      expect(screen.getByText(/Locks in 2h 15m/i)).toBeInTheDocument();
+      // Not locked yet → still selectable.
+      expect(screen.getByRole('button', { name: /MEX.*Mexico/i })).toBeEnabled();
+    });
+  });
 });
