@@ -1,7 +1,7 @@
 'use client';
 
-import * as React from 'react';
-import { AlertCircle, Lock, Unlock, X } from 'lucide-react';
+import { useEffect } from 'react';
+import { AlertCircle, Lock, Unlock } from 'lucide-react';
 
 import { useTournamentLock } from '@/hooks/useTournamentLock';
 import { useAuth } from '@/hooks/useAuth';
@@ -10,13 +10,8 @@ import { formatRemaining } from '@/lib/formatRemaining';
 
 const ONE_DAY_MS = 24 * 60 * 60 * 1000;
 
-function dismissKey(tournamentId: string, phase: string): string {
-  return `wc2026:banner-dismissed:${tournamentId}:${phase}`;
-}
-
 export function LockStatusBanner() {
   const {
-    tournamentId,
     lockTime,
     isLoading,
     phase,
@@ -26,34 +21,29 @@ export function LockStatusBanner() {
     knockoutLockTime,
   } = useTournamentLock();
   const { profile } = useAuth();
-  const [dismissed, setDismissed] = React.useState(false);
 
-  // Re-evaluate dismissal state when the tournament or phase change so
-  // a state transition re-shows the banner.
-  React.useEffect(() => {
-    if (!tournamentId || typeof window === 'undefined') {
-      setDismissed(false);
-      return;
-    }
+  // One-time cleanup: the dismiss control was removed (see below), but devices
+  // that dismissed under the old scheme still carry a sticky sessionStorage flag
+  // — on iOS Safari the session can persist for days. Sweep any leftover
+  // `banner-dismissed:*` keys on load so those users recover immediately.
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
     try {
-      const flag = window.sessionStorage.getItem(dismissKey(tournamentId, phase));
-      setDismissed(flag === '1');
-    } catch {
-      setDismissed(false);
-    }
-  }, [tournamentId, phase]);
-
-  const handleDismiss = React.useCallback(() => {
-    if (!tournamentId || typeof window === 'undefined') return;
-    try {
-      window.sessionStorage.setItem(dismissKey(tournamentId, phase), '1');
+      for (const key of Object.keys(window.sessionStorage)) {
+        if (key.startsWith('wc2026:banner-dismissed:')) {
+          window.sessionStorage.removeItem(key);
+        }
+      }
     } catch {
       // best-effort
     }
-    setDismissed(true);
-  }, [tournamentId, phase]);
+  }, []);
 
-  if (isLoading || !lockTime || dismissed) return null;
+  // The banner is a time-critical deadline reminder, so it is always shown (no
+  // dismiss control). A previous sessionStorage-backed ✕ could permanently bury
+  // the countdown on iOS Safari, where the session survives tab restore /
+  // backgrounding for days.
+  if (isLoading || !lockTime) return null;
 
   const isSuperAdmin = profile?.isSuperAdmin === true;
   const urgent =
@@ -116,14 +106,6 @@ export function LockStatusBanner() {
             </span>
           )}
         </div>
-        <button
-          type="button"
-          onClick={handleDismiss}
-          aria-label="Dismiss notification"
-          className="-mr-1 inline-flex h-6 w-6 items-center justify-center rounded transition hover:bg-white/20 focus:outline-none focus-visible:ring-2 focus-visible:ring-white"
-        >
-          <X className="h-4 w-4" aria-hidden />
-        </button>
       </div>
     </div>
   );
