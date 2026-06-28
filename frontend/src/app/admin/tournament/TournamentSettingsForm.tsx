@@ -105,6 +105,7 @@ export function TournamentSettingsForm() {
   const [savingPhase1, setSavingPhase1] = React.useState(false);
   const [snapshotting, setSnapshotting] = React.useState(false);
   const [busyPhase2, setBusyPhase2] = React.useState(false);
+  const [resetPhaseTwoOpen, setResetPhaseTwoOpen] = React.useState(false);
   const [resetDialogOpen, setResetDialogOpen] = React.useState(false);
   const [resetConfirm, setResetConfirm] = React.useState('');
   const [resetting, setResetting] = React.useState(false);
@@ -305,6 +306,34 @@ export function TournamentSettingsForm() {
       ]);
     } catch (e) {
       toast.error(e instanceof Error ? e.message : 'Failed');
+    } finally {
+      setBusyPhase2(false);
+    }
+  };
+
+  // Reset Phase 2: revert to the locked Phase 1 state. Clears knockout_unlocked +
+  // knockout_lock_time + per-fixture locks; preserves knockout predictions.
+  const handleResetPhaseTwo = async () => {
+    if (!tournament.data) return;
+    setBusyPhase2(true);
+    try {
+      const res = await fetch('/api/admin/tournament/reset-phase-two', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: tournament.data.id }),
+      });
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(body.error ?? 'Failed to reset Phase 2');
+      toast.success('Phase 2 reset — tournament is back in the locked Phase 1 state');
+      setResetPhaseTwoOpen(false);
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['tournament'] }),
+        queryClient.invalidateQueries({ queryKey: ['admin-advancers'] }),
+        queryClient.invalidateQueries({ queryKey: ['admin-stats'] }),
+        queryClient.invalidateQueries({ queryKey: ['knockout-locks', tournament.data.id] }),
+      ]);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Failed to reset Phase 2');
     } finally {
       setBusyPhase2(false);
     }
@@ -657,6 +686,16 @@ export function TournamentSettingsForm() {
               >
                 Close Phase 2
               </Button>
+              {isSuperAdmin && (phase === 'phase2_open' || phase === 'phase2_locked') && (
+                <Button
+                  variant="destructive"
+                  onClick={() => setResetPhaseTwoOpen(true)}
+                  disabled={busyPhase2}
+                  title="Revert to the locked Phase 1 state (keeps knockout picks)"
+                >
+                  Reset Phase 2
+                </Button>
+              )}
             </div>
           </CardContent>
         </Card>
@@ -851,6 +890,39 @@ export function TournamentSettingsForm() {
             </Button>
             <Button onClick={handleAutofill} disabled={autofilling}>
               {autofilling ? 'Filling…' : 'Auto-fill brackets'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={resetPhaseTwoOpen} onOpenChange={setResetPhaseTwoOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Reset Phase 2</DialogTitle>
+            <DialogDescription>
+              Revert <span className="font-mono">{tournament.data?.name}</span> to its locked
+              Phase 1 state.
+            </DialogDescription>
+          </DialogHeader>
+          <ul className="text-muted-foreground list-disc space-y-1 pl-5 text-sm">
+            <li>Phase 2 closes — the tournament returns to the locked Phase 1 state.</li>
+            <li>The Phase 2 lock time is cleared (back to unset).</li>
+            <li>All per-fixture knockout locks are removed.</li>
+            <li>
+              <span className="font-medium">Knockout predictions are kept</span> — they reappear if
+              you re-open Phase 2.
+            </li>
+          </ul>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setResetPhaseTwoOpen(false)}
+              disabled={busyPhase2}
+            >
+              Cancel
+            </Button>
+            <Button variant="destructive" onClick={handleResetPhaseTwo} disabled={busyPhase2}>
+              {busyPhase2 ? 'Resetting…' : 'Reset Phase 2'}
             </Button>
           </DialogFooter>
         </DialogContent>
