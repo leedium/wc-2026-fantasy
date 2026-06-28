@@ -2,7 +2,6 @@
  * @jest-environment jsdom
  */
 import { render, screen, waitFor } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import * as React from 'react';
 
@@ -139,20 +138,27 @@ describe('LockStatusBanner', () => {
     );
   });
 
-  it('persists dismiss in sessionStorage', async () => {
+  it('is always shown with no dismiss control', async () => {
+    // The banner is a time-critical deadline reminder; removing the ✕ avoids a
+    // dismissal getting stuck (notably on iOS Safari, where the session — and
+    // any stored dismiss flag — survives tab restore / backgrounding for days).
     mockTournament({ lockOffsetMs: 86_400_000 });
-    const user = userEvent.setup();
-    const { unmount } = render(wrap(<LockStatusBanner />));
-    await waitFor(() => expect(screen.getByRole('status')).toBeInTheDocument());
-
-    await user.click(screen.getByRole('button', { name: /dismiss/i }));
-    expect(screen.queryByRole('status')).not.toBeInTheDocument();
-
-    // Mounting again with the same tournament + same locked-flag stays dismissed.
-    unmount();
     render(wrap(<LockStatusBanner />));
-    await waitFor(() => {
-      expect(screen.queryByRole('status')).not.toBeInTheDocument();
-    });
+    await waitFor(() => expect(screen.getByRole('status')).toBeInTheDocument());
+    expect(screen.queryByRole('button', { name: /dismiss/i })).not.toBeInTheDocument();
+  });
+
+  it('sweeps stale banner-dismissed flags from a prior session on load', async () => {
+    // Devices that dismissed under the old sticky scheme keep a key until the
+    // session resets; clean them up so the banner recovers immediately.
+    window.sessionStorage.setItem('wc2026:banner-dismissed:t1:phase1', '1');
+    window.sessionStorage.setItem('wc2026:banner-dismissed:t1:phase2_open', '1');
+    window.sessionStorage.setItem('unrelated:key', 'keep');
+    mockTournament({ lockOffsetMs: 86_400_000 });
+    render(wrap(<LockStatusBanner />));
+    await waitFor(() => expect(screen.getByRole('status')).toBeInTheDocument());
+    expect(window.sessionStorage.getItem('wc2026:banner-dismissed:t1:phase1')).toBeNull();
+    expect(window.sessionStorage.getItem('wc2026:banner-dismissed:t1:phase2_open')).toBeNull();
+    expect(window.sessionStorage.getItem('unrelated:key')).toBe('keep');
   });
 });
