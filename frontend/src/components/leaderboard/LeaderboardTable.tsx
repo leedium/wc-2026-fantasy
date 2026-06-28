@@ -203,8 +203,8 @@ export function LeaderboardTable({
                             size="sm"
                             disabled
                             className="cursor-not-allowed opacity-50"
-                            aria-label={`Previewing ${entry.predictionName}'s bracket unlocks when the knockout bracket locks`}
-                            title="Previewing other players' brackets unlocks when the knockout bracket locks"
+                            aria-label={`Previewing ${entry.predictionName}'s bracket unlocks once the group stage locks`}
+                            title="Previewing other players' brackets unlocks once the group stage locks"
                           >
                             <Eye className="mr-1.5 h-4 w-4" />
                             Preview

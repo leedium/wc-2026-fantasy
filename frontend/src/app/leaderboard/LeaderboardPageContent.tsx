@@ -84,15 +84,17 @@ export function LeaderboardPageContent() {
 
   const currentUsername = profile?.username ?? null;
   // Staff (admin or super-admin — the latter doesn't imply the former) can
-  // always preview every bracket. Everyone else can preview others' entries in
-  // two windows where picks are frozen: while the Group Stage is locked
-  // (`phase1_locked`) and once the knockout bracket locks (`phase2_locked`).
-  // It stays restricted while picks are still editable (`phase1` group picks,
-  // `phase2_open` knockout picks) so a player can't copy a rival's in-progress
-  // picks. Fails closed while the tournament query is loading (phase defaults
-  // to phase1 → restricted).
+  // always preview every bracket. Everyone else can preview others' entries once
+  // the Group Stage is locked — `phase1_locked`, `phase2_open`, and
+  // `phase2_locked`. During `phase2_open` the knockout bracket + tiebreaker are
+  // redacted server-side (get_public_prediction, migration 0078) so only the
+  // frozen Phase 1 picks are revealed; the full bracket unlocks at
+  // `phase2_locked`. It stays restricted only while group picks are still
+  // editable (`phase1`), so a player can't copy a rival's in-progress group
+  // picks. Fails closed while the tournament query is loading (phase defaults to
+  // phase1 → restricted).
   const isStaff = !!profile?.isAdmin || !!profile?.isSuperAdmin;
-  const previewOthersLocked = !(phase === 'phase1_locked' || phase === 'phase2_locked');
+  const previewOthersLocked = phase === 'phase1';
   const canPreviewOthers = isStaff || !previewOthersLocked;
   // The leaderboard response shape depends on the viewer's identity:
   // admins get an extra `email` field, anon/auth users don't. Bake the
@@ -261,20 +263,9 @@ export function LeaderboardPageContent() {
         <div className="border-muted-foreground/20 bg-muted/40 text-muted-foreground mb-6 flex items-start gap-2 rounded-md border px-4 py-3 text-sm">
           <Lock className="mt-0.5 h-4 w-4 shrink-0" />
           <p>
-            <span className="text-foreground font-medium">Heads up —</span>{' '}
-            {phase === 'phase2_open' ? (
-              <>
-                brackets are private again while knockout picks are being made. Everyone&apos;s
-                full bracket reopens for viewing once the knockout bracket locks. This keeps picks
-                private while they can still be edited.
-              </>
-            ) : (
-              <>
-                you can preview only your own brackets for now. Other players&apos; group-stage
-                picks open for viewing once the group stage locks. This keeps picks private while
-                they can still be edited.
-              </>
-            )}
+            <span className="text-foreground font-medium">Heads up —</span> you can preview only
+            your own brackets for now. Other players&apos; group-stage picks open for viewing once
+            the group stage locks. This keeps picks private while they can still be edited.
           </p>
         </div>
       )}
