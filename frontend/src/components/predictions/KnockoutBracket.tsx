@@ -97,6 +97,14 @@ interface KnockoutBracketProps {
    * to kickoff. Defaults to never-locked.
    */
   getMatchLockInfo?: (matchId: string) => { locked: boolean; remainingMs: number | null };
+  /**
+   * Admin-editor override: when true, per-fixture (kicked-off) locks no longer
+   * block selection, so an admin can correct a locked fixture's winner to
+   * unblock a user's bracket. The "Locked" badge still renders for context, and
+   * a locked-but-unpicked match no longer counts toward round completion (the
+   * admin is expected to actually pick it). Defaults to false (normal users).
+   */
+  allowLockedEdit?: boolean;
 }
 
 // resolveTeamSource lives in @/lib/knockoutResolver so both this editor and
@@ -140,6 +148,7 @@ function MatchCard({
   disabled,
   locked = false,
   lockRemainingMs = null,
+  allowLockedEdit = false,
 }: {
   match: KnockoutMatch;
   team1Id: string | null;
@@ -151,6 +160,8 @@ function MatchCard({
   locked?: boolean;
   /** Ms until this fixture locks, when a future lock is scheduled (else null). */
   lockRemainingMs?: number | null;
+  /** Admin override: allow selecting even a locked (kicked-off) fixture. */
+  allowLockedEdit?: boolean;
 }) {
   const team1 = getTeamDisplay(team1Id, teams);
   const team2 = getTeamDisplay(team2Id, teams);
@@ -171,7 +182,8 @@ function MatchCard({
   // A locked fixture always renders its stored winner and is never editable.
   const effectiveWinnerId = locked || isWinnerValid ? selectedWinnerId : null;
   const hasWinner = effectiveWinnerId !== null;
-  const canSelect = team1Id !== null && team2Id !== null && !disabled && !locked;
+  const canSelect =
+    team1Id !== null && team2Id !== null && !disabled && (!locked || allowLockedEdit);
 
   return (
     <Card
@@ -274,6 +286,7 @@ function StageSection({
   onPredictionChange,
   disabled,
   getMatchLockInfo,
+  allowLockedEdit = false,
 }: {
   stage: KnockoutStage;
   matches: KnockoutMatch[];
@@ -286,11 +299,17 @@ function StageSection({
   onPredictionChange: (matchId: string, winnerId: string | null) => void;
   disabled?: boolean;
   getMatchLockInfo?: (matchId: string) => { locked: boolean; remainingMs: number | null };
+  allowLockedEdit?: boolean;
 }) {
   const config = STAGE_CONFIG[stage];
   const completedCount = matches.filter((match) => {
     const prediction = knockoutPredictions.find((p) => p.matchId === match.id);
-    return prediction?.winnerId !== null && prediction?.winnerId !== undefined;
+    const hasWinner = prediction?.winnerId !== null && prediction?.winnerId !== undefined;
+    // A locked (kicked-off) fixture is frozen and counts as resolved even
+    // without a pick — it can no longer be acted on, so it shouldn't hold the
+    // round's "Complete" badge back. In the admin editor (allowLockedEdit) it's
+    // editable, so a locked-unpicked fixture stays incomplete until picked.
+    return hasWinner || (!allowLockedEdit && (getMatchLockInfo?.(match.id)?.locked ?? false));
   }).length;
 
   return (
@@ -364,6 +383,7 @@ function StageSection({
               disabled={disabled}
               locked={lockInfo?.locked ?? false}
               lockRemainingMs={lockInfo && !lockInfo.locked ? lockInfo.remainingMs : null}
+              allowLockedEdit={allowLockedEdit}
             />
           );
         })}
@@ -383,6 +403,7 @@ export function KnockoutBracket({
   disabled = false,
   stage,
   getMatchLockInfo,
+  allowLockedEdit = false,
 }: KnockoutBracketProps) {
   const stageMatches = React.useMemo(
     () => matches.filter((m) => m.stage === stage),
@@ -390,7 +411,16 @@ export function KnockoutBracket({
   );
 
   const totalMatches = matches.length;
-  const completedMatches = knockoutPredictions.filter((p) => p.winnerId !== null).length;
+  const completedMatches = matches.filter((m) => {
+    const hasWinner = knockoutPredictions.some(
+      (p) => p.matchId === m.id && p.winnerId !== null
+    );
+    // Locked (kicked-off) fixtures are frozen — count them as resolved so the
+    // summary badge stays in step with the unblocked Continue / Submit gates.
+    // In the admin editor (allowLockedEdit) locked fixtures are editable, so
+    // they only count once actually picked.
+    return hasWinner || (!allowLockedEdit && (getMatchLockInfo?.(m.id)?.locked ?? false));
+  }).length;
 
   return (
     <div className="space-y-6">
@@ -459,6 +489,7 @@ export function KnockoutBracket({
         onPredictionChange={onPredictionChange}
         disabled={disabled}
         getMatchLockInfo={getMatchLockInfo}
+        allowLockedEdit={allowLockedEdit}
       />
     </div>
   );
