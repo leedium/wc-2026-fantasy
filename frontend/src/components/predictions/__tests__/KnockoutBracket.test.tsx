@@ -168,5 +168,25 @@ describe('KnockoutBracket', () => {
       // Not locked yet → still selectable.
       expect(screen.getByRole('button', { name: /MEX.*Mexico/i })).toBeEnabled();
     });
+
+    it('lets an admin (allowLockedEdit) select a locked fixture, badge still shown', async () => {
+      // Admin-editor override: a kicked-off fixture keeps its "Locked" badge for
+      // context but its team buttons become clickable so the admin can correct
+      // the winner and unblock the user's bracket.
+      const user = userEvent.setup();
+      const { onPredictionChange } = renderBracket({
+        groupPredictions: createCompleteGroupPredictions(),
+        allowLockedEdit: true,
+        getMatchLockInfo: (matchId) =>
+          matchId === 'M73'
+            ? { locked: true, remainingMs: 0 }
+            : { locked: false, remainingMs: null },
+      });
+      expect(screen.getByText('Locked')).toBeInTheDocument();
+      const mexButton = screen.getByRole('button', { name: /MEX.*Mexico/i });
+      expect(mexButton).toBeEnabled();
+      await user.click(mexButton);
+      expect(onPredictionChange).toHaveBeenCalledWith('M73', 'mex');
+    });
   });
 });

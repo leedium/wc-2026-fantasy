@@ -215,6 +215,7 @@ interface QueryConfig {
   storedKnockout?: Array<{ matchId: string; winner: string | null }>;
   storedTotalGoals?: number | null;
   phase?: 'phase1' | 'phase1_locked' | 'phase2_open' | 'phase2_locked';
+  knockoutLocks?: Array<{ matchId: string; lockedAt: string }>;
 }
 
 function configureQueries({
@@ -224,6 +225,7 @@ function configureQueries({
   storedKnockout = [],
   storedTotalGoals = null,
   phase,
+  knockoutLocks = [],
 }: QueryConfig = {}) {
   mockUseQuery.mockImplementation(({ queryKey }: { queryKey: ReadonlyArray<unknown> }) => {
     const key = queryKey[0];
@@ -241,6 +243,7 @@ function configureQueries({
             phase:
               phase ??
               (new Date(tournamentLockTime) > new Date() ? 'phase1' : 'phase1_locked'),
+            knockoutLocks,
             totalEntries: 0,
             serverTime: new Date().toISOString(),
           },
@@ -941,6 +944,179 @@ describe('PredictionsPageContent — autosave', () => {
 
     await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
     expect(JSON.parse(fetchMock.mock.calls[0][1].body).submit).toBe(false);
+  });
+
+  it('lets the user advance past R32 when a fixture locked before they picked it', async () => {
+    // Regression: a per-fixture lock (kickoff passed) freezes a match the user
+    // never picked. The user fills every other R32 match but the round-complete
+    // gate used to require a winner on EVERY match, so "Continue to Round of 16"
+    // stayed disabled forever. A locked-unpicked fixture must count as resolved.
+    configureQueries({
+      phase: 'phase2_open',
+      knockoutLocks: [
+        { matchId: 'M88', lockedAt: new Date(Date.now() - 60_000).toISOString() },
+      ],
+    });
+
+    const initial = {
+      id: 'pred-1',
+      name: 'Main',
+      totalGoals: 7,
+      championTeamId: 'arg',
+      submittedAt: new Date(Date.now() - 60_000).toISOString(),
+      isPaid: false,
+      paidAt: null,
+      groups: [],
+      // Every fixture picked EXCEPT M88 (a R32 match), which has locked.
+      knockout: fixtureKnockoutMatches
+        .filter((m) => m.id !== 'M88')
+        .map((m) => ({ matchId: m.id, winner: 'mex' })),
+      advancers: [],
+    };
+
+    render(<PredictionsPageContent mode="edit" predictionId="pred-1" initial={initial} />);
+
+    // Wizard auto-jumps to R32 in phase2_open.
+    await screen.findByTestId('knockout-bracket');
+    const continueBtn = await screen.findByRole('button', {
+      name: /Continue to Round of 16/,
+    });
+    expect(continueBtn).toBeEnabled();
+  });
+
+  it('keeps R32 Continue disabled while an UNLOCKED fixture is still unpicked', async () => {
+    // Negative case for the fix above: an un-actionable (locked) gap is fine,
+    // but a match the user can still pick must keep blocking progression.
+    configureQueries({ phase: 'phase2_open' });
+
+    const initial = {
+      id: 'pred-1',
+      name: 'Main',
+      totalGoals: 7,
+      championTeamId: 'arg',
+      submittedAt: new Date(Date.now() - 60_000).toISOString(),
+      isPaid: false,
+      paidAt: null,
+      groups: [],
+      // M88 unpicked and NOT locked → round still incomplete.
+      knockout: fixtureKnockoutMatches
+        .filter((m) => m.id !== 'M88')
+        .map((m) => ({ matchId: m.id, winner: 'mex' })),
+      advancers: [],
+    };
+
+    render(<PredictionsPageContent mode="edit" predictionId="pred-1" initial={initial} />);
+
+    await screen.findByTestId('knockout-bracket');
+    const continueBtn = await screen.findByRole('button', {
+      name: /Continue to Round of 16/,
+    });
+    expect(continueBtn).toBeDisabled();
+  });
+
+  it('in the admin editor, a locked-unpicked R32 fixture keeps Continue disabled until filled', async () => {
+    // Admin override (apiBasePath under /api/admin): unlike a regular user, the
+    // admin CAN edit a kicked-off fixture, so a locked-unpicked match no longer
+    // counts as resolved — it must actually be picked. This nudges the admin to
+    // set the missing winner (which resolves the downstream R16 slot) rather
+    // than silently skating past it.
+    configureQueries({
+      phase: 'phase2_open',
+      knockoutLocks: [
+        { matchId: 'M88', lockedAt: new Date(Date.now() - 60_000).toISOString() },
+      ],
+    });
+
+    const initial = {
+      id: 'pred-1',
+      name: 'Main',
+      totalGoals: 7,
+      championTeamId: 'arg',
+      submittedAt: new Date(Date.now() - 60_000).toISOString(),
+      isPaid: false,
+      paidAt: null,
+      groups: [],
+      // Every fixture picked EXCEPT the locked M88.
+      knockout: fixtureKnockoutMatches
+        .filter((m) => m.id !== 'M88')
+        .map((m) => ({ matchId: m.id, winner: 'mex' })),
+      advancers: [],
+    };
+
+    render(
+      <PredictionsPageContent
+        mode="edit"
+        predictionId="pred-1"
+        initial={initial}
+        apiBasePath="/api/admin/users/u1/predictions"
+      />
+    );
+
+    await screen.findByTestId('knockout-bracket');
+    const continueBtn = await screen.findByRole('button', {
+      name: /Continue to Round of 16/,
+    });
+    // Contrast with the regular-user case above (enabled): admin must fill M88.
+    expect(continueBtn).toBeDisabled();
+  });
+
+  it('lets an admin submit a complete Phase 2 prediction while phase2 is LOCKED', async () => {
+    // Regression: in a locked phase the footer commit buttons were gated on raw
+    // isLocked, so the admin editor showed an enabled-looking flow but the
+    // "Submit Prediction" button stayed disabled. The admin (bypassLockNav) must
+    // be able to commit once everything is filled.
+    configureQueries({ phase: 'phase2_locked' });
+    const fetchMock = global.fetch as jest.Mock;
+    fetchMock.mockResolvedValue({ ok: true, json: async () => ({ predictionId: 'pred-1' }) });
+
+    const groups = fixtureGroups.map((g) => ({
+      groupId: g.id,
+      first: g.teams[0].id,
+      second: g.teams[1].id,
+      third: g.teams[2].id,
+      fourth: g.teams[3].id,
+    }));
+    const advancers = fixtureGroups.slice(0, 8).map((g, i) => ({
+      rank: i + 1,
+      teamId: g.teams[2].id,
+    }));
+    const initial = {
+      id: 'pred-1',
+      name: 'Main',
+      totalGoals: 7,
+      championTeamId: 'arg',
+      submittedAt: new Date(Date.now() - 60_000).toISOString(),
+      isPaid: false,
+      paidAt: null,
+      groups,
+      knockout: fixtureKnockoutMatches.map((m) => ({ matchId: m.id, winner: 'mex' })),
+      advancers,
+    };
+
+    const user = userEvent.setup();
+    render(
+      <PredictionsPageContent
+        mode="edit"
+        predictionId="pred-1"
+        initial={initial}
+        apiBasePath="/api/admin/users/u1/predictions"
+      />
+    );
+
+    // All step tabs are unlocked for the admin; jump straight to the last step.
+    await user.click(await screen.findByRole('tab', { name: /Tiebreaker/ }));
+    const submitBtn = await screen.findByRole('button', { name: /Submit Prediction/ });
+    expect(submitBtn).toBeEnabled();
+
+    await user.click(submitBtn);
+    await waitFor(() => expect(toastSuccess).toHaveBeenCalledWith('Prediction submitted'));
+    // Routed through the admin RPC, with submit:true.
+    const submitCall = fetchMock.mock.calls.find(
+      ([url, init]) =>
+        String(url).startsWith('/api/admin/users/u1/predictions') &&
+        JSON.parse((init as { body: string }).body).submit === true
+    );
+    expect(submitCall).toBeTruthy();
   });
 
   it('auto-commits an edit to a SUBMITTED prediction after the debounce (submit:false, no redirect)', async () => {

@@ -297,6 +297,10 @@ function PaymentStatusBanner({
   );
 }
 
+// Stable empty set so the admin-editor override (which treats no fixture as
+// locked) keeps referential equality across renders for memo deps.
+const EMPTY_LOCKED_MATCH_IDS: Set<string> = new Set<string>();
+
 export function PredictionsPageContent({
   mode,
   predictionId,
@@ -319,15 +323,27 @@ export function PredictionsPageContent({
     user?.id
       ? `/api/admin/users/${user.id}/predictions`
       : apiBasePath;
-  // Per-phase editability for the user-side forms. Super admin bypasses both.
+  // The admin editor surface (mounted with an /api/admin base path, which the
+  // super-admin self-edit reroute above also produces) lets ANY admin correct a
+  // prediction through the lock — including kicked-off knockout fixtures — so
+  // they can unblock a user's bracket progression. The corresponding RPC bypass
+  // + audit log live in migration 0079.
+  const allowLockedEdit = effectiveApiBasePath.startsWith('/api/admin/');
+  // Per-phase editability for the user-side forms. Super admin bypasses both;
+  // the admin editor additionally unlocks the Phase 2 (knockout / tiebreaker)
+  // forms in locked phases. Phase 1 fields stay gated for regular admins to
+  // match the RPC (group/champion edits remain frozen post-Phase 1).
   const phase1Editable = phase === 'phase1' || isSuperAdmin;
-  const phase2Editable = phase === 'phase2_open' || isSuperAdmin;
-  // Super admin can keep navigating between steps after the tournament
-  // locks (they're the only role whose forms remain editable through
-  // locks — phase1Editable/phase2Editable above). Without this bypass
-  // the Continue button + step tabs get force-disabled by isLocked,
-  // stranding super admin on the Groups step in the admin editor.
-  const bypassLockNav = isSuperAdmin;
+  const phase2Editable = phase === 'phase2_open' || isSuperAdmin || allowLockedEdit;
+  // Super admin / admin editor can keep navigating between steps after the
+  // tournament locks. Without this bypass the Continue button + step tabs get
+  // force-disabled by isLocked, stranding them on the Groups step.
+  const bypassLockNav = isSuperAdmin || allowLockedEdit;
+  // In the admin editor the override lets an admin set winners on kicked-off
+  // fixtures, so no fixture is treated as frozen for completion/cascade — the
+  // admin must actually pick each one (which resolves the downstream slot) and
+  // their picks carry through later rounds. Regular users keep the real locks.
+  const effectiveLockedMatchIds = allowLockedEdit ? EMPTY_LOCKED_MATCH_IDS : lockedMatchIds;
 
   // A step is "locked" when its phase's edit window is closed for this user.
   // Phase 1 steps (Group Stage / Best 3rds / Gut Feeling) freeze once Phase 2
@@ -338,7 +354,7 @@ export function PredictionsPageContent({
   // stepper and Back / Continue (the forms themselves render read-only).
   const isStepLocked = React.useCallback(
     (step: Step): boolean => {
-      if (isSuperAdmin) return false;
+      if (isSuperAdmin || allowLockedEdit) return false;
       const top = topOf(step);
       const isPhase1Step =
         top === 'groups' || top === 'best_thirds' || top === 'champion_pick';
@@ -347,7 +363,7 @@ export function PredictionsPageContent({
       if (phase === 'phase1' && isPhase2Step) return true;
       return false;
     },
-    [isSuperAdmin, phase]
+    [isSuperAdmin, allowLockedEdit, phase]
   );
 
   const tournamentQuery = useQuery<{
@@ -571,8 +587,21 @@ export function PredictionsPageContent({
   const completedGroups = groupPredictions.filter(
     (p) => Object.values(p.positions).filter((v) => v !== null).length === 4
   ).length;
-  const completedKnockoutMatches = knockoutPredictions.filter(
-    (p) => p.winnerId !== null
+  // A knockout match is "resolved" for progression/completion when the user
+  // has picked a winner OR the fixture has individually locked (kicked off).
+  // A locked fixture is frozen — the user can no longer pick it (MatchCard
+  // disables selection), so requiring a winner there would trap them on the
+  // round forever. Locked-unpicked matches simply score 0. In the admin editor
+  // (effectiveLockedMatchIds is empty) only a real pick counts, so the admin is
+  // nudged to fill the kicked-off fixture they're correcting.
+  const isKnockoutMatchResolved = React.useCallback(
+    (matchId: string): boolean =>
+      knockoutPredictions.some((p) => p.matchId === matchId && p.winnerId !== null) ||
+      effectiveLockedMatchIds.has(matchId),
+    [knockoutPredictions, effectiveLockedMatchIds]
+  );
+  const completedKnockoutMatches = (matches ?? []).filter((m) =>
+    isKnockoutMatchResolved(m.id)
   ).length;
   const completedAdvancers = advancerPredictions.filter((a) => !!a.teamId).length;
   const tiebreakerSlots = 1;
@@ -659,12 +688,10 @@ export function PredictionsPageContent({
         out[s] = false;
         continue;
       }
-      out[s] = stageMatches.every((m) =>
-        knockoutPredictions.some((p) => p.matchId === m.id && p.winnerId !== null)
-      );
+      out[s] = stageMatches.every((m) => isKnockoutMatchResolved(m.id));
     }
     return out;
-  }, [matchesByStage, knockoutPredictions]);
+  }, [matchesByStage, isKnockoutMatchResolved]);
 
   const stepStatus: Record<Step, boolean> = {
     champion_pick: isChampionPickComplete,
@@ -824,7 +851,7 @@ export function PredictionsPageContent({
         groupPredictions,
         bracketAssignments,
         groupStandings,
-        lockedMatchIds
+        effectiveLockedMatchIds
       );
       persistDraft({ knockoutPredictions: next });
       if (changedMatchIds.length > 0) {
@@ -1475,6 +1502,7 @@ export function PredictionsPageContent({
               disabled={!phase2Editable}
               stage={currentStep}
               getMatchLockInfo={getMatchLockInfo}
+              allowLockedEdit={allowLockedEdit}
             />
           )}
 
@@ -1516,7 +1544,7 @@ export function PredictionsPageContent({
                 type="button"
                 variant="outline"
                 onClick={handleSaveProgress}
-                disabled={isLocked || isSubmitting || isSavingProgress}
+                disabled={lockedReadOnly || isSubmitting || isSavingProgress}
                 className="sm:w-auto"
               >
                 {isSavingProgress ? 'Saving…' : 'Save progress'}
@@ -1526,7 +1554,7 @@ export function PredictionsPageContent({
               <Button
                 type="button"
                 onClick={handleSavePhase1}
-                disabled={isLocked || isSavingProgress || isSubmitting}
+                disabled={lockedReadOnly || isSavingProgress || isSubmitting}
                 className="sm:w-auto"
               >
                 {isSavingProgress ? 'Saving…' : 'Save Phase 1 Picks'}
@@ -1537,7 +1565,7 @@ export function PredictionsPageContent({
               <Button
                 type="button"
                 onClick={handleSubmit}
-                disabled={isLocked || isSubmitting || isSavingProgress}
+                disabled={lockedReadOnly || isSubmitting || isSavingProgress}
                 className="sm:w-auto"
               >
                 {isSubmitting ? 'Submitting…' : 'Submit Prediction'}
