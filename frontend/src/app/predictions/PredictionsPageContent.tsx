@@ -323,12 +323,13 @@ export function PredictionsPageContent({
     user?.id
       ? `/api/admin/users/${user.id}/predictions`
       : apiBasePath;
-  // The admin editor surface (mounted with an /api/admin base path, which the
-  // super-admin self-edit reroute above also produces) lets ANY admin correct a
-  // prediction through the lock — including kicked-off knockout fixtures — so
-  // they can unblock a user's bracket progression. The corresponding RPC bypass
-  // + audit log live in migration 0079.
-  const allowLockedEdit = effectiveApiBasePath.startsWith('/api/admin/');
+  // The post-lock override (edit through the lock, including kicked-off knockout
+  // fixtures) is SUPER-ADMIN-only. It activates only on the /api/admin base path
+  // (the admin editor, which the super-admin self-edit reroute above also
+  // produces). Normal admins fall back to pre-override behavior — Phase 2 forms
+  // editable only while phase2 is open, locked fixtures frozen. The matching RPC
+  // gate + audit log live in migrations 0079/0080.
+  const allowLockedEdit = isSuperAdmin && effectiveApiBasePath.startsWith('/api/admin/');
   // Per-phase editability for the user-side forms. Super admin bypasses both;
   // the admin editor additionally unlocks the Phase 2 (knockout / tiebreaker)
   // forms in locked phases. Phase 1 fields stay gated for regular admins to

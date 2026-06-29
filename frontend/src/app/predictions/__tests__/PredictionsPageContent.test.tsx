@@ -1014,12 +1014,13 @@ describe('PredictionsPageContent — autosave', () => {
     expect(continueBtn).toBeDisabled();
   });
 
-  it('in the admin editor, a locked-unpicked R32 fixture keeps Continue disabled until filled', async () => {
-    // Admin override (apiBasePath under /api/admin): unlike a regular user, the
-    // admin CAN edit a kicked-off fixture, so a locked-unpicked match no longer
-    // counts as resolved — it must actually be picked. This nudges the admin to
-    // set the missing winner (which resolves the downstream R16 slot) rather
-    // than silently skating past it.
+  it('super admin: a locked-unpicked R32 fixture keeps Continue disabled until filled', async () => {
+    // Super-admin override (apiBasePath under /api/admin): unlike a regular user,
+    // they CAN edit a kicked-off fixture, so a locked-unpicked match no longer
+    // counts as resolved — it must actually be picked. This nudges them to set
+    // the missing winner (which resolves the downstream R16 slot) rather than
+    // silently skating past it.
+    mockAuthProfile = { isSuperAdmin: true };
     configureQueries({
       phase: 'phase2_open',
       knockoutLocks: [
@@ -1060,11 +1061,12 @@ describe('PredictionsPageContent — autosave', () => {
     expect(continueBtn).toBeDisabled();
   });
 
-  it('lets an admin submit a complete Phase 2 prediction while phase2 is LOCKED', async () => {
+  it('super admin: can submit a complete Phase 2 prediction while phase2 is LOCKED', async () => {
     // Regression: in a locked phase the footer commit buttons were gated on raw
-    // isLocked, so the admin editor showed an enabled-looking flow but the
-    // "Submit Prediction" button stayed disabled. The admin (bypassLockNav) must
-    // be able to commit once everything is filled.
+    // isLocked, so the editor showed an enabled-looking flow but the "Submit
+    // Prediction" button stayed disabled. A super admin (bypassLockNav) must be
+    // able to commit once everything is filled.
+    mockAuthProfile = { isSuperAdmin: true };
     configureQueries({ phase: 'phase2_locked' });
     const fetchMock = global.fetch as jest.Mock;
     fetchMock.mockResolvedValue({ ok: true, json: async () => ({ predictionId: 'pred-1' }) });
@@ -1117,6 +1119,98 @@ describe('PredictionsPageContent — autosave', () => {
         JSON.parse((init as { body: string }).body).submit === true
     );
     expect(submitCall).toBeTruthy();
+  });
+
+  it('normal admin: the locked-fixture override is OFF (no Submit while phase2 LOCKED)', async () => {
+    // The post-lock override is super-admin-only. A normal admin (isSuperAdmin
+    // false) in the admin editor during phase2_locked gets the pre-override,
+    // read-only treatment — no Submit Prediction button is offered.
+    mockAuthProfile = { isSuperAdmin: false };
+    configureQueries({ phase: 'phase2_locked' });
+
+    const groups = fixtureGroups.map((g) => ({
+      groupId: g.id,
+      first: g.teams[0].id,
+      second: g.teams[1].id,
+      third: g.teams[2].id,
+      fourth: g.teams[3].id,
+    }));
+    const advancers = fixtureGroups.slice(0, 8).map((g, i) => ({
+      rank: i + 1,
+      teamId: g.teams[2].id,
+    }));
+    const initial = {
+      id: 'pred-1',
+      name: 'Main',
+      totalGoals: 7,
+      championTeamId: 'arg',
+      submittedAt: new Date(Date.now() - 60_000).toISOString(),
+      isPaid: false,
+      paidAt: null,
+      groups,
+      knockout: fixtureKnockoutMatches.map((m) => ({ matchId: m.id, winner: 'mex' })),
+      advancers,
+    };
+
+    const user = userEvent.setup();
+    render(
+      <PredictionsPageContent
+        mode="edit"
+        predictionId="pred-1"
+        initial={initial}
+        apiBasePath="/api/admin/users/u1/predictions"
+      />
+    );
+
+    await user.click(await screen.findByRole('tab', { name: /Tiebreaker/ }));
+    // Locked, read-only: no Submit button for a normal admin post-lock.
+    expect(screen.queryByRole('button', { name: /Submit Prediction/ })).toBeNull();
+  });
+
+  it('normal admin: a kicked-off fixture stays locked (not selectable) in phase2_open', async () => {
+    // Super-admin-only override is off, so a normal admin sees the per-fixture
+    // lock just like a regular user — a locked R32 counts as resolved (Continue
+    // enabled) and its winner buttons are not editable.
+    mockAuthProfile = { isSuperAdmin: false };
+    configureQueries({
+      phase: 'phase2_open',
+      knockoutLocks: [
+        { matchId: 'M88', lockedAt: new Date(Date.now() - 60_000).toISOString() },
+      ],
+    });
+
+    const initial = {
+      id: 'pred-1',
+      name: 'Main',
+      totalGoals: 7,
+      championTeamId: 'arg',
+      submittedAt: new Date(Date.now() - 60_000).toISOString(),
+      isPaid: false,
+      paidAt: null,
+      groups: [],
+      // Every fixture picked EXCEPT the locked M88.
+      knockout: fixtureKnockoutMatches
+        .filter((m) => m.id !== 'M88')
+        .map((m) => ({ matchId: m.id, winner: 'mex' })),
+      advancers: [],
+    };
+
+    render(
+      <PredictionsPageContent
+        mode="edit"
+        predictionId="pred-1"
+        initial={initial}
+        apiBasePath="/api/admin/users/u1/predictions"
+      />
+    );
+
+    await screen.findByTestId('knockout-bracket');
+    // Locked M88 counts as resolved for a normal admin → Continue enabled
+    // (contrast the super-admin case above, which stays disabled).
+    const continueBtn = await screen.findByRole('button', {
+      name: /Continue to Round of 16/,
+    });
+    expect(continueBtn).toBeEnabled();
   });
 
   it('auto-commits an edit to a SUBMITTED prediction after the debounce (submit:false, no redirect)', async () => {
