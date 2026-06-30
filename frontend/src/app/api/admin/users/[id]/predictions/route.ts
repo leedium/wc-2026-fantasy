@@ -59,7 +59,7 @@ export async function GET(
   const { data: predictions } = await supabase
     .from('predictions')
     .select(
-      'id, prediction_name, total_goals, champion_team_id, submitted_at, tournament_payments!prediction_id(paid_at, marked_by, is_free)'
+      'id, prediction_name, total_goals, champion_team_id, submitted_at, voided, tournament_payments!prediction_id(paid_at, marked_by, is_free)'
     )
     .eq('user_id', userId)
     .eq('tournament_id', tournament.id)
@@ -72,6 +72,7 @@ export async function GET(
     total_goals: number | null;
     champion_team_id: string | null;
     submitted_at: string | null;
+    voided: boolean | null;
     // PostgREST returns an object (not array) when the embed resolves through
     // a unique FK — `tournament_payments.prediction_id` is unique, so it's 1:1.
     tournament_payments: Payment | Payment[] | null;
@@ -98,6 +99,7 @@ export async function GET(
         totalGoals: p.total_goals,
         championTeamId: p.champion_team_id,
         submittedAt: p.submitted_at,
+        voided: p.voided === true,
         isPaid: payment != null,
         paidAt: payment?.paid_at ?? null,
         markedBy: payment?.marked_by ?? null,
