@@ -63,9 +63,21 @@ describe('AdminUserBracket — lock-time edit hiding + void', () => {
     expect(screen.getByRole('button', { name: /^Void$/i })).toBeInTheDocument();
   });
 
-  it('super admin + locked: keeps Edit + New prediction', () => {
+  it('super admin + locked: ALSO hides Edit + New prediction', () => {
     mockProfile.isSuperAdmin = true;
     mockLock.isLocked = true;
+    render(<AdminUserBracket userId="u1" />);
+
+    // The admin editor is read-only for everyone once locked — super admins
+    // included. Void stays available.
+    expect(screen.queryByRole('link', { name: /New prediction/i })).toBeNull();
+    expect(screen.queryByRole('link', { name: /^Edit$/i })).toBeNull();
+    expect(screen.getByRole('button', { name: /^Void$/i })).toBeInTheDocument();
+  });
+
+  it('unlocked: shows Edit + New prediction', () => {
+    mockProfile.isSuperAdmin = false;
+    mockLock.isLocked = false;
     render(<AdminUserBracket userId="u1" />);
 
     expect(screen.getByRole('link', { name: /New prediction/i })).toBeInTheDocument();
