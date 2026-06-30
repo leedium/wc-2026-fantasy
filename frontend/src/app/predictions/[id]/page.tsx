@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import { notFound, redirect } from 'next/navigation';
 
 import { getServerSupabase } from '@/lib/supabase/server';
+import { shouldRedirectLockedPrediction } from '@/lib/tournament/lockGate';
 import { ROUTES } from '@/lib/constants';
 import { AdminBreadcrumb } from '@/components/admin/AdminBreadcrumb';
 import { PredictionsPageContent, type InitialPrediction } from '../PredictionsPageContent';
@@ -21,6 +22,10 @@ export default async function EditPredictionPage({ params }: PageProps) {
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) redirect(`${ROUTES.login}?next=${encodeURIComponent(ROUTES.predictions)}`);
+
+  // While the tournament is locked, deeplinks to the editor redirect back to the
+  // predictions hub — except for super admins, who keep edit access in any phase.
+  if (await shouldRedirectLockedPrediction(user.id)) redirect(ROUTES.predictions);
 
   const { data: prediction } = await supabase
     .from('predictions')

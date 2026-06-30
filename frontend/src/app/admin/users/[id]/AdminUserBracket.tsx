@@ -36,6 +36,7 @@ interface AdminPrediction {
   paidAt: string | null;
   markedBy: string | null;
   isFreePaid: boolean;
+  voided: boolean;
 }
 
 interface AdminUserSummary {
@@ -187,9 +188,18 @@ function PaymentRow({
 
 export function AdminUserBracket({ userId }: { userId: string }) {
   const queryClient = useQueryClient();
+  const { profile } = useAuth();
+  const { isLocked, isLoading: lockLoading } = useTournamentLock();
   const [pendingDelete, setPendingDelete] = React.useState<AdminPrediction | null>(null);
   const [isDeleting, setIsDeleting] = React.useState(false);
   const [previewId, setPreviewId] = React.useState<string | null>(null);
+  const [voidingId, setVoidingId] = React.useState<string | null>(null);
+
+  // While the tournament is locked, only super admins may edit a user's picks
+  // (the admin_submit_predictions RPC enforces this). Hide the pick-edit
+  // affordances for everyone else so they aren't led to a dead end.
+  const isSuperAdmin = profile?.isSuperAdmin === true;
+  const editLocked = !lockLoading && isLocked && !isSuperAdmin;
 
   const query = useQuery<AdminPredictionsResponse>({
     queryKey: ['admin-user-predictions', userId],
@@ -237,6 +247,30 @@ export function AdminUserBracket({ userId }: { userId: string }) {
       toast.error(e instanceof Error ? e.message : 'Failed');
     } finally {
       setIsDeleting(false);
+    }
+  };
+
+  const handleVoid = async (prediction: AdminPrediction, nextVoided: boolean) => {
+    setVoidingId(prediction.id);
+    try {
+      const res = await fetch(
+        `/api/admin/predictions/${encodeURIComponent(prediction.id)}/void`,
+        {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ void: nextVoided }),
+        }
+      );
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(String(body.error ?? 'Failed'));
+      }
+      toast.success(nextVoided ? 'Prediction voided' : 'Prediction restored');
+      await refresh();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Failed');
+    } finally {
+      setVoidingId(null);
     }
   };
 
@@ -299,11 +333,13 @@ export function AdminUserBracket({ userId }: { userId: string }) {
 
       <div className="mb-4 flex items-center justify-between">
         <h2 className="text-xl font-semibold">User predictions</h2>
-        <Button asChild>
-          <Link href={`/admin/users/${userId}/predictions/new`}>
-            <Plus className="mr-2 h-4 w-4" /> New prediction
-          </Link>
-        </Button>
+        {!editLocked && (
+          <Button asChild>
+            <Link href={`/admin/users/${userId}/predictions/new`}>
+              <Plus className="mr-2 h-4 w-4" /> New prediction
+            </Link>
+          </Button>
+        )}
       </div>
 
       {predictions.length === 0 ? (
@@ -319,6 +355,11 @@ export function AdminUserBracket({ userId }: { userId: string }) {
               <CardHeader className="flex flex-row items-center justify-between">
                 <CardTitle className="flex items-center gap-2">
                   {p.name}
+                  {p.voided ? (
+                    <Badge variant="destructive" className="text-xs">
+                      Voided
+                    </Badge>
+                  ) : null}
                   {p.submittedAt ? (
                     <span className="text-muted-foreground text-xs font-normal">
                       submitted {new Date(p.submittedAt).toLocaleString()}
@@ -326,10 +367,25 @@ export function AdminUserBracket({ userId }: { userId: string }) {
                   ) : null}
                 </CardTitle>
                 <div className="flex gap-2">
-                  <Button asChild variant="outline" size="sm">
-                    <Link href={`/admin/users/${userId}/predictions/${encodeURIComponent(p.id)}`}>
-                      Edit
-                    </Link>
+                  {!editLocked && (
+                    <Button asChild variant="outline" size="sm">
+                      <Link href={`/admin/users/${userId}/predictions/${encodeURIComponent(p.id)}`}>
+                        Edit
+                      </Link>
+                    </Button>
+                  )}
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleVoid(p, !p.voided)}
+                    disabled={voidingId === p.id}
+                    title={
+                      p.voided
+                        ? 'Restore this prediction to the competition'
+                        : 'Void: remove from the competition + leaderboard'
+                    }
+                  >
+                    {voidingId === p.id ? '…' : p.voided ? 'Unvoid' : 'Void'}
                   </Button>
                   <Button
                     variant="outline"
