@@ -188,18 +188,16 @@ function PaymentRow({
 
 export function AdminUserBracket({ userId }: { userId: string }) {
   const queryClient = useQueryClient();
-  const { profile } = useAuth();
   const { isLocked, isLoading: lockLoading } = useTournamentLock();
   const [pendingDelete, setPendingDelete] = React.useState<AdminPrediction | null>(null);
   const [isDeleting, setIsDeleting] = React.useState(false);
   const [previewId, setPreviewId] = React.useState<string | null>(null);
   const [voidingId, setVoidingId] = React.useState<string | null>(null);
 
-  // While the tournament is locked, only super admins may edit a user's picks
-  // (the admin_submit_predictions RPC enforces this). Hide the pick-edit
-  // affordances for everyone else so they aren't led to a dead end.
-  const isSuperAdmin = profile?.isSuperAdmin === true;
-  const editLocked = !lockLoading && isLocked && !isSuperAdmin;
+  // Once the tournament is locked the admin editor is read-only for ALL admins
+  // (including super admins): hide the pick-edit affordances (Edit + New
+  // prediction). Void / Preview / Delete / payment controls are unaffected.
+  const editLocked = !lockLoading && isLocked;
 
   const query = useQuery<AdminPredictionsResponse>({
     queryKey: ['admin-user-predictions', userId],
