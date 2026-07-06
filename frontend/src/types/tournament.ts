@@ -117,6 +117,14 @@ export interface LeaderboardEntry {
   championPickPoints: number;
   /** When the prediction's picks were last saved (predictions.updated_at). */
   updatedAt?: string | null;
+  /**
+   * FIFA 3-letter code of the team predicted to win the final (M104) — the
+   * "pick to win the tournament" shown as a flag next to the prediction name.
+   * Null before the final pick is made (or for legacy rows).
+   */
+  bracketChampionCode?: string | null;
+  /** Full name of the bracket champion team (for the flag's hover title). */
+  bracketChampionName?: string | null;
 }
 
 export interface LeaderboardRankMatch {

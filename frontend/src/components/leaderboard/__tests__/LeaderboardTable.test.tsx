@@ -98,6 +98,25 @@ describe('LeaderboardTable', () => {
     expect(screen.getByText('5th')).toBeInTheDocument();
   });
 
+  it('shows the bracket champion flag (pick to win) when present, a dash otherwise', () => {
+    render(
+      <LeaderboardTable
+        entries={[
+          { ...entries[0], bracketChampionCode: 'ARG', bracketChampionName: 'Argentina' },
+          { ...entries[1], bracketChampionCode: null, bracketChampionName: null },
+        ]}
+      />
+    );
+    // The flag wrapper exposes the team name via title + aria-label for hover/SR.
+    expect(screen.getByTitle('Argentina')).toBeInTheDocument();
+    expect(
+      screen.getByLabelText('Pick to win: Argentina')
+    ).toBeInTheDocument();
+    // The row without a pick renders a dash placeholder rather than nothing.
+    expect(screen.queryByTitle('Brazil')).not.toBeInTheDocument();
+    expect(screen.getByLabelText('Pick to win: not yet made')).toBeInTheDocument();
+  });
+
   it('renders email in place of username when present (admin view)', () => {
     const adminEntries: LeaderboardEntry[] = [
       { ...entries[0], email: 'alice@example.com' },
