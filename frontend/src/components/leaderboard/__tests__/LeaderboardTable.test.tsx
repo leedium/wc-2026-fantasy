@@ -98,7 +98,7 @@ describe('LeaderboardTable', () => {
     expect(screen.getByText('5th')).toBeInTheDocument();
   });
 
-  it('shows the bracket champion flag (pick to win) when present, hidden otherwise', () => {
+  it('shows the bracket champion flag (pick to win) when present, a dash otherwise', () => {
     render(
       <LeaderboardTable
         entries={[
@@ -112,8 +112,9 @@ describe('LeaderboardTable', () => {
     expect(
       screen.getByLabelText('Pick to win: Argentina')
     ).toBeInTheDocument();
-    // The row without a pick renders no flag.
+    // The row without a pick renders a dash placeholder rather than nothing.
     expect(screen.queryByTitle('Brazil')).not.toBeInTheDocument();
+    expect(screen.getByLabelText('Pick to win: not yet made')).toBeInTheDocument();
   });
 
   it('renders email in place of username when present (admin view)', () => {

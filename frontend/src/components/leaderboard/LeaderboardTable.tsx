@@ -164,7 +164,7 @@ export function LeaderboardTable({
                       {isCurrentUser && (
                         <span className="text-muted-foreground text-xs">(You)</span>
                       )}
-                      {entry.bracketChampionCode && (
+                      {entry.bracketChampionCode ? (
                         <span
                           title={entry.bracketChampionName ?? undefined}
                           aria-label={
@@ -175,6 +175,13 @@ export function LeaderboardTable({
                           className="inline-flex items-center"
                         >
                           <TeamFlag code={entry.bracketChampionCode} className="h-3.5 w-5" />
+                        </span>
+                      ) : (
+                        <span
+                          aria-label="Pick to win: not yet made"
+                          className="text-muted-foreground/60 text-xs"
+                        >
+                          &mdash;
                         </span>
                       )}
                     </span>
