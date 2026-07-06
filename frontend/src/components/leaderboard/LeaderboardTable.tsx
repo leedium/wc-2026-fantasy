@@ -14,6 +14,7 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { BracketPreviewDialog } from '@/components/predictions/BracketPreviewDialog';
+import { TeamFlag } from '@/components/shared/TeamFlag';
 import { getRankBadge } from '@/components/leaderboard/rankBadge';
 import { ROUTES } from '@/lib/constants';
 import { cn } from '@/lib/utils';
@@ -155,13 +156,26 @@ export function LeaderboardTable({
                   <div className="flex flex-col">
                     <span
                       className={cn(
-                        'text-sm font-medium',
+                        'flex items-center gap-1.5 text-sm font-medium',
                         isCurrentUser && 'text-primary font-semibold'
                       )}
                     >
                       {entry.predictionName}
                       {isCurrentUser && (
-                        <span className="text-muted-foreground ml-2 text-xs">(You)</span>
+                        <span className="text-muted-foreground text-xs">(You)</span>
+                      )}
+                      {entry.bracketChampionCode && (
+                        <span
+                          title={entry.bracketChampionName ?? undefined}
+                          aria-label={
+                            entry.bracketChampionName
+                              ? `Pick to win: ${entry.bracketChampionName}`
+                              : undefined
+                          }
+                          className="inline-flex items-center"
+                        >
+                          <TeamFlag code={entry.bracketChampionCode} className="h-3.5 w-5" />
+                        </span>
                       )}
                     </span>
                     <span className="text-muted-foreground text-xs">

@@ -78,6 +78,8 @@ describe('GET /api/leaderboard', () => {
           knockout_points: 40,
           total_goals: 170,
           updated_at: '2026-05-29T12:00:00.000Z',
+          bracket_champion_code: 'ARG',
+          bracket_champion_name: 'Argentina',
           total_count: 2,
         },
         {
@@ -87,6 +89,8 @@ describe('GET /api/leaderboard', () => {
           group_points: 55,
           knockout_points: 35,
           total_goals: 175,
+          bracket_champion_code: null,
+          bracket_champion_name: null,
           total_count: 2,
         },
       ],
@@ -103,6 +107,12 @@ describe('GET /api/leaderboard', () => {
       groupPoints: 60,
       knockoutPoints: 40,
       updatedAt: '2026-05-29T12:00:00.000Z',
+      bracketChampionCode: 'ARG',
+      bracketChampionName: 'Argentina',
+    });
+    expect(body.entries[1]).toMatchObject({
+      bracketChampionCode: null,
+      bracketChampionName: null,
     });
     expect(body.entries[0].email).toBeUndefined();
     expect(supabaseMock.rpc).toHaveBeenCalledWith(

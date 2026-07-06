@@ -63,6 +63,8 @@ export async function GET(request: NextRequest) {
     champion_pick_points: number;
     total_goals: number | null;
     updated_at: string | null;
+    bracket_champion_code: string | null;
+    bracket_champion_name: string | null;
     total_count: number;
   }>;
 
@@ -80,6 +82,8 @@ export async function GET(request: NextRequest) {
       knockoutPoints: row.knockout_points,
       championPickPoints: row.champion_pick_points ?? 0,
       updatedAt: row.updated_at ?? null,
+      bracketChampionCode: row.bracket_champion_code ?? null,
+      bracketChampionName: row.bracket_champion_name ?? null,
     })),
     total: Number(rows[0]?.total_count ?? 0),
     page,
